@@ -1,0 +1,235 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 218 50% 28%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 218 50% 28%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 218 50% 28%;
+
+    --primary: 218 52% 29%;
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 218 60% 45%;
+
+    --secondary: 14 85% 57%;
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+
+    --accent: 218 52% 29%;
+    --accent-foreground: 0 0% 100%;
+
+    /* Service-specific accent colors */
+    --rides-accent: 218 52% 29%;
+    --rides-accent-foreground: 0 0% 100%;
+    --food-accent: 38 92% 50%;
+    --food-accent-foreground: 0 0% 100%;
+    --hotels-accent: 218 50% 45%;
+    --hotels-accent-foreground: 0 0% 100%;
+
+    /* Semantic colors with subtle variants */
+    --success: 160 84% 39%;
+    --success-foreground: 0 0% 100%;
+    --success-subtle: 160 60% 95%;
+    
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+    --warning-subtle: 38 90% 95%;
+
+    --info: 218 80% 55%;
+    --info-foreground: 0 0% 100%;
+    --info-subtle: 218 70% 95%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 218 52% 29%;
+
+    /* Modern radius system */
+    --radius: 0.75rem;
+    --radius-sm: 0.5rem;
+    --radius-md: 0.75rem;
+    --radius-lg: 1rem;
+    --radius-xl: 1.25rem;
+    --radius-2xl: 1.5rem;
+
+    /* Shadow system with colored shadows */
+    --shadow-sm: 0 1px 2px 0 hsl(218 50% 28% / 0.05);
+    --shadow-md: 0 4px 6px -1px hsl(218 50% 28% / 0.1), 0 2px 4px -1px hsl(218 50% 28% / 0.06);
+    --shadow-lg: 0 10px 15px -3px hsl(218 50% 28% / 0.1), 0 4px 6px -2px hsl(218 50% 28% / 0.05);
+    --shadow-xl: 0 20px 25px -5px hsl(218 50% 28% / 0.1), 0 10px 10px -5px hsl(218 50% 28% / 0.04);
+    --shadow-2xl: 0 25px 50px -12px hsl(218 50% 28% / 0.25);
+    --shadow-primary: 0 10px 30px -10px hsl(218 52% 29% / 0.3);
+    --shadow-glow: 0 0 40px hsl(218 60% 45% / 0.4);
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 218 50% 28%;
+    --sidebar-primary: 218 52% 29%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 218 50% 28%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 218 52% 29%;
+  }
+
+  .dark {
+    --background: 218 50% 10%;
+    --foreground: 0 0% 98%;
+
+    --card: 218 50% 15%;
+    --card-foreground: 0 0% 98%;
+
+    --popover: 218 50% 15%;
+    --popover-foreground: 0 0% 98%;
+
+    --primary: 218 52% 40%;
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 218 60% 55%;
+
+    --secondary: 14 85% 57%;
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+
+    --accent: 218 52% 40%;
+    --accent-foreground: 0 0% 100%;
+
+    /* Service-specific accent colors */
+    --rides-accent: 218 52% 40%;
+    --rides-accent-foreground: 0 0% 100%;
+    --food-accent: 38 92% 50%;
+    --food-accent-foreground: 0 0% 100%;
+    --hotels-accent: 218 50% 55%;
+    --hotels-accent-foreground: 0 0% 100%;
+
+    /* Semantic colors with subtle variants */
+    --success: 160 84% 39%;
+    --success-foreground: 0 0% 100%;
+    --success-subtle: 160 50% 20%;
+    
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+    --warning-subtle: 38 70% 20%;
+
+    --info: 218 80% 60%;
+    --info-foreground: 0 0% 100%;
+    --info-subtle: 218 60% 20%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 218 52% 40%;
+
+    /* Shadow system for dark mode */
+    --shadow-sm: 0 1px 2px 0 hsl(0 0% 0% / 0.3);
+    --shadow-md: 0 4px 6px -1px hsl(0 0% 0% / 0.4), 0 2px 4px -1px hsl(0 0% 0% / 0.3);
+    --shadow-lg: 0 10px 15px -3px hsl(0 0% 0% / 0.5), 0 4px 6px -2px hsl(0 0% 0% / 0.3);
+    --shadow-xl: 0 20px 25px -5px hsl(0 0% 0% / 0.5), 0 10px 10px -5px hsl(0 0% 0% / 0.4);
+    --shadow-2xl: 0 25px 50px -12px hsl(0 0% 0% / 0.6);
+    --shadow-primary: 0 10px 30px -10px hsl(218 52% 40% / 0.4);
+    --shadow-glow: 0 0 40px hsl(218 60% 55% / 0.3);
+
+    --sidebar-background: 218 50% 10%;
+    --sidebar-foreground: 0 0% 98%;
+    --sidebar-primary: 218 52% 40%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 218 50% 20%;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-border: 217.2 32.6% 17.5%;
+    --sidebar-ring: 218 52% 40%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+@layer utilities {
+  /* Hover lift effect */
+  .hover-lift {
+    @apply transition-all duration-300 ease-out;
+  }
+  .hover-lift:hover {
+    @apply -translate-y-1 shadow-lg;
+  }
+
+  /* Card hover glow */
+  .card-hover-glow {
+    @apply transition-all duration-300;
+  }
+  .card-hover-glow:hover {
+    box-shadow: var(--shadow-primary);
+  }
+
+  /* Stagger fade-in for lists */
+  @keyframes stagger-fade-in {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .stagger-item {
+    animation: stagger-fade-in 0.5s ease-out forwards;
+  }
+
+  /* Smooth bounce for buttons */
+  .smooth-bounce:active {
+    @apply scale-95;
+    transition: transform 0.1s ease-out;
+  }
+
+  /* Glassmorphism utilities */
+  .glass {
+    @apply bg-background/80 backdrop-blur-md;
+  }
+  .glass-card {
+    @apply bg-card/80 backdrop-blur-md border border-border/50;
+  }
+
+  /* Gradient utilities */
+  .gradient-primary {
+    background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)));
+  }
+  .gradient-rides {
+    background: linear-gradient(135deg, hsl(var(--rides-accent)), hsl(var(--primary-glow)));
+  }
+  .gradient-food {
+    background: linear-gradient(135deg, hsl(var(--food-accent)), hsl(38 100% 70%));
+  }
+  .gradient-hotels {
+    background: linear-gradient(135deg, hsl(var(--hotels-accent)), hsl(218 70% 65%));
+  }
+
+  /* Text gradients */
+  .text-gradient-primary {
+    @apply bg-clip-text text-transparent;
+    background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)));
+  }
+}

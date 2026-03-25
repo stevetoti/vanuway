@@ -1,0 +1,26 @@
+{
+  "name": "vanuway",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint",
+    "dev:website": "turbo run dev --filter=@vanuway/website",
+    "dev:app": "turbo run dev --filter=@vanuway/app",
+    "build:website": "turbo run build --filter=@vanuway/website",
+    "build:app": "turbo run build --filter=@vanuway/app",
+    "clean": "turbo run clean && rm -rf node_modules"
+  },
+  "devDependencies": {
+    "turbo": "^2.5.3"
+  },
+  "packageManager": "pnpm@9.15.0",
+  "engines": {
+    "node": ">=18"
+  }
+}

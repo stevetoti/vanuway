@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes" />
+
+    <!-- App Title & Description -->
+    <title>VanuWay - The Vanuatu Way</title>
+    <meta name="description" content="Your super app for Vanuatu - Rides, Food Delivery, Wallet, and more!" />
+    <meta name="author" content="VanuWay" />
+    <meta name="keywords" content="Vanuatu, rides, food delivery, taxi, restaurant, wallet, mobile money" />
+
+    <!-- PWA Primary Meta Tags -->
+    <meta name="theme-color" content="#ef5e33" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="VanuWay" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="application-name" content="VanuWay" />
+
+    <!-- Manifest -->
+    <link rel="manifest" href="/manifest.json" />
+
+    <!-- Favicons -->
+    <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="/icon-512.png" />
+    <link rel="shortcut icon" href="/icon-192.png" />
+
+    <!-- Apple Touch Icons -->
+    <link rel="apple-touch-icon" href="/icon-192.png" />
+    <link rel="apple-touch-icon" sizes="152x152" href="/icon-152.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icon-192.png" />
+
+    <!-- Apple Splash Screens -->
+    <link rel="apple-touch-startup-image" href="/icon-512.png" />
+
+    <!-- Open Graph Meta Tags -->
+    <meta property="og:title" content="VanuWay - The Vanuatu Way" />
+    <meta property="og:description" content="Your super app for Vanuatu - Rides, Food Delivery, Wallet, and more!" />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="/icon-512.png" />
+    <meta property="og:url" content="https://app.vanuway.com" />
+    <meta property="og:site_name" content="VanuWay" />
+
+    <!-- Twitter Card Meta Tags -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@VanuWay" />
+    <meta name="twitter:title" content="VanuWay - The Vanuatu Way" />
+    <meta name="twitter:description" content="Your super app for Vanuatu - Rides, Food Delivery, Wallet, and more!" />
+    <meta name="twitter:image" content="/icon-512.png" />
+
+    <!-- Microsoft Tile -->
+    <meta name="msapplication-TileColor" content="#ef5e33" />
+    <meta name="msapplication-TileImage" content="/icon-144.png" />
+    <meta name="msapplication-config" content="/browserconfig.xml" />
+
+    <!-- Preconnect to Supabase -->
+    <link rel="preconnect" href="https://ljervgzsovamehnlztxf.supabase.co" crossorigin />
+    <link rel="dns-prefetch" href="https://ljervgzsovamehnlztxf.supabase.co" />
+  </head>
+
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+
+    <!-- Service Worker Registration -->
+    <noscript>
+      <div style="display: flex; align-items: center; justify-content: center; height: 100vh; font-family: sans-serif; text-align: center; padding: 20px;">
+        <div>
+          <h1>JavaScript Required</h1>
+          <p>VanuWay requires JavaScript to be enabled. Please enable JavaScript in your browser settings.</p>
+        </div>
+      </div>
+    </noscript>
+  </body>
+</html>

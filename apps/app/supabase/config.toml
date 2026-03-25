@@ -1,0 +1,19 @@
+project_id = "ljervgzsovamehnlztxf"
+
+[functions.hello-world]
+verify_jwt = false
+
+[functions.create-ride-payment]
+verify_jwt = false
+
+[functions.process-driver-payout]
+verify_jwt = false
+
+[functions.check-payment-status]
+verify_jwt = false
+
+[functions.send-driver-notification]
+verify_jwt = false
+
+[functions.send-auth-email]
+verify_jwt = false

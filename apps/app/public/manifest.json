@@ -1,0 +1,54 @@
+{
+  "name": "VanuWay - The Vanuatu Way",
+  "short_name": "VanuWay",
+  "description": "Your super app for Vanuatu - Rides, Food Delivery, and more!",
+  "theme_color": "#ef5e33",
+  "background_color": "#ffffff",
+  "display": "standalone",
+  "orientation": "portrait",
+  "scope": "/",
+  "start_url": "/",
+  "id": "com.vanuway.app",
+  "icons": [
+    {
+      "src": "/icon-144.png",
+      "sizes": "144x144",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-152.png",
+      "sizes": "152x152",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["travel", "food", "lifestyle", "transportation"],
+  "lang": "en",
+  "dir": "ltr",
+  "shortcuts": [
+    {
+      "name": "Book a Ride",
+      "short_name": "Ride",
+      "description": "Quick access to book a ride",
+      "url": "/rides/request"
+    },
+    {
+      "name": "Order Food",
+      "short_name": "Food",
+      "description": "Quick access to order food",
+      "url": "/food"
+    }
+  ],
+  "prefer_related_applications": false
+}

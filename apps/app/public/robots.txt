@@ -1,0 +1,26 @@
+User-agent: Googlebot
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+User-agent: Twitterbot
+Allow: /
+
+User-agent: facebookexternalhit
+Allow: /
+
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://app.vanuway.com/sitemap.xml
+
+# Disallow admin and private areas
+Disallow: /admin/
+Disallow: /driver/dashboard
+Disallow: /driver/earnings
+Disallow: /driver/payouts
+Disallow: /profile/
+Disallow: /wallet
+Disallow: /bookings

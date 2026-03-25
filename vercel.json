@@ -1,0 +1,14 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "version": 2,
+  "projects": [
+    {
+      "directory": "apps/website",
+      "name": "vanuway-website"
+    },
+    {
+      "directory": "apps/app",
+      "name": "vanuway-app"
+    }
+  ]
+}
