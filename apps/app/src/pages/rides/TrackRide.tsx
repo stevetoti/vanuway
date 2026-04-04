@@ -117,13 +117,14 @@ export default function TrackRide() {
           filter: `id=eq.${bookingId}`,
         },
         (payload) => {
-          setBooking(payload.new as RideBooking);
+          const updated = payload.new as RideBooking;
+          setBooking(updated);
 
-          // Show toast for status changes
-          const newStatus = (payload.new as RideBooking).status;
-          if (newStatus === 'accepted') {
+          // When driver accepts, fetch their info
+          if (updated.status === 'accepted' && updated.driver_id) {
             toast.success('Driver found! They are on their way.');
-          } else if (newStatus === 'arrived') {
+            fetchDriverInfo(updated.driver_id);
+          } else if (updated.status === 'arrived') {
             toast.success('Your driver has arrived!');
           }
         }
@@ -134,6 +135,27 @@ export default function TrackRide() {
       supabase.removeChannel(channel);
     };
   }, [bookingId]);
+
+  const fetchDriverInfo = async (driverUserId: string) => {
+    // driver_id = auth.users.id (new pattern)
+    let { data: driverData } = await supabase
+      .from('drivers')
+      .select('id, user_id, vehicle_model, vehicle_type, vehicle_color, license_plate, rating, total_rides, current_lat, current_lng, first_name, last_name')
+      .eq('user_id', driverUserId)
+      .maybeSingle();
+
+    // Fallback: old pattern where driver_id = drivers.id
+    if (!driverData) {
+      const { data: fallbackDriver } = await supabase
+        .from('drivers')
+        .select('id, user_id, vehicle_model, vehicle_type, vehicle_color, license_plate, rating, total_rides, current_lat, current_lng, first_name, last_name')
+        .eq('id', driverUserId)
+        .maybeSingle();
+      driverData = fallbackDriver;
+    }
+
+    if (driverData) setDriver(driverData);
+  };
 
   const fetchBooking = async () => {
     try {
@@ -146,27 +168,8 @@ export default function TrackRide() {
       if (error) throw error;
       setBooking(data);
 
-      // Fetch driver info if assigned
-      // Note: driver_id can be either auth.users.id (new) or drivers.id (old)
       if (data.driver_id) {
-        // Try new pattern first: driver_id = auth.users.id
-        let { data: driverData } = await supabase
-          .from('drivers')
-          .select('id, user_id, vehicle_model, vehicle_type, vehicle_color, license_plate, rating, total_rides, current_lat, current_lng, first_name, last_name')
-          .eq('user_id', data.driver_id)
-          .maybeSingle();
-
-        // Fallback: try old pattern where driver_id = drivers.id
-        if (!driverData) {
-          const { data: fallbackDriver } = await supabase
-            .from('drivers')
-            .select('id, user_id, vehicle_model, vehicle_type, vehicle_color, license_plate, rating, total_rides, current_lat, current_lng, first_name, last_name')
-            .eq('id', data.driver_id)
-            .maybeSingle();
-          driverData = fallbackDriver;
-        }
-
-        if (driverData) setDriver(driverData);
+        await fetchDriverInfo(data.driver_id);
       }
     } catch (error) {
       toast.error('Failed to load ride details');

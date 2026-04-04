@@ -1,16 +1,12 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
-import { useGoogleMaps } from '@/hooks/useGoogleMaps';
 import { supabase } from '@/integrations/supabase/client';
-import { 
-  createVehicleMarkerIcon, 
-  calculateBearing, 
-  getVehicleEmoji,
-  getVehicleColor 
-} from '@/lib/rides/vehicle-icons';
 import { calculateETA } from '@/lib/rides/location-tracking';
-import { MapPin, Navigation, Loader2, AlertTriangle, Clock, Car } from 'lucide-react';
+import { MapPin, Loader2, Clock, Car } from 'lucide-react';
+import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 
 interface DriverInfo {
   id: string;
@@ -39,6 +35,99 @@ interface LiveTrackingMapProps {
   onEtaUpdate?: (eta: number) => void;
 }
 
+// Leaflet icons
+const pickupIcon = L.divIcon({
+  className: '',
+  html: `<div style="position:relative;">
+    <div style="width:18px;height:18px;background:#22C55E;border:3px solid white;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,0.4);"></div>
+    <div style="position:absolute;top:-24px;left:50%;transform:translateX(-50%);background:#22C55E;color:white;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:bold;white-space:nowrap;">PICKUP</div>
+  </div>`,
+  iconSize: [18, 18],
+  iconAnchor: [9, 9],
+});
+
+const dropoffIcon = L.divIcon({
+  className: '',
+  html: `<div style="position:relative;">
+    <div style="width:18px;height:18px;background:#EF4444;border:3px solid white;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,0.4);"></div>
+    <div style="position:absolute;top:-24px;left:50%;transform:translateX(-50%);background:#EF4444;color:white;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:bold;white-space:nowrap;">DROP-OFF</div>
+  </div>`,
+  iconSize: [18, 18],
+  iconAnchor: [9, 9],
+});
+
+const createCarIcon = (rotation: number = 0) => L.divIcon({
+  className: '',
+  html: `<div style="transform:rotate(${rotation}deg);width:36px;height:36px;display:flex;align-items:center;justify-content:center;">
+    <div style="background:#3B82F6;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.3);border:3px solid white;">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg">
+        <path d="M5 11l1.5-4.5h11L19 11M19 17a1.5 1.5 0 100-3 1.5 1.5 0 000 3zM5 17a1.5 1.5 0 100-3 1.5 1.5 0 000 3zM3 11l1-3.5C4.5 5.5 6 5 7 5h10c1 0 2.5.5 3 2.5L21 11v6a1 1 0 01-1 1h-1a1 1 0 01-1-1v-1H6v1a1 1 0 01-1 1H4a1 1 0 01-1-1v-6z"/>
+      </svg>
+    </div>
+  </div>`,
+  iconSize: [36, 36],
+  iconAnchor: [18, 18],
+});
+
+/** Calculate bearing between two points */
+function calcBearing(from: { lat: number; lng: number }, to: { lat: number; lng: number }): number {
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const toDeg = (r: number) => (r * 180) / Math.PI;
+  const dLng = toRad(to.lng - from.lng);
+  const y = Math.sin(dLng) * Math.cos(toRad(to.lat));
+  const x = Math.cos(toRad(from.lat)) * Math.sin(toRad(to.lat)) -
+            Math.sin(toRad(from.lat)) * Math.cos(toRad(to.lat)) * Math.cos(dLng);
+  return (toDeg(Math.atan2(y, x)) + 360) % 360;
+}
+
+/** Generate a simple polyline between two points */
+function generateRoute(from: [number, number], to: [number, number]): [number, number][] {
+  const pts: [number, number][] = [from];
+  const steps = 10;
+  for (let i = 1; i < steps; i++) {
+    const t = i / steps;
+    pts.push([
+      from[0] + (to[0] - from[0]) * t + (Math.random() - 0.5) * 0.002,
+      from[1] + (to[1] - from[1]) * t + (Math.random() - 0.5) * 0.002,
+    ]);
+  }
+  pts.push(to);
+  return pts;
+}
+
+/** Auto-fit bounds when positions change */
+function BoundsController({ points }: { points: [number, number][] }) {
+  const map = useMap();
+  useEffect(() => {
+    if (points.length < 2) return;
+    const bounds = L.latLngBounds(points.map(p => L.latLng(p[0], p[1])));
+    map.fitBounds(bounds, { padding: [50, 50], maxZoom: 16 });
+  }, [points, map]);
+  return null;
+}
+
+/** Driver marker that animates on position change */
+function DriverMarker({ position, rotation }: { position: [number, number]; rotation: number }) {
+  const markerRef = useRef<L.Marker | null>(null);
+
+  useEffect(() => {
+    if (markerRef.current) {
+      markerRef.current.setLatLng(position);
+      markerRef.current.setIcon(createCarIcon(rotation));
+    }
+  }, [position, rotation]);
+
+  return (
+    <Marker
+      ref={markerRef}
+      position={position}
+      icon={createCarIcon(rotation)}
+    >
+      <Popup>Your driver is on the way!</Popup>
+    </Marker>
+  );
+}
+
 export const LiveTrackingMap = ({
   pickupLat,
   pickupLng,
@@ -52,145 +141,31 @@ export const LiveTrackingMap = ({
   className = '',
   onEtaUpdate,
 }: LiveTrackingMapProps) => {
-  const mapRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<google.maps.Map | null>(null);
-  const driverMarkerRef = useRef<google.maps.Marker | null>(null);
-  const routeRendererRef = useRef<google.maps.DirectionsRenderer | null>(null);
-  const previousPositionRef = useRef<{ lat: number; lng: number } | null>(null);
-  
   const [driverPosition, setDriverPosition] = useState<{ lat: number; lng: number } | null>(
-    driverInfo?.current_lat && driverInfo?.current_lng 
+    driverInfo?.current_lat && driverInfo?.current_lng
       ? { lat: driverInfo.current_lat, lng: driverInfo.current_lng }
       : null
   );
-  const [eta, setEta] = useState<number | null>(null);
   const [heading, setHeading] = useState(0);
+  const [eta, setEta] = useState<number | null>(null);
+  const prevPosRef = useRef<{ lat: number; lng: number } | null>(null);
 
-  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-  const { isLoaded, isLoading, error } = useGoogleMaps(apiKey);
-
-  // Validate coordinates
-  const hasValidCoordinates = 
-    pickupLat && pickupLng && dropoffLat && dropoffLng &&
+  const hasValidCoordinates = pickupLat && pickupLng && dropoffLat && dropoffLng &&
     pickupLat !== 0 && pickupLng !== 0;
 
-  // Initialize map
+  // Update driver position when driverInfo prop changes
   useEffect(() => {
-    if (!isLoaded || !mapRef.current || mapInstanceRef.current || !hasValidCoordinates) return;
-
-    const map = new google.maps.Map(mapRef.current, {
-      center: { lat: pickupLat, lng: pickupLng },
-      zoom: 14,
-      zoomControl: true,
-      mapTypeControl: false,
-      streetViewControl: false,
-      fullscreenControl: false,
-      styles: [
-        {
-          featureType: 'poi',
-          stylers: [{ visibility: 'off' }],
-        },
-      ],
-    });
-
-    // Pickup marker (green)
-    new google.maps.Marker({
-      position: { lat: pickupLat, lng: pickupLng },
-      map,
-      title: 'Pickup Location',
-      icon: {
-        path: google.maps.SymbolPath.CIRCLE,
-        fillColor: '#22C55E',
-        fillOpacity: 1,
-        strokeColor: '#FFFFFF',
-        strokeWeight: 3,
-        scale: 10,
-      },
-      zIndex: 100,
-    });
-
-    // Dropoff marker (red)
-    new google.maps.Marker({
-      position: { lat: dropoffLat, lng: dropoffLng },
-      map,
-      title: 'Dropoff Location',
-      icon: {
-        path: google.maps.SymbolPath.CIRCLE,
-        fillColor: '#EF4444',
-        fillOpacity: 1,
-        strokeColor: '#FFFFFF',
-        strokeWeight: 3,
-        scale: 10,
-      },
-      zIndex: 100,
-    });
-
-    // Fit bounds to show both markers
-    const bounds = new google.maps.LatLngBounds();
-    bounds.extend({ lat: pickupLat, lng: pickupLng });
-    bounds.extend({ lat: dropoffLat, lng: dropoffLng });
-    if (driverPosition) {
-      bounds.extend(driverPosition);
+    if (driverInfo?.current_lat && driverInfo?.current_lng) {
+      setDriverPosition({ lat: driverInfo.current_lat, lng: driverInfo.current_lng });
     }
-    map.fitBounds(bounds, 60);
+  }, [driverInfo?.current_lat, driverInfo?.current_lng]);
 
-    // Initialize directions renderer for route
-    if (showRoute) {
-      const renderer = new google.maps.DirectionsRenderer({
-        map,
-        suppressMarkers: true,
-        polylineOptions: {
-          strokeColor: '#3B82F6',
-          strokeWeight: 4,
-          strokeOpacity: 0.8,
-        },
-      });
-      routeRendererRef.current = renderer;
-      
-      // Render initial route
-      renderRoute(map, pickupLat, pickupLng, dropoffLat, dropoffLng);
-    }
-
-    mapInstanceRef.current = map;
-
-    return () => {
-      if (routeRendererRef.current) {
-        routeRendererRef.current.setMap(null);
-      }
-    };
-  }, [isLoaded, hasValidCoordinates, pickupLat, pickupLng, dropoffLat, dropoffLng, showRoute]);
-
-  // Render route between two points
-  const renderRoute = useCallback((
-    map: google.maps.Map,
-    originLat: number,
-    originLng: number,
-    destLat: number,
-    destLng: number
-  ) => {
-    if (!routeRendererRef.current) return;
-
-    const directionsService = new google.maps.DirectionsService();
-    directionsService.route(
-      {
-        origin: { lat: originLat, lng: originLng },
-        destination: { lat: destLat, lng: destLng },
-        travelMode: google.maps.TravelMode.DRIVING,
-      },
-      (result, status) => {
-        if (status === 'OK' && result) {
-          routeRendererRef.current?.setDirections(result);
-        }
-      }
-    );
-  }, []);
-
-  // Subscribe to driver location updates
+  // Subscribe to real-time driver location updates
   useEffect(() => {
     if (!driverId || !showDriverMarker) return;
 
     const channel = supabase
-      .channel(`driver-location-live-${driverId}`)
+      .channel(`driver-tracking-${driverId}`)
       .on(
         'postgres_changes',
         {
@@ -202,16 +177,13 @@ export const LiveTrackingMap = ({
         (payload: any) => {
           const { current_lat, current_lng } = payload.new;
           if (current_lat && current_lng) {
-            const newPosition = { lat: current_lat, lng: current_lng };
-            
-            // Calculate heading if we have a previous position
-            if (previousPositionRef.current) {
-              const newHeading = calculateBearing(previousPositionRef.current, newPosition);
-              setHeading(newHeading);
+            const newPos = { lat: current_lat, lng: current_lng };
+
+            if (prevPosRef.current) {
+              setHeading(calcBearing(prevPosRef.current, newPos));
             }
-            
-            previousPositionRef.current = newPosition;
-            setDriverPosition(newPosition);
+            prevPosRef.current = newPos;
+            setDriverPosition(newPos);
           }
         }
       )
@@ -222,141 +194,98 @@ export const LiveTrackingMap = ({
     };
   }, [driverId, showDriverMarker]);
 
-  // Update driver marker position
+  // Calculate ETA when driver position updates
   useEffect(() => {
-    if (!mapInstanceRef.current || !driverPosition || !showDriverMarker) return;
+    if (!driverPosition) return;
 
-    const vehicleColor = driverInfo?.vehicle_color || 'blue';
-    const vehicleType = driverInfo?.vehicle_type;
-
-    if (!driverMarkerRef.current) {
-      // Create driver marker
-      driverMarkerRef.current = new google.maps.Marker({
-        position: driverPosition,
-        map: mapInstanceRef.current,
-        title: 'Driver',
-        icon: createVehicleMarkerIcon(vehicleType, vehicleColor, heading),
-        zIndex: 200,
-      });
-    } else {
-      // Animate marker to new position
-      animateMarker(driverMarkerRef.current, driverPosition, heading, vehicleType, vehicleColor);
-    }
-
-    // Calculate and update ETA
-    const destination = rideStatus === 'in_progress' 
+    const destination = rideStatus === 'in_progress'
       ? { lat: dropoffLat, lng: dropoffLng }
       : { lat: pickupLat, lng: pickupLng };
-    
+
     const newEta = calculateETA(driverPosition, destination);
     setEta(newEta);
     onEtaUpdate?.(newEta);
+  }, [driverPosition, rideStatus, pickupLat, pickupLng, dropoffLat, dropoffLng, onEtaUpdate]);
 
-    // Update route to show driver's current position
-    if (showRoute && routeRendererRef.current && mapInstanceRef.current) {
-      const destPoint = rideStatus === 'in_progress'
-        ? { lat: dropoffLat, lng: dropoffLng }
-        : { lat: pickupLat, lng: pickupLng };
-      renderRoute(mapInstanceRef.current, driverPosition.lat, driverPosition.lng, destPoint.lat, destPoint.lng);
-    }
-
-    // Extend bounds to include driver
-    const bounds = new google.maps.LatLngBounds();
-    bounds.extend({ lat: pickupLat, lng: pickupLng });
-    bounds.extend({ lat: dropoffLat, lng: dropoffLng });
-    bounds.extend(driverPosition);
-    mapInstanceRef.current.fitBounds(bounds, 60);
-
-  }, [driverPosition, heading, showDriverMarker, driverInfo, rideStatus, pickupLat, pickupLng, dropoffLat, dropoffLng, onEtaUpdate, showRoute, renderRoute]);
-
-  // Animate marker smoothly between positions
-  const animateMarker = (
-    marker: google.maps.Marker,
-    newPosition: { lat: number; lng: number },
-    heading: number,
-    vehicleType?: string,
-    vehicleColor?: string
-  ) => {
-    const currentPosition = marker.getPosition();
-    if (!currentPosition) {
-      marker.setPosition(newPosition);
-      return;
-    }
-
-    const startLat = currentPosition.lat();
-    const startLng = currentPosition.lng();
-    const deltaLat = newPosition.lat - startLat;
-    const deltaLng = newPosition.lng - startLng;
-    
-    const duration = 1000; // 1 second animation
-    const steps = 60;
-    const stepDuration = duration / steps;
-    let step = 0;
-
-    const animate = () => {
-      step++;
-      const progress = step / steps;
-      const easeProgress = 1 - Math.pow(1 - progress, 3); // ease-out cubic
-      
-      const lat = startLat + deltaLat * easeProgress;
-      const lng = startLng + deltaLng * easeProgress;
-      
-      marker.setPosition({ lat, lng });
-      marker.setIcon(createVehicleMarkerIcon(vehicleType, vehicleColor, heading));
-
-      if (step < steps) {
-        setTimeout(animate, stepDuration);
-      }
-    };
-
-    animate();
-  };
-
-  // Error state
-  if (error) {
-    return (
-      <Card className={`overflow-hidden ${className}`}>
-        <div className="w-full h-[300px] bg-muted flex flex-col items-center justify-center p-4 text-center">
-          <AlertTriangle className="h-8 w-8 text-amber-500 mb-2" />
-          <p className="font-medium text-sm">Map unavailable</p>
-          <p className="text-xs text-muted-foreground">{error}</p>
-        </div>
-      </Card>
-    );
-  }
-
-  // No coordinates
   if (!hasValidCoordinates) {
     return (
       <Card className={`overflow-hidden ${className}`}>
         <div className="w-full h-[300px] bg-muted flex flex-col items-center justify-center p-4 text-center">
           <MapPin className="h-8 w-8 text-muted-foreground mb-2" />
           <p className="font-medium text-sm">No location data</p>
-          <p className="text-xs text-muted-foreground">Coordinates not available for this ride</p>
         </div>
       </Card>
     );
   }
 
-  // Loading state
-  if (isLoading || !isLoaded) {
-    return (
-      <Card className={`overflow-hidden ${className}`}>
-        <div className="w-full h-[300px] bg-muted flex flex-col items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-primary mb-2" />
-          <p className="text-sm text-muted-foreground">Loading map...</p>
-        </div>
-      </Card>
-    );
+  // Build route line
+  const routeFrom: [number, number] = driverPosition
+    ? [driverPosition.lat, driverPosition.lng]
+    : [pickupLat, pickupLng];
+  const routeTo: [number, number] = rideStatus === 'in_progress'
+    ? [dropoffLat, dropoffLng]
+    : [pickupLat, pickupLng];
+
+  // Points for bounds fitting
+  const boundsPoints: [number, number][] = [
+    [pickupLat, pickupLng],
+    [dropoffLat, dropoffLng],
+  ];
+  if (driverPosition) {
+    boundsPoints.push([driverPosition.lat, driverPosition.lng]);
   }
+
+  // Route from driver to destination (or pickup to dropoff if no driver yet)
+  const routePoints = driverPosition
+    ? generateRoute([driverPosition.lat, driverPosition.lng], routeTo)
+    : generateRoute([pickupLat, pickupLng], [dropoffLat, dropoffLng]);
 
   return (
     <Card className={`overflow-hidden relative ${className}`}>
-      <div ref={mapRef} className="w-full h-[300px]" />
-      
+      <div className="w-full h-[300px]">
+        <MapContainer
+          center={[pickupLat, pickupLng]}
+          zoom={14}
+          style={{ height: '100%', width: '100%' }}
+          zoomControl={false}
+          attributionControl={false}
+        >
+          <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+          <BoundsController points={boundsPoints} />
+
+          {/* Pickup marker */}
+          <Marker position={[pickupLat, pickupLng]} icon={pickupIcon}>
+            <Popup>Pickup Location</Popup>
+          </Marker>
+
+          {/* Dropoff marker */}
+          <Marker position={[dropoffLat, dropoffLng]} icon={dropoffIcon}>
+            <Popup>Drop-off Location</Popup>
+          </Marker>
+
+          {/* Route line */}
+          {showRoute && (
+            <Polyline
+              positions={routePoints}
+              color="#3B82F6"
+              weight={5}
+              opacity={0.8}
+            />
+          )}
+
+          {/* Driver marker */}
+          {showDriverMarker && driverPosition && (
+            <DriverMarker
+              position={[driverPosition.lat, driverPosition.lng]}
+              rotation={heading}
+            />
+          )}
+        </MapContainer>
+      </div>
+
       {/* ETA Badge Overlay */}
       {eta !== null && showDriverMarker && driverPosition && (
-        <div className="absolute top-3 left-3">
+        <div className="absolute top-3 left-3 z-[1000]">
           <Badge className="bg-background/95 text-foreground shadow-lg px-3 py-1.5 flex items-center gap-2">
             <Clock className="h-4 w-4 text-primary" />
             <span className="font-semibold">
@@ -368,31 +297,21 @@ export const LiveTrackingMap = ({
 
       {/* Vehicle Info Overlay */}
       {driverInfo && showDriverMarker && (
-        <div className="absolute bottom-3 left-3 right-3">
+        <div className="absolute bottom-3 left-3 right-3 z-[1000]">
           <div className="bg-background/95 backdrop-blur-sm rounded-lg p-3 shadow-lg flex items-center gap-3">
-            <div 
-              className="w-10 h-10 rounded-full flex items-center justify-center text-xl"
-              style={{ backgroundColor: getVehicleColor(driverInfo.vehicle_color) + '20' }}
-            >
-              {getVehicleEmoji(driverInfo.vehicle_type)}
+            <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+              <Car className="h-5 w-5 text-blue-600" />
             </div>
             <div className="flex-1 min-w-0">
               <p className="font-semibold truncate">
                 {driverInfo.vehicle_model || 'Vehicle'}
               </p>
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <div 
-                  className="w-3 h-3 rounded-full border border-background shadow-sm"
-                  style={{ backgroundColor: getVehicleColor(driverInfo.vehicle_color) }}
-                />
-                <span className="capitalize">{driverInfo.vehicle_color || 'Unknown'}</span>
-                <span>•</span>
-                <Badge variant="outline" className="font-mono text-xs">
-                  {driverInfo.license_plate || 'N/A'}
-                </Badge>
+                <span className="capitalize">{driverInfo.vehicle_color || driverInfo.vehicle_type || 'Car'}</span>
+                <span>·</span>
+                <span className="font-mono text-xs">{driverInfo.license_plate || 'N/A'}</span>
               </div>
             </div>
-            <Car className="h-5 w-5 text-muted-foreground" />
           </div>
         </div>
       )}
