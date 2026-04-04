@@ -12,6 +12,8 @@ import {
 } from 'lucide-react';
 import { LiveTrackingMap } from '@/components/rides/LiveTrackingMap';
 import { RideMessaging, MessageButton } from '@/components/rides/RideMessaging';
+import { CancellationDialog } from '@/components/rides/CancellationDialog';
+import { RideRating } from '@/components/rides/RideRating';
 import { getVehicleEmoji, getVehicleColor } from '@/lib/rides/vehicle-icons';
 
 interface RideBooking {
@@ -95,7 +97,8 @@ export default function TrackRide() {
   const [loading, setLoading] = useState(true);
   const [chatOpen, setChatOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [cancelling, setCancelling] = useState(false);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [ratingOpen, setRatingOpen] = useState(false);
   const [eta, setEta] = useState<number | null>(null);
 
   useEffect(() => {
@@ -124,6 +127,7 @@ export default function TrackRide() {
             toast.success('Your driver has arrived!');
           } else if (updated.status === 'completed') {
             toast.success('Ride completed! Thanks for riding with VanuCar.');
+            setRatingOpen(true);
           }
         }
       )
@@ -177,23 +181,40 @@ export default function TrackRide() {
     }
   };
 
-  const handleCancelRide = async () => {
-    if (!booking || !window.confirm('Are you sure you want to cancel this ride?')) return;
+  const handleCancelRide = async (reason: string) => {
+    if (!booking) return;
 
-    setCancelling(true);
     try {
       const { error } = await supabase
         .from('ride_bookings')
-        .update({ status: 'cancelled' })
+        .update({
+          status: 'cancelled',
+          cancellation_reason: reason,
+          cancelled_by: 'passenger',
+        })
         .eq('id', booking.id);
 
       if (error) throw error;
+
+      // Free up the driver if assigned
+      if (booking.driver_id) {
+        supabase.from('drivers').update({
+          status: 'available', is_available: true, current_ride_id: null,
+        }).eq('user_id', booking.driver_id).catch(console.warn);
+
+        supabase.from('notifications').insert({
+          user_id: booking.driver_id,
+          title: 'Ride Cancelled',
+          message: `Passenger cancelled: ${reason}`,
+          type: 'ride_cancelled',
+        }).catch(console.warn);
+      }
+
       toast.success('Ride cancelled');
+      setCancelDialogOpen(false);
       navigate('/bookings');
     } catch (error) {
       toast.error('Failed to cancel ride');
-    } finally {
-      setCancelling(false);
     }
   };
 
@@ -429,35 +450,54 @@ export default function TrackRide() {
           <Button
             variant="destructive"
             className="w-full h-12"
-            onClick={handleCancelRide}
-            disabled={cancelling}
+            onClick={() => setCancelDialogOpen(true)}
           >
-            {cancelling ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Cancelling...
-              </>
-            ) : (
-              <>
-                <X className="h-4 w-4 mr-2" />
-                Cancel Ride
-              </>
-            )}
+            <X className="h-4 w-4 mr-2" />
+            Cancel Ride
           </Button>
         </div>
       )}
 
       {/* Completed State */}
       {booking.status === 'completed' && (
-        <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t z-40">
+        <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t z-40 space-y-2">
           <Button
             className="w-full h-12 bg-primary"
+            onClick={() => setRatingOpen(true)}
+          >
+            <Star className="h-4 w-4 mr-2" />
+            Rate Your Ride
+          </Button>
+          <Button
+            variant="outline"
+            className="w-full h-10"
             onClick={() => navigate('/')}
           >
             Book Another Ride
           </Button>
         </div>
       )}
+
+      {/* Cancellation Dialog */}
+      <CancellationDialog
+        open={cancelDialogOpen}
+        onClose={() => setCancelDialogOpen(false)}
+        onConfirm={handleCancelRide}
+        userType="passenger"
+        rideStatus={booking.status}
+        fareAmount={booking.price}
+      />
+
+      {/* Rating Dialog */}
+      <RideRating
+        open={ratingOpen}
+        onClose={() => setRatingOpen(false)}
+        rideId={booking.id}
+        driverName={driver?.first_name || undefined}
+        pickupLocation={booking.pickup_location}
+        dropoffLocation={booking.dropoff_location}
+        fare={booking.price}
+      />
 
       {/* Real-time Chat (uses ride_messages table) */}
       {showChat && user && (

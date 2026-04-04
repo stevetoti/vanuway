@@ -9,20 +9,10 @@ import { toast } from 'sonner';
 import { Phone, Navigation, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { RideMessaging, MessageButton } from '@/components/rides/RideMessaging';
+import { CancellationDialog } from '@/components/rides/CancellationDialog';
 import { getUnreadCount } from '@/lib/rides/messaging-service';
 import { LiveTrackingMap } from '@/components/rides/LiveTrackingMap';
 import { DriverLocationService } from '@/lib/rides/location-tracking';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
 
 interface RideDetails {
   id: string;
@@ -61,7 +51,7 @@ const ActiveRide = () => {
   const [loading, setLoading] = useState(true);
   const [chatOpen, setChatOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [cancelling, setCancelling] = useState(false);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
 
   useEffect(() => {
     fetchRideDetails();
@@ -239,46 +229,38 @@ const ActiveRide = () => {
     }
   };
 
-  const handleCancelRide = async () => {
+  const handleCancelRide = async (reason: string) => {
     if (!ride || !user) return;
 
-    setCancelling(true);
     try {
-      // Update ride status to cancelled
       const { error: rideError } = await supabase
         .from('ride_bookings')
-        .update({ status: 'cancelled' })
+        .update({
+          status: 'cancelled',
+          cancellation_reason: reason,
+          cancelled_by: 'driver',
+        })
         .eq('id', ride.id);
 
       if (rideError) throw rideError;
 
-      // Update driver status back to available
-      const { error: driverError } = await supabase
-        .from('drivers')
-        .update({
-          status: 'available',
-          is_available: true,
-          current_ride_id: null,
-        })
-        .eq('user_id', user.id);
+      await supabase.from('drivers').update({
+        status: 'available', is_available: true, current_ride_id: null,
+      }).eq('user_id', user.id);
 
-      if (driverError) throw driverError;
-
-      // Notify passenger (non-blocking)
       supabase.from('notifications').insert({
         user_id: ride.user_id,
-        title: 'Ride Cancelled',
-        message: 'Your driver has cancelled the ride. Please request a new one.',
+        title: 'Ride Cancelled by Driver',
+        message: `Reason: ${reason}. Please request a new ride.`,
         type: 'ride_cancelled',
       }).catch(console.warn);
 
       toast.success('Ride cancelled');
+      setCancelDialogOpen(false);
       navigate('/driver/dashboard');
     } catch (error: any) {
       console.error('Error cancelling ride:', error);
       toast.error('Failed to cancel ride');
-    } finally {
-      setCancelling(false);
     }
   };
   const openNavigation = () => {
@@ -482,37 +464,26 @@ const ActiveRide = () => {
 
           {/* Cancel Button - available for all active statuses */}
           {['accepted', 'arriving', 'in_progress'].includes(ride.status) && (
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button
-                  variant="outline"
-                  className="w-full border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
-                  size="lg"
-                  disabled={cancelling}
-                >
-                  <XCircle className="h-4 w-4 mr-2" />
-                  {cancelling ? 'Cancelling...' : 'Cancel Ride'}
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Cancel this ride?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This will cancel the ride and notify the passenger. You will become available for new ride requests.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Keep Ride</AlertDialogCancel>
-                  <AlertDialogAction
-                    onClick={handleCancelRide}
-                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                  >
-                    Yes, Cancel Ride
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+            <Button
+              variant="outline"
+              className="w-full border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
+              size="lg"
+              onClick={() => setCancelDialogOpen(true)}
+            >
+              <XCircle className="h-4 w-4 mr-2" />
+              Cancel Ride
+            </Button>
           )}
+
+          {/* Cancellation Dialog */}
+          <CancellationDialog
+            open={cancelDialogOpen}
+            onClose={() => setCancelDialogOpen(false)}
+            onConfirm={handleCancelRide}
+            userType="driver"
+            rideStatus={ride.status}
+            fareAmount={ride.price}
+          />
         </div>
       </div>
     </Layout>
