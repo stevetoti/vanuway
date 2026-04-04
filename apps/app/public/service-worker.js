@@ -1,20 +1,18 @@
-// VanuWay Service Worker — Network-first for pages, cache-first for static assets
-const CACHE_NAME = 'vanuway-v2';
+// VanuWay Service Worker v3 — Network-first for all code, cache images/fonts only
+const CACHE_NAME = 'vanuway-v3';
 
 // Install — skip waiting immediately to activate new SW
 self.addEventListener('install', () => {
-  console.log('[SW] Installing v2...');
+  console.log('[SW] Installing v3...');
   self.skipWaiting();
 });
 
-// Activate — delete all old caches
+// Activate — delete ALL old caches to force fresh load
 self.addEventListener('activate', (event) => {
-  console.log('[SW] Activating v2...');
+  console.log('[SW] Activating v3...');
   event.waitUntil(
     caches.keys().then((names) =>
-      Promise.all(
-        names.filter((n) => n !== CACHE_NAME).map((n) => caches.delete(n))
-      )
+      Promise.all(names.map((n) => caches.delete(n)))
     ).then(() => self.clients.claim())
   );
 });
@@ -28,61 +26,37 @@ self.addEventListener('fetch', (event) => {
   if (request.method !== 'GET') return;
   if (url.origin !== self.location.origin) return;
 
-  // Skip Supabase API calls — never cache these
+  // Never cache API calls or Supabase requests
   if (url.pathname.startsWith('/rest/') || url.pathname.startsWith('/auth/')) return;
 
-  // Navigation requests (HTML pages) — NETWORK FIRST
-  if (request.mode === 'navigate') {
-    event.respondWith(
-      fetch(request)
-        .then((response) => {
-          // Cache the latest page
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
-          return response;
-        })
-        .catch(() =>
-          caches.match(request).then((cached) =>
-            cached || new Response(
-              '<html><body style="font-family:sans-serif;text-align:center;padding:40px"><h1>Offline</h1><p>Please check your internet connection.</p></body></html>',
-              { headers: { 'Content-Type': 'text/html' } }
-            )
-          )
-        )
-    );
-    return;
-  }
-
-  // Static assets (JS, CSS, images, fonts) — STALE-WHILE-REVALIDATE
-  if (
-    url.pathname.startsWith('/assets/') ||
-    url.pathname.endsWith('.js') ||
-    url.pathname.endsWith('.css') ||
+  // Only cache images and fonts — everything else goes to network
+  const isCacheable =
     url.pathname.endsWith('.png') ||
     url.pathname.endsWith('.jpg') ||
+    url.pathname.endsWith('.jpeg') ||
     url.pathname.endsWith('.svg') ||
-    url.pathname.endsWith('.woff2')
-  ) {
-    event.respondWith(
-      caches.match(request).then((cached) => {
-        const fetchPromise = fetch(request)
-          .then((response) => {
-            if (response && response.status === 200) {
-              const clone = response.clone();
-              caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
-            }
-            return response;
-          })
-          .catch(() => cached);
+    url.pathname.endsWith('.ico') ||
+    url.pathname.endsWith('.woff2') ||
+    url.pathname.endsWith('.woff');
 
-        return cached || fetchPromise;
-      })
+  if (isCacheable) {
+    // Images/fonts: cache-first
+    event.respondWith(
+      caches.match(request).then((cached) =>
+        cached || fetch(request).then((response) => {
+          if (response && response.status === 200) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+          }
+          return response;
+        })
+      )
     );
     return;
   }
 
-  // Everything else — network only
-  event.respondWith(fetch(request));
+  // Everything else (HTML, JS, CSS): network only — no caching
+  // This prevents stale chunk mismatches after deploys
 });
 
 // Message handlers
