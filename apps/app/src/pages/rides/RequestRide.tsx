@@ -239,6 +239,7 @@ export default function RequestRide() {
   const { serviceType } = useParams();
   const { user } = useAuth();
 
+  const [mapReady, setMapReady] = useState(false);
   const [step, setStep] = useState<BookingStep>('pickup');
   const [pickupLocation, setPickupLocation] = useState<Location | null>(null);
   const [dropoffLocation, setDropoffLocation] = useState<Location | null>(null);
@@ -255,6 +256,12 @@ export default function RequestRide() {
   const [searchingProgress, setSearchingProgress] = useState(0);
   const [locationSheetOpen, setLocationSheetOpen] = useState(false);
   const [activeField, setActiveField] = useState<'pickup' | 'dropoff'>('pickup');
+
+  // Delay map rendering until after mount to prevent react-leaflet initialization crash
+  useEffect(() => {
+    const timer = setTimeout(() => setMapReady(true), 100);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Route polyline
   const routePoints = useMemo(() => {
@@ -407,6 +414,11 @@ export default function RequestRide() {
 
       {/* MAP */}
       <div className="flex-1 relative" style={{ zIndex: 1 }}>
+        {!mapReady ? (
+          <div className="h-full w-full bg-gray-100 flex items-center justify-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+          </div>
+        ) : (
         <MapContainer
           center={PORT_VILA_CENTER}
           zoom={14}
@@ -457,6 +469,7 @@ export default function RequestRide() {
             </Marker>
           )}
         </MapContainer>
+        )}
 
         {/* My location button */}
         <button
