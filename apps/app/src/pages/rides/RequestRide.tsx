@@ -94,6 +94,9 @@ export default function RequestRide() {
   const [activeField, setActiveField] = useState<'pickup' | 'dropoff'>('pickup');
   const [createdRideId, setCreatedRideId] = useState<string | null>(null);
   const [isCreatingRide, setIsCreatingRide] = useState(false);
+  const [searchResults, setSearchResults] = useState<Location[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Route polyline
   const routePoints = useMemo(() => {
@@ -260,6 +263,7 @@ export default function RequestRide() {
         setMapCenter([loc.lat, loc.lng]);
         setMapZoom(16);
         setLocationSheetOpen(false);
+        setActiveField('dropoff');
         setStep('destination');
         toast.success('Location detected');
       },
@@ -269,11 +273,44 @@ export default function RequestRide() {
         setPickupLocation(loc);
         setMapCenter([loc.lat, loc.lng]);
         setLocationSheetOpen(false);
+        setActiveField('dropoff');
         setStep('destination');
         toast.info('Using default location');
       }
     );
   };
+
+  // Search places via OpenStreetMap Nominatim (free, no API key)
+  const searchPlaces = useCallback((query: string) => {
+    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+    if (!query || query.length < 2) {
+      setSearchResults([]);
+      setIsSearching(false);
+      return;
+    }
+    setIsSearching(true);
+    searchTimeoutRef.current = setTimeout(async () => {
+      try {
+        const res = await fetch(
+          `https://nominatim.openstreetmap.org/search?` +
+          `q=${encodeURIComponent(query + ', Vanuatu')}&format=json&limit=8&countrycodes=vu&addressdetails=1`,
+          { headers: { 'Accept-Language': 'en' } }
+        );
+        const data = await res.json();
+        const locations: Location[] = data.map((item: any) => ({
+          name: item.display_name.split(',')[0],
+          address: item.display_name.split(',').slice(1, 3).join(',').trim(),
+          lat: parseFloat(item.lat),
+          lng: parseFloat(item.lon),
+        }));
+        setSearchResults(locations);
+      } catch {
+        setSearchResults([]);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 400); // debounce 400ms
+  }, []);
 
   return (
     <div className="h-screen flex flex-col bg-gray-50 relative overflow-hidden">
@@ -675,58 +712,103 @@ export default function RequestRide() {
 
       {/* LOCATION SEARCH SHEET (fullscreen overlay) */}
       {locationSheetOpen && (
-        <div className="absolute inset-0 z-[2000] bg-white animate-in fade-in duration-200">
+        <div className="absolute inset-0 z-[2000] bg-white animate-in fade-in duration-200 flex flex-col">
           <div className="flex items-center gap-3 px-4 py-3 border-b">
-            <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => setLocationSheetOpen(false)}>
+            <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => { setLocationSheetOpen(false); setSearchResults([]); }}>
               <X className="h-5 w-5" />
             </Button>
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
                 autoFocus
-                placeholder={activeField === 'pickup' ? 'Search pickup location...' : 'Search destination...'}
+                placeholder={activeField === 'pickup' ? 'Search any place in Vanuatu...' : 'Search destination...'}
                 value={activeField === 'pickup' ? pickupSearch : dropoffSearch}
-                onChange={(e) => activeField === 'pickup' ? setPickupSearch(e.target.value) : setDropoffSearch(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (activeField === 'pickup') setPickupSearch(val); else setDropoffSearch(val);
+                  searchPlaces(val);
+                }}
                 className="pl-10 h-10 bg-gray-50"
               />
             </div>
           </div>
 
-          {activeField === 'pickup' && (
-            <button
-              className="flex items-center gap-3 px-4 py-4 hover:bg-gray-50 transition-colors w-full border-b"
-              onClick={() => { setLocationSheetOpen(false); getCurrentLocation(); }}
-            >
-              <div className="h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center">
-                <Locate className="h-5 w-5 text-blue-600" />
-              </div>
-              <div className="text-left">
-                <p className="font-medium">Use current location</p>
-                <p className="text-xs text-muted-foreground">GPS location</p>
-              </div>
-            </button>
-          )}
+          <div className="flex-1 overflow-y-auto">
+            {activeField === 'pickup' && (
+              <button
+                className="flex items-center gap-3 px-4 py-4 hover:bg-gray-50 transition-colors w-full border-b"
+                onClick={() => { setLocationSheetOpen(false); setSearchResults([]); getCurrentLocation(); }}
+              >
+                <div className="h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center">
+                  <Locate className="h-5 w-5 text-blue-600" />
+                </div>
+                <div className="text-left">
+                  <p className="font-medium">Use current location</p>
+                  <p className="text-xs text-muted-foreground">GPS location</p>
+                </div>
+              </button>
+            )}
 
-          <div className="p-4">
-            <p className="text-xs font-medium text-muted-foreground uppercase mb-3">Popular Places</p>
-            <div className="space-y-1">
-              {filteredLocations.map(loc => (
-                <button
-                  key={loc.id}
-                  className="flex items-center gap-3 px-3 py-3 hover:bg-gray-50 rounded-xl transition-colors w-full text-left"
-                  onClick={() => handleSelectLocation(loc)}
-                >
-                  <div className="h-10 w-10 bg-gray-100 rounded-full flex items-center justify-center text-lg">
-                    {loc.icon}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm">{loc.name}</p>
-                    <p className="text-xs text-muted-foreground truncate">{loc.address}</p>
-                  </div>
-                  <MapPin className="h-4 w-4 text-gray-300 flex-shrink-0" />
-                </button>
-              ))}
-            </div>
+            {/* Live search results from OpenStreetMap */}
+            {isSearching && (
+              <div className="flex items-center gap-2 px-4 py-3 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Searching...
+              </div>
+            )}
+
+            {searchResults.length > 0 && (
+              <div className="p-4">
+                <p className="text-xs font-medium text-muted-foreground uppercase mb-3">Search Results</p>
+                <div className="space-y-1">
+                  {searchResults.map((loc, idx) => (
+                    <button
+                      key={`search-${idx}`}
+                      className="flex items-center gap-3 px-3 py-3 hover:bg-gray-50 rounded-xl transition-colors w-full text-left"
+                      onClick={() => {
+                        const locData = { id: 100 + idx, name: loc.name, address: loc.address, lat: loc.lat, lng: loc.lng, icon: '📍' };
+                        handleSelectLocation(locData);
+                        setSearchResults([]);
+                      }}
+                    >
+                      <div className="h-10 w-10 bg-blue-50 rounded-full flex items-center justify-center">
+                        <MapPin className="h-5 w-5 text-blue-600" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm">{loc.name}</p>
+                        <p className="text-xs text-muted-foreground truncate">{loc.address}</p>
+                      </div>
+                      <ChevronRight className="h-4 w-4 text-gray-300 flex-shrink-0" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Popular places (shown when no search results) */}
+            {searchResults.length === 0 && !isSearching && (
+              <div className="p-4">
+                <p className="text-xs font-medium text-muted-foreground uppercase mb-3">Popular Places</p>
+                <div className="space-y-1">
+                  {filteredLocations.map(loc => (
+                    <button
+                      key={loc.id}
+                      className="flex items-center gap-3 px-3 py-3 hover:bg-gray-50 rounded-xl transition-colors w-full text-left"
+                      onClick={() => { handleSelectLocation(loc); setSearchResults([]); }}
+                    >
+                      <div className="h-10 w-10 bg-gray-100 rounded-full flex items-center justify-center text-lg">
+                        {loc.icon}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm">{loc.name}</p>
+                        <p className="text-xs text-muted-foreground truncate">{loc.address}</p>
+                      </div>
+                      <MapPin className="h-4 w-4 text-gray-300 flex-shrink-0" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
