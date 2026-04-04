@@ -1,10 +1,20 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PersonalInfoData } from '@/types/driver-onboarding';
 import { ArrowRight } from 'lucide-react';
+
+const VANUATU_PROVINCES = [
+  'Malampa',
+  'Penama',
+  'Sanma',
+  'Shefa',
+  'Tafea',
+  'Torba',
+];
 
 interface PersonalInfoStepProps {
   initialData?: PersonalInfoData;
@@ -26,12 +36,30 @@ export const PersonalInfoStep = ({ initialData, onNext }: PersonalInfoStepProps)
       address_line2: '',
       city: '',
       province: '',
-      postal_code: '',
     }
   );
 
+  const STORAGE_KEY = 'vanuway_driver_personal_info';
+
+  // Load saved data on mount
+  useEffect(() => {
+    if (initialData) return;
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) setFormData(JSON.parse(saved));
+    } catch {}
+  }, []);
+
+  // Auto-save on change
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(formData));
+    } catch {}
+  }, [formData]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    localStorage.removeItem(STORAGE_KEY);
     onNext(formData);
   };
 
@@ -174,7 +202,7 @@ export const PersonalInfoStep = ({ initialData, onNext }: PersonalInfoStepProps)
             }
           />
         </div>
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="city">City *</Label>
             <Input
@@ -188,24 +216,22 @@ export const PersonalInfoStep = ({ initialData, onNext }: PersonalInfoStepProps)
           </div>
           <div className="space-y-2">
             <Label htmlFor="province">Province *</Label>
-            <Input
-              id="province"
-              required
+            <Select
               value={formData.province}
-              onChange={(e) =>
-                setFormData({ ...formData, province: e.target.value })
-              }
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="postal_code">Postal Code</Label>
-            <Input
-              id="postal_code"
-              value={formData.postal_code}
-              onChange={(e) =>
-                setFormData({ ...formData, postal_code: e.target.value })
-              }
-            />
+              onValueChange={(value) => setFormData({ ...formData, province: value })}
+              required
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select province" />
+              </SelectTrigger>
+              <SelectContent>
+                {VANUATU_PROVINCES.map((province) => (
+                  <SelectItem key={province} value={province}>
+                    {province}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
       </div>

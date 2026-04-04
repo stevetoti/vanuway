@@ -100,7 +100,7 @@ const ApplicationReview = () => {
       const { data: appData, error: appError } = await supabase
         .from('driver_applications')
         .select('*')
-        .eq('id', id)
+        .eq('driver_id', id)
         .maybeSingle();
 
       if (appError) {
@@ -191,7 +191,7 @@ const ApplicationReview = () => {
           review_notes: notes,
           decision_date: new Date().toISOString(),
         })
-        .eq('id', id);
+        .eq('driver_id', id);
 
       if (appError) throw appError;
 
@@ -247,7 +247,7 @@ const ApplicationReview = () => {
           decision_date: new Date().toISOString(),
           decision_notes: notes,
         })
-        .eq('id', id);
+        .eq('driver_id', id);
 
       if (appError) throw appError;
 

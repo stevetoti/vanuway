@@ -11,7 +11,6 @@ export interface PersonalInfoData {
   address_line2?: string;
   city: string;
   province: string;
-  postal_code?: string;
 }
 
 export interface LicenseInfoData {
