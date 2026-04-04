@@ -1,21 +1,43 @@
 /**
- * VanuCar & VanuRide Services
+ * VanuWay Ride & Delivery Services
  * Central export for all ride-hailing functionality
  */
 
 // Pricing
 export {
   calculateDistance,
+  calculateRidePrice,
+  calculateRidePriceAsync,
+  calculateDeliveryPrice,
+  calculateDeliveryPriceAsync,
+  calculateDriverEarnings,
+  getDrivingDistance,
+  estimateDrivingDistance,
   estimateTravelTime,
   getSurgeMultiplier,
-  calculateRidePrice,
+  getNightMultiplier,
   formatPrice,
   getVehicleConfig,
   getAllVehicles,
+  getPassengerVehicles,
+  getVehiclesByService,
+  getCommissionRate,
+  isAirportLocation,
+  isCruiseTerminalLocation,
   VEHICLE_CONFIGS,
+  PASSENGER_VEHICLES,
+  DELIVERY_VEHICLES,
+  COMMISSION_RATES,
+  AIRPORT_SURCHARGE,
+  CRUISE_TERMINAL_SURCHARGE,
+  HANDLING_FEE_RANGE,
   type VehicleType,
+  type ServiceType,
   type VehicleConfig,
   type PriceEstimate,
+  type DeliveryPriceEstimate,
+  type EarningsBreakdown,
+  type DrivingResult,
 } from './pricing';
 
 // Driver Assignment

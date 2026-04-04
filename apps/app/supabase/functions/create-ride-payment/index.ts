@@ -75,6 +75,23 @@ serve(async (req) => {
     // Determine origin for redirect URLs
     const origin = returnUrl || req.headers.get("origin") || "https://app.vanuway.com";
 
+    // Idempotency: check if session already exists for this booking
+    if (booking.metadata?.stripe_session_id) {
+      try {
+        const existingSession = await stripe.checkout.sessions.retrieve(booking.metadata.stripe_session_id);
+        if (existingSession.status === "open") {
+          logStep("Returning existing session", { sessionId: existingSession.id });
+          return new Response(
+            JSON.stringify({ url: existingSession.url, sessionId: existingSession.id }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+          );
+        }
+      } catch {
+        // Session expired or invalid, create a new one
+        logStep("Existing session invalid, creating new one");
+      }
+    }
+
     // Create checkout session
     const session = await stripe.checkout.sessions.create({
       customer: customerId,

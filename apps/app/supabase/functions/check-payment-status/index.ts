@@ -113,48 +113,59 @@ serve(async (req) => {
         payment_status: newPaymentStatus,
       };
 
-      // If payment completed, create driver earnings record
+      // If payment completed, create driver earnings record (with idempotency check)
       if (newPaymentStatus === "completed" && booking.driver_id) {
-        // Get commission rate
-        const { data: settings } = await supabaseAdmin
-          .from("platform_settings")
-          .select("value")
-          .eq("id", "commission_rates")
-          .single();
-
-        const serviceType = booking.is_delivery ? "delivery" : (booking.service_type || "vanucar");
-        const rates = settings?.value || { vanucar: 0.18, vanuride: 0.18, delivery: 0.15 };
-        const commissionRate = rates[serviceType] || 0.18;
-        const commissionAmount = Math.round(booking.price * commissionRate);
-        const driverEarning = booking.price - commissionAmount;
-        const handlingFee = booking.delivery_handling_fee || 0;
-
-        // Update booking with commission info
-        updateData.commission_rate = commissionRate;
-        updateData.commission_amount = commissionAmount;
-        updateData.driver_earnings = driverEarning + handlingFee;
-
-        // Create earnings record
-        await supabaseAdmin
+        // Check if earnings already exist for this booking (idempotency)
+        const { data: existingEarning } = await supabaseAdmin
           .from("driver_earnings")
-          .insert({
-            driver_id: booking.driver_id,
-            booking_id: booking.id,
-            service_type: serviceType,
-            total_fare: booking.price,
-            commission_percentage: commissionRate * 100,
-            platform_commission: commissionAmount,
-            driver_earning: driverEarning,
-            bonus_amount: handlingFee,
-            bonus_reason: handlingFee > 0 ? "Delivery handling fee" : null,
-            net_earning: driverEarning + handlingFee,
-            payment_status: "pending",
-          });
+          .select("id")
+          .eq("booking_id", booking.id)
+          .maybeSingle();
 
-        logStep("Driver earnings created", { 
-          driverId: booking.driver_id, 
-          earnings: driverEarning + handlingFee 
-        });
+        if (!existingEarning) {
+          // Get commission rate
+          const { data: settings } = await supabaseAdmin
+            .from("platform_settings")
+            .select("value")
+            .eq("id", "commission_rates")
+            .single();
+
+          const serviceType = booking.is_delivery ? "delivery" : (booking.service_type || "vanucar");
+          const rates = settings?.value || { vanucar: 0.20, delivery: 0.20 };
+          const commissionRate = rates[serviceType] || 0.20;
+          const commissionAmount = Math.round(booking.price * commissionRate);
+          const driverEarning = booking.price - commissionAmount;
+          const handlingFee = booking.delivery_handling_fee || 0;
+
+          // Update booking with commission info
+          updateData.commission_rate = commissionRate;
+          updateData.commission_amount = commissionAmount;
+          updateData.driver_earnings = driverEarning + handlingFee;
+
+          // Create earnings record
+          await supabaseAdmin
+            .from("driver_earnings")
+            .insert({
+              driver_id: booking.driver_id,
+              booking_id: booking.id,
+              service_type: serviceType,
+              total_fare: booking.price,
+              commission_percentage: commissionRate * 100,
+              platform_commission: commissionAmount,
+              driver_earning: driverEarning,
+              bonus_amount: handlingFee,
+              bonus_reason: handlingFee > 0 ? "Delivery handling fee" : null,
+              net_earning: driverEarning + handlingFee,
+              payment_status: "pending",
+            });
+
+          logStep("Driver earnings created", {
+            driverId: booking.driver_id,
+            earnings: driverEarning + handlingFee
+          });
+        } else {
+          logStep("Driver earnings already exist, skipping", { bookingId: booking.id });
+        }
       }
 
       await supabaseAdmin

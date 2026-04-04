@@ -2,21 +2,8 @@ import { useEffect, useState, useCallback } from 'react';
 import { toast } from 'sonner';
 
 export const usePWA = () => {
-  // Safety check for React hooks (prevents HMR crashes)
-  if (!useState || !useEffect) {
-    console.warn('[PWA] React hooks not available, skipping PWA initialization');
-    return {
-      registration: null,
-      isOnline: true,
-      updateAvailable: false,
-      updateServiceWorker: () => {},
-      clearCache: async () => {},
-      checkForUpdates: async () => {},
-    };
-  }
-
   const [registration, setRegistration] = useState<ServiceWorkerRegistration | null>(null);
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
   const [updateAvailable, setUpdateAvailable] = useState(false);
 
   const updateServiceWorker = useCallback(() => {
@@ -31,20 +18,20 @@ export const usePWA = () => {
 
   const registerServiceWorker = useCallback(async () => {
     try {
+      if (!('serviceWorker' in navigator)) return;
+
       const reg = await navigator.serviceWorker.register('/service-worker.js', {
         scope: '/',
       });
 
       setRegistration(reg);
 
-      // Check for updates
       reg.addEventListener('updatefound', () => {
         const newWorker = reg.installing;
 
         if (newWorker) {
           newWorker.addEventListener('statechange', () => {
             if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-              // New version available
               setUpdateAvailable(true);
               toast.info('A new version is available!', {
                 action: {
@@ -60,17 +47,14 @@ export const usePWA = () => {
 
       console.log('[PWA] Service Worker registered successfully');
     } catch (error) {
-      console.error('[PWA] Service Worker registration failed:', error);
+      // Service worker registration fails silently — not critical for app function
+      console.warn('[PWA] Service Worker registration failed:', error);
     }
   }, [updateServiceWorker]);
 
   useEffect(() => {
-    // Register service worker
-    if ('serviceWorker' in navigator) {
-      registerServiceWorker();
-    }
+    registerServiceWorker();
 
-    // Listen for online/offline events
     const handleOnline = () => {
       setIsOnline(true);
       toast.success('You are back online!');
@@ -105,7 +89,7 @@ export const usePWA = () => {
           }
         };
 
-        registration.active.postMessage(
+        registration.active!.postMessage(
           { type: 'CLEAR_CACHE' },
           [messageChannel.port2]
         );

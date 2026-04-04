@@ -156,12 +156,7 @@ const queryClient = new QueryClient({
 });
 
 const AppContent = () => {
-  // Initialize PWA functionality (wrapped in try-catch to prevent HMR crashes)
-  try {
-    usePWA();
-  } catch (error) {
-    console.error('[App] PWA initialization failed (this is usually a hot-reload issue):', error);
-  }
+  usePWA();
 
   return (
     <BrowserRouter>

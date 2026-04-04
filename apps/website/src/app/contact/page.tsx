@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { submitContactForm } from "./actions";
 
 const contactReasons = [
   "General Inquiry",
@@ -37,10 +38,23 @@ const contactInfo = [
 
 export default function ContactPage() {
   const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setSubmitted(true);
+    setError(null);
+    setSubmitting(true);
+
+    const formData = new FormData(e.currentTarget);
+    const result = await submitContactForm(formData);
+
+    setSubmitting(false);
+    if (result.success) {
+      setSubmitted(true);
+    } else {
+      setError(result.error || "Something went wrong. Please try again.");
+    }
   };
 
   return (
@@ -133,6 +147,7 @@ export default function ContactPage() {
                         </label>
                         <input
                           type="text"
+                          name="name"
                           required
                           className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-vibrant-orange focus:border-vibrant-orange outline-none transition-colors text-sm"
                           placeholder="Your name"
@@ -144,6 +159,7 @@ export default function ContactPage() {
                         </label>
                         <input
                           type="email"
+                          name="email"
                           required
                           className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-vibrant-orange focus:border-vibrant-orange outline-none transition-colors text-sm"
                           placeholder="you@example.com"
@@ -157,6 +173,7 @@ export default function ContactPage() {
                       </label>
                       <input
                         type="tel"
+                        name="phone"
                         className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-vibrant-orange focus:border-vibrant-orange outline-none transition-colors text-sm"
                         placeholder="+678 XXXX XXX"
                       />
@@ -167,6 +184,7 @@ export default function ContactPage() {
                         Reason for Contact *
                       </label>
                       <select
+                        name="reason"
                         required
                         className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-vibrant-orange focus:border-vibrant-orange outline-none transition-colors text-sm bg-white"
                       >
@@ -184,6 +202,7 @@ export default function ContactPage() {
                         Message *
                       </label>
                       <textarea
+                        name="message"
                         required
                         rows={5}
                         className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-vibrant-orange focus:border-vibrant-orange outline-none transition-colors text-sm resize-none"
@@ -191,11 +210,19 @@ export default function ContactPage() {
                       />
                     </div>
 
-                    <button type="submit" className="btn-primary w-full sm:w-auto">
-                      Send Message
-                      <svg className="ml-2 w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                      </svg>
+                    {error && <p className="text-red-600 text-sm">{error}</p>}
+
+                    <button
+                      type="submit"
+                      disabled={submitting}
+                      className="btn-primary w-full sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {submitting ? "Sending..." : "Send Message"}
+                      {!submitting && (
+                        <svg className="ml-2 w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                        </svg>
+                      )}
                     </button>
                   </form>
                 )}

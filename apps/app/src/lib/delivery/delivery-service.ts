@@ -26,7 +26,7 @@ export interface DeliveryRequest {
   packageDescription: string;
   recipientName: string;
   recipientPhone: string;
-  vehicleType: 'moto' | 'bike';
+  vehicleType: 'moto';
   paymentMethodId?: string;
   paymentMethodType: string;
 }
@@ -47,38 +47,61 @@ export interface DeliveryDriver {
  */
 export const getAvailableDeliveryDrivers = async (
   location: { lat: number; lng: number },
-  vehicleType?: 'moto' | 'bike',
+  vehicleType?: 'moto',
   radiusKm: number = 5
 ): Promise<DeliveryDriver[]> => {
   try {
-    let query = supabase
+    // Build driver filter
+    let driverQuery = supabase
       .from('drivers')
-      .select('id, first_name, last_name, vehicle_type, average_rating, delivery_handling_fee, accepts_deliveries, current_lat, current_lng')
+      .select('id, first_name, last_name, vehicle_type, average_rating, delivery_handling_fee, accepts_deliveries')
       .eq('is_online', true)
       .eq('is_available', true)
       .eq('application_status', 'approved')
       .eq('accepts_deliveries', true);
 
     if (vehicleType) {
-      query = query.eq('vehicle_type', vehicleType);
+      driverQuery = driverQuery.eq('vehicle_type', vehicleType);
     } else {
-      query = query.in('vehicle_type', ['moto', 'bike']);
+      driverQuery = driverQuery.eq('vehicle_type', 'moto');
     }
 
-    const { data, error } = await query;
+    const { data: drivers, error: driverError } = await driverQuery;
+    if (driverError) throw driverError;
+    if (!drivers || drivers.length === 0) return [];
 
-    if (error) throw error;
+    // Get latest location for each driver from driver_locations
+    const driverIds = drivers.map(d => d.id);
+    const { data: locations, error: locError } = await supabase
+      .from('driver_locations')
+      .select('driver_id, latitude, longitude, recorded_at')
+      .in('driver_id', driverIds)
+      .order('recorded_at', { ascending: false });
+
+    if (locError) throw locError;
+
+    // Build a map of latest location per driver
+    const latestLocations = new Map<string, { latitude: number; longitude: number }>();
+    for (const loc of locations || []) {
+      if (!latestLocations.has(loc.driver_id)) {
+        latestLocations.set(loc.driver_id, {
+          latitude: loc.latitude,
+          longitude: loc.longitude,
+        });
+      }
+    }
 
     // Filter by distance and sort
-    const driversWithDistance = (data || [])
+    const driversWithDistance = drivers
       .map(driver => {
-        if (!driver.current_lat || !driver.current_lng) return null;
-        
+        const loc = latestLocations.get(driver.id);
+        if (!loc) return null;
+
         const distance = calculateHaversineDistance(
           location.lat,
           location.lng,
-          driver.current_lat,
-          driver.current_lng
+          loc.latitude,
+          loc.longitude
         );
 
         if (distance > radiusKm) return null;
@@ -240,13 +263,12 @@ export const toggleDriverDeliveryAcceptance = async (
 export const getDeliveryPriceEstimate = (
   pickup: { lat: number; lng: number; address?: string },
   dropoff: { lat: number; lng: number; address?: string },
-  vehicleType: 'moto' | 'bike',
   driverHandlingFee?: number
 ): DeliveryPriceEstimate => {
   return calculateDeliveryPrice(
     pickup,
     dropoff,
-    vehicleType,
+    'moto',
     driverHandlingFee || HANDLING_FEE_RANGE.default
   );
 };

@@ -63,18 +63,42 @@ serve(async (req) => {
         .update({ status: "processing", processed_at: new Date().toISOString() })
         .eq("id", payoutId);
 
-      // For now, we mark as completed since actual bank/mobile money transfer
-      // would require integration with local payment providers
-      // In production, integrate with Digicel My CASH, Vodafone M-Vatu, or local banks
-      
-      await supabaseAdmin
-        .from("driver_payouts")
-        .update({ 
-          status: "completed", 
-          completed_at: new Date().toISOString(),
-          notes: "Payout processed successfully. Manual bank transfer initiated."
-        })
-        .eq("id", payoutId);
+      // Determine payout method and process accordingly
+      const driver = payout.drivers;
+      const payoutMethod = payout.payment_method;
+
+      if (payoutMethod === "mobile_money" && driver?.mobile_money_number) {
+        // TODO: Integrate with Digicel My CASH or Vodafone M-Vatu API
+        // For now, mark as awaiting_transfer so admin can process manually
+        await supabaseAdmin
+          .from("driver_payouts")
+          .update({
+            status: "awaiting_transfer",
+            completed_at: new Date().toISOString(),
+            notes: `Mobile money transfer pending to ${driver.mobile_money_provider}: ${driver.mobile_money_number}. Amount: ${payout.net_payout} VUV. Admin must process manually until mobile money API is integrated.`,
+          })
+          .eq("id", payoutId);
+      } else if (payoutMethod === "bank_transfer" && driver?.bank_account_number) {
+        // TODO: Integrate with local bank transfer API
+        await supabaseAdmin
+          .from("driver_payouts")
+          .update({
+            status: "awaiting_transfer",
+            completed_at: new Date().toISOString(),
+            notes: `Bank transfer pending to account ${driver.bank_account_number}. Amount: ${payout.net_payout} VUV. Admin must process manually until bank API is integrated.`,
+          })
+          .eq("id", payoutId);
+      } else {
+        // Manual payout — admin handles cash or other method
+        await supabaseAdmin
+          .from("driver_payouts")
+          .update({
+            status: "awaiting_transfer",
+            completed_at: new Date().toISOString(),
+            notes: `Manual payout required. Amount: ${payout.net_payout} VUV. No digital payment method on file.`,
+          })
+          .eq("id", payoutId);
+      }
 
       // Update related earnings as paid
       await supabaseAdmin

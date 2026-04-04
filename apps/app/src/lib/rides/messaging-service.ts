@@ -1,24 +1,9 @@
 /**
- * DISABLED: Ride messaging service
- * The ride_messages table does not exist in the current database schema.
- * This functionality needs to be set up via a migration before it can be used.
- * 
- * To enable:
- * 1. Create ride_messages table via Supabase migration
- * 2. Update this file with proper implementation
- * 3. Update imports in components that use this service
+ * Ride messaging service
+ * Provides in-ride messaging between drivers and passengers
  */
 
 import { supabase } from '@/integrations/supabase/client';
-
-// Only show warning once per session
-let messagingWarningShown = false;
-const logWarning = () => {
-  if (!messagingWarningShown) {
-    console.log('Ride messaging is disabled. Table ride_messages does not exist.');
-    messagingWarningShown = true;
-  }
-};
 
 export interface RideMessage {
   id: string;
@@ -64,51 +49,128 @@ export const PASSENGER_QUICK_MESSAGES = [
 ];
 
 /**
- * Send a message for a ride - DISABLED
+ * Send a message for a ride
  */
 export const sendRideMessage = async (params: SendMessageParams) => {
-  logWarning();
-  return { success: false, error: 'Ride messaging feature is not yet available' };
+  try {
+    const { data, error } = await supabase
+      .from('ride_messages')
+      .insert({
+        ride_id: params.rideId,
+        sender_id: params.senderId,
+        sender_type: params.senderType,
+        message: params.message,
+        is_template: params.isTemplate || false,
+        is_read: false,
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return { success: true, data: data as RideMessage };
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Failed to send message';
+    console.error('Error sending ride message:', error);
+    return { success: false, error: message };
+  }
 };
 
 /**
- * Get all messages for a ride - DISABLED
+ * Get all messages for a ride
  */
 export const getRideMessages = async (rideId: string) => {
-  logWarning();
-  return { success: false, error: 'Ride messaging feature is not yet available', data: [] };
+  try {
+    const { data, error } = await supabase
+      .from('ride_messages')
+      .select('*')
+      .eq('ride_id', rideId)
+      .order('created_at', { ascending: true });
+
+    if (error) throw error;
+
+    return { success: true, data: (data || []) as RideMessage[] };
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Failed to fetch messages';
+    console.error('Error fetching ride messages:', error);
+    return { success: false, error: message, data: [] };
+  }
 };
 
 /**
- * Mark messages as read - DISABLED
+ * Mark messages as read
  */
 export const markMessagesAsRead = async (rideId: string, userId: string) => {
-  logWarning();
-  return { success: false, error: 'Ride messaging feature is not yet available' };
+  try {
+    const { error } = await supabase
+      .from('ride_messages')
+      .update({ is_read: true })
+      .eq('ride_id', rideId)
+      .neq('sender_id', userId)
+      .eq('is_read', false);
+
+    if (error) throw error;
+
+    return { success: true };
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Failed to mark messages as read';
+    console.error('Error marking messages as read:', error);
+    return { success: false, error: message };
+  }
 };
 
 /**
- * Get unread message count for a ride - DISABLED
+ * Get unread message count for a ride
  */
 export const getUnreadCount = async (rideId: string, userId: string) => {
-  logWarning();
-  return { success: false, count: 0 };
+  try {
+    const { count, error } = await supabase
+      .from('ride_messages')
+      .select('*', { count: 'exact', head: true })
+      .eq('ride_id', rideId)
+      .neq('sender_id', userId)
+      .eq('is_read', false);
+
+    if (error) throw error;
+
+    return { success: true, count: count || 0 };
+  } catch (error: unknown) {
+    console.error('Error getting unread count:', error);
+    return { success: false, count: 0 };
+  }
 };
 
 /**
- * Subscribe to real-time messages for a ride - DISABLED
+ * Subscribe to real-time messages for a ride
  */
 export const subscribeToRideMessages = (
   rideId: string,
   onMessage: (message: RideMessage) => void
 ) => {
-  logWarning();
-  return null;
+  const channel = supabase
+    .channel(`ride-messages-${rideId}`)
+    .on(
+      'postgres_changes',
+      {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'ride_messages',
+        filter: `ride_id=eq.${rideId}`,
+      },
+      (payload) => {
+        onMessage(payload.new as RideMessage);
+      }
+    )
+    .subscribe();
+
+  return channel;
 };
 
 /**
- * Unsubscribe from ride messages - DISABLED
+ * Unsubscribe from ride messages
  */
-export const unsubscribeFromRideMessages = (channel: any) => {
-  // No warning needed for unsubscribe
+export const unsubscribeFromRideMessages = (channel: ReturnType<typeof supabase.channel> | null) => {
+  if (channel) {
+    supabase.removeChannel(channel);
+  }
 };

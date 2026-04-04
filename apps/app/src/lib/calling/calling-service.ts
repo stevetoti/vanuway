@@ -249,7 +249,7 @@ export const getOrCreateMaskedNumber = async (params: {
         .from('phone_masking')
         .insert({
           user_id: params.userId,
-          real_phone_number: 'private', // Phone privacy: not storing real numbers
+          real_phone_number: profile?.phone_number || 'unknown',
           masked_number: fallbackMasked,
           masked_number_provider: 'internal',
           booking_id: params.bookingId,
@@ -297,7 +297,7 @@ export const getOrCreateMaskedNumber = async (params: {
       .from('phone_masking')
       .insert({
         user_id: params.userId,
-        real_phone_number: 'private', // Phone privacy: not storing real numbers
+        real_phone_number: profile?.phone_number || 'unknown',
         masked_number: availableNumber.phone_number,
         masked_number_provider: availableNumber.provider,
         booking_id: params.bookingId,

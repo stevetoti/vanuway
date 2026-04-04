@@ -57,7 +57,7 @@ const handler = async (req: Request): Promise<Response> => {
             </div>
 
             <div style="background: #fef3c7; border-radius: 8px; padding: 15px; margin: 20px 0;">
-              <p style="margin: 0;"><strong>💰 Earnings:</strong> You keep 82% of every fare. Payments are processed weekly.</p>
+              <p style="margin: 0;"><strong>💰 Earnings:</strong> You keep 80% of every fare. Payments are processed weekly.</p>
             </div>
 
             <div style="text-align: center; margin: 30px 0;">

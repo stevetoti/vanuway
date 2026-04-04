@@ -27,7 +27,7 @@ export interface CreateRideRequest {
   vehicleType: VehicleType;
   passengerCount: number;
   priceEstimate: PriceEstimate;
-  serviceType: 'vanucar' | 'vanuride';
+  serviceType: 'vanucar';
   paymentMethodId?: string;
   paymentMethodType?: string;
   category?: 'regular' | 'airport' | 'scheduled';
@@ -235,33 +235,19 @@ export const cancelRide = async (
 
     if (updateError) throw updateError;
 
-    // If driver was assigned, make them available (try user_id first, then id as fallback)
+    // If driver was assigned, make them available
+    // ride.driver_id stores drivers.user_id (auth.users.id)
     if (ride.driver_id) {
-      // Try new pattern: driver_id = auth.users.id
-      const { data: updated } = await supabase
+      await supabase
         .from('drivers')
         .update({
           status: 'available',
           is_available: true,
           current_ride_id: null,
         })
-        .eq('user_id', ride.driver_id)
-        .select('id')
-        .maybeSingle();
+        .eq('user_id', ride.driver_id);
 
-      // Fallback: old pattern where driver_id = drivers.id
-      if (!updated) {
-        await supabase
-          .from('drivers')
-          .update({
-            status: 'available',
-            is_available: true,
-            current_ride_id: null,
-          })
-          .eq('id', ride.driver_id);
-      }
-
-      // Notify driver (driver_id is auth.users.id, which is correct for notifications)
+      // Notify driver
       await supabase.from('notifications').insert({
         user_id: ride.driver_id,
         title: 'Ride Cancelled',
@@ -330,7 +316,7 @@ export const rateRide = async (
     if (updateError) throw updateError;
 
     // Update driver's average rating
-    // Note: ride.driver_id is auth.users.id, lookup driver by user_id
+    // ride.driver_id stores drivers.user_id (auth.users.id)
     if (ride.driver_id) {
       const { data: driverRides } = await supabase
         .from('ride_bookings')
@@ -343,21 +329,10 @@ export const rateRide = async (
           driverRides.reduce((sum, r) => sum + (r.rating || 0), 0) /
           driverRides.length;
 
-        // Try new pattern: driver_id = auth.users.id
-        const { data: updated } = await supabase
+        await supabase
           .from('drivers')
           .update({ rating: parseFloat(avgRating.toFixed(2)) })
-          .eq('user_id', ride.driver_id)
-          .select('id')
-          .maybeSingle();
-
-        // Fallback: old pattern
-        if (!updated) {
-          await supabase
-            .from('drivers')
-            .update({ rating: parseFloat(avgRating.toFixed(2)) })
-            .eq('id', ride.driver_id);
-        }
+          .eq('user_id', ride.driver_id);
       }
     }
 

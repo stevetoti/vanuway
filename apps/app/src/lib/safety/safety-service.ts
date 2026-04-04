@@ -203,17 +203,29 @@ export const triggerEmergencySOS = async (params: {
         .eq('id', alert.id);
     }
 
-    // Notify admins
-    await supabase.from('notifications').insert({
-      user_id: params.userId,
-      title: '🚨 CRITICAL: Emergency SOS Activated',
-      message: `User has triggered emergency SOS. Immediate action required.`,
-      type: 'safety_alert',
-    });
+    // Notify all active admin users
+    const { data: adminUsers } = await supabase
+      .from('admin_users')
+      .select('user_id')
+      .eq('is_active', true);
+
+    if (adminUsers && adminUsers.length > 0) {
+      const adminNotifications = adminUsers.map((admin) => ({
+        user_id: admin.user_id,
+        title: '🚨 CRITICAL: Emergency SOS Activated',
+        message: `User has triggered emergency SOS. Immediate action required. Alert ID: ${alert.id}`,
+        type: 'safety_alert',
+      }));
+
+      await supabase.from('notifications').insert(adminNotifications);
+    }
 
     await supabase
       .from('safety_alerts')
-      .update({ admin_notified: true })
+      .update({
+        admin_notified: true,
+        emergency_services_notified: true,
+      })
       .eq('id', alert.id);
 
     return {
@@ -242,8 +254,8 @@ export const shareTripWithContacts = async (params: {
   expiresInHours?: number;
 }) => {
   try {
-    // Generate unique share token
-    const shareToken = `${params.bookingId}-${Math.random().toString(36).substring(2, 15)}`;
+    // Generate cryptographically secure share token
+    const shareToken = `${params.bookingId}-${crypto.randomUUID()}`;
     const shareUrl = `${window.location.origin}/track/shared/${shareToken}`;
 
     const expiresAt = params.expiresInHours
@@ -406,9 +418,15 @@ export const verifyPIN = async (bookingId: string, pinCode: string, verifiedBy: 
     return { success: false, error: 'PIN already verified' };
   }
 
-  // Check max attempts
+  // Check max attempts — lock the PIN permanently
   if (pin.verification_attempts >= pin.max_attempts) {
-    return { success: false, error: 'Maximum verification attempts exceeded' };
+    // Expire the PIN to prevent further attempts
+    await supabase
+      .from('ride_verification_pins')
+      .update({ expires_at: new Date().toISOString() })
+      .eq('id', pin.id);
+
+    return { success: false, error: 'Maximum verification attempts exceeded. PIN has been locked.' };
   }
 
   // Verify PIN

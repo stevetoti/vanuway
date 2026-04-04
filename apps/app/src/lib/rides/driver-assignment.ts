@@ -9,7 +9,7 @@ import { calculateDistance } from './pricing';
 export interface Driver {
   id: string;
   userId: string;
-  vehicleType: 'car' | 'moto';
+  vehicleType: 'car' | 'suv' | 'van' | 'wheelchair_van' | 'moto';
   currentLat: number | null;
   currentLng: number | null;
   status: 'available' | 'busy' | 'offline';
@@ -31,14 +31,23 @@ export interface RideRequest {
  */
 const mapVehicleType = (rideVehicleType: string): string => {
   const mapping: Record<string, string> = {
+    car: 'car',
     economy: 'car',
     comfort: 'car',
-    luxury: 'car',
+    standard: 'car',
+    sedan: 'car',
+    suv: 'suv',
+    luxury: 'suv',
+    premium: 'suv',
+    van: 'van',
+    minivan: 'van',
+    wheelchair_van: 'wheelchair_van',
     moto: 'moto',
-    bike: 'moto',
-    car: 'car',
+    // Legacy mappings
+    VanuCar: 'car',
+    VanuRide: 'moto',
   };
-  return mapping[rideVehicleType.toLowerCase()] || 'car';
+  return mapping[rideVehicleType] || mapping[rideVehicleType.toLowerCase()] || 'car';
 };
 
 /**
@@ -290,31 +299,16 @@ export const completeRide = async (
 
     if (updateError) throw updateError;
 
-    // Make driver available again (try user_id first, then id as fallback)
+    // Make driver available again (driver_id = auth.users.id)
     if (ride.driver_id) {
-      // Try new pattern: driver_id = auth.users.id
-      const { data: updated } = await supabase
+      await supabase
         .from('drivers')
         .update({
           status: 'available',
           is_available: true,
           current_ride_id: null,
         })
-        .eq('user_id', ride.driver_id)
-        .select('id')
-        .maybeSingle();
-
-      // Fallback: old pattern where driver_id = drivers.id
-      if (!updated) {
-        await supabase
-          .from('drivers')
-          .update({
-            status: 'available',
-            is_available: true,
-            current_ride_id: null,
-          })
-          .eq('id', ride.driver_id);
-      }
+        .eq('user_id', ride.driver_id);
     }
 
     return true;
@@ -326,7 +320,6 @@ export const completeRide = async (
 
 /**
  * Cancel a ride
- * Note: ride.driver_id is auth.users.id, so we need to lookup driver by user_id
  */
 export const cancelRide = async (
   rideId: string,
@@ -341,7 +334,6 @@ export const cancelRide = async (
 
     if (rideError || !ride) throw rideError;
 
-    // Update ride status
     const { error: updateError } = await supabase
       .from('ride_bookings')
       .update({
@@ -352,31 +344,16 @@ export const cancelRide = async (
 
     if (updateError) throw updateError;
 
-    // If driver was assigned, make them available (try user_id first, then id as fallback)
+    // Make driver available (driver_id = auth.users.id)
     if (ride.driver_id) {
-      // Try new pattern: driver_id = auth.users.id
-      const { data: updated } = await supabase
+      await supabase
         .from('drivers')
         .update({
           status: 'available',
           is_available: true,
           current_ride_id: null,
         })
-        .eq('user_id', ride.driver_id)
-        .select('id')
-        .maybeSingle();
-
-      // Fallback: old pattern where driver_id = drivers.id
-      if (!updated) {
-        await supabase
-          .from('drivers')
-          .update({
-            status: 'available',
-            is_available: true,
-            current_ride_id: null,
-          })
-          .eq('id', ride.driver_id);
-      }
+        .eq('user_id', ride.driver_id);
     }
 
     return true;

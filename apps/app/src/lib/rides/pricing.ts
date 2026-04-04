@@ -1,125 +1,55 @@
 /**
- * VanuCar & VanuRide Pricing Service
- * Handles fare calculations for ride-hailing and delivery services
+ * VanuWay Pricing Engine (Production)
+ *
+ * - Passenger rides: Car, SUV, Van, Wheelchair Van
+ * - Delivery only: Moto
+ * - Uses Google Maps Distance Matrix for actual driving distance/duration
+ * - Falls back to Haversine with road correction factor if Google unavailable
+ * - All fares rounded to nearest 50 VUV
  */
 
-export type VehicleType = 'car' | 'moto' | 'suv' | 'van' | 'wheelchair_van' | 'bike';
-export type ServiceType = 'vanucar' | 'vanuride' | 'delivery';
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
 
-// Platform commission rates (18% for rides, 15% for delivery)
-export const COMMISSION_RATES: Record<ServiceType, number> = {
-  vanucar: 0.18,
-  vanuride: 0.18,
-  delivery: 0.15,
-};
+/** Passenger vehicle types + delivery-only moto */
+export type VehicleType = 'car' | 'suv' | 'van' | 'wheelchair_van' | 'moto';
+
+export type ServiceType = 'vanucar' | 'delivery';
 
 export interface VehicleConfig {
   type: VehicleType;
   name: string;
-  basePrice: number;
-  pricePerKm: number;
-  pricePerMinute: number;
-  surgePricing?: {
-    enabled: boolean;
-    multiplier: number;
-  };
+  basePrice: number;       // VUV
+  pricePerKm: number;      // VUV
+  pricePerMinute: number;  // VUV
+  minimumFare: number;     // VUV
   capacity: number;
   wheelchairAccessible?: boolean;
-  description?: string;
-  supportsDelivery?: boolean;
+  description: string;
+  /** If true this vehicle is only available for delivery, not passenger rides */
+  deliveryOnly?: boolean;
 }
-
-// Vehicle categorization by service type
-export const VANUCAR_VEHICLES: VehicleType[] = ['car', 'suv', 'van', 'wheelchair_van'];
-export const VANURIDE_VEHICLES: VehicleType[] = ['moto', 'bike'];
-export const DELIVERY_VEHICLES: VehicleType[] = ['moto', 'bike'];
-
-// Airport-specific pricing
-export const AIRPORT_SURCHARGE = 500; // VUV - flat airport fee
-export const AIRPORT_LOCATIONS = [
-  'bauerfield',
-  'airport',
-  'international airport',
-];
-
-// Handling fee range for delivery drivers
-export const HANDLING_FEE_RANGE = {
-  min: 100,
-  max: 1000,
-  default: 200,
-  currency: 'VUV',
-};
-
-export const VEHICLE_CONFIGS: Record<VehicleType, VehicleConfig> = {
-  moto: {
-    type: 'moto',
-    name: 'VanuRide (Bike)',
-    basePrice: 300, // VUV
-    pricePerKm: 30,
-    pricePerMinute: 7,
-    capacity: 1,
-    description: 'Quick and affordable motorcycle rides',
-    supportsDelivery: true,
-  },
-  car: {
-    type: 'car',
-    name: 'VanuCar (Standard)',
-    basePrice: 500, // VUV
-    pricePerKm: 50,
-    pricePerMinute: 10,
-    capacity: 4,
-    description: 'Comfortable sedan for up to 4 passengers',
-  },
-  suv: {
-    type: 'suv',
-    name: 'VanuCar (SUV)',
-    basePrice: 700, // VUV
-    pricePerKm: 70,
-    pricePerMinute: 12,
-    capacity: 6,
-    description: 'Spacious SUV for larger groups',
-  },
-  van: {
-    type: 'van',
-    name: 'VanuCar (Van)',
-    basePrice: 900, // VUV
-    pricePerKm: 90,
-    pricePerMinute: 15,
-    capacity: 8,
-    description: 'Large van for groups or extra luggage',
-  },
-  bike: {
-    type: 'bike',
-    name: 'VanuRide (Bicycle)',
-    basePrice: 150, // VUV
-    pricePerKm: 20,
-    pricePerMinute: 5,
-    capacity: 1,
-    description: 'Eco-friendly bicycle rides for short distances',
-    supportsDelivery: true,
-  },
-  wheelchair_van: {
-    type: 'wheelchair_van',
-    name: 'VanuAccess (Wheelchair Van)',
-    basePrice: 1000, // VUV
-    pricePerKm: 100,
-    pricePerMinute: 15,
-    capacity: 4,
-    wheelchairAccessible: true,
-    description: 'Wheelchair-accessible van with ramp/lift',
-  },
-};
 
 export interface PriceEstimate {
   basePrice: number;
   distancePrice: number;
   timePrice: number;
-  surgePrice: number;
-  airportSurcharge: number;
+  nightSurcharge: number;
+  locationSurcharge: number;
+  locationSurchargeLabel: string | null;
   totalPrice: number;
-  distance: number; // km
-  estimatedTime: number; // minutes
+  distance: number;          // km (actual driving distance)
+  estimatedTime: number;     // minutes (actual driving time)
   vehicleType: VehicleType;
+  usedGoogleMaps: boolean;
+}
+
+export interface DeliveryPriceEstimate extends PriceEstimate {
+  handlingFee: number;
+  isDelivery: true;
+  commissionRate: number;
+  driverEarnings: number;
 }
 
 export interface EarningsBreakdown {
@@ -131,21 +61,218 @@ export interface EarningsBreakdown {
   totalDriverEarnings: number;
 }
 
-export interface DeliveryPriceEstimate extends PriceEstimate {
-  handlingFee: number;
-  isDelivery: true;
-  commissionRate: number;
-  driverEarnings: number;
+// ---------------------------------------------------------------------------
+// Commission Rates (single source of truth)
+// ---------------------------------------------------------------------------
+
+/** 20% platform commission across all vendors */
+export const PLATFORM_COMMISSION = 0.20;
+
+export const COMMISSION_RATES: Record<ServiceType, number> = {
+  vanucar: PLATFORM_COMMISSION,
+  delivery: PLATFORM_COMMISSION,
+};
+
+// ---------------------------------------------------------------------------
+// Vehicle Configurations
+// ---------------------------------------------------------------------------
+
+/** Passenger ride vehicles */
+export const PASSENGER_VEHICLES: VehicleType[] = ['car', 'suv', 'van', 'wheelchair_van'];
+
+/** Delivery-only vehicles */
+export const DELIVERY_VEHICLES: VehicleType[] = ['moto'];
+
+export const VEHICLE_CONFIGS: Record<VehicleType, VehicleConfig> = {
+  car: {
+    type: 'car',
+    name: 'VanuCar Standard',
+    basePrice: 500,
+    pricePerKm: 60,
+    pricePerMinute: 12,
+    minimumFare: 600,
+    capacity: 4,
+    description: 'Comfortable sedan for up to 4 passengers',
+  },
+  suv: {
+    type: 'suv',
+    name: 'VanuCar SUV',
+    basePrice: 700,
+    pricePerKm: 80,
+    pricePerMinute: 15,
+    minimumFare: 800,
+    capacity: 6,
+    description: 'Spacious SUV for larger groups',
+  },
+  van: {
+    type: 'van',
+    name: 'VanuCar Van',
+    basePrice: 900,
+    pricePerKm: 100,
+    pricePerMinute: 18,
+    minimumFare: 1000,
+    capacity: 8,
+    description: 'Large van for groups or extra luggage',
+  },
+  wheelchair_van: {
+    type: 'wheelchair_van',
+    name: 'VanuAccess',
+    basePrice: 800,
+    pricePerKm: 80,
+    pricePerMinute: 15,
+    minimumFare: 900,
+    capacity: 4,
+    wheelchairAccessible: true,
+    description: 'Wheelchair-accessible van with ramp/lift',
+  },
+  moto: {
+    type: 'moto',
+    name: 'VanuRide Moto',
+    basePrice: 300,
+    pricePerKm: 40,
+    pricePerMinute: 8,
+    minimumFare: 400,
+    capacity: 0,        // delivery only, no passengers
+    description: 'Motorcycle courier for deliveries',
+    deliveryOnly: true,
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Location Surcharges
+// ---------------------------------------------------------------------------
+
+export const AIRPORT_SURCHARGE = 3500; // VUV (current taxi airport fare is ~3000)
+export const CRUISE_TERMINAL_SURCHARGE = 2500; // VUV
+
+const AIRPORT_KEYWORDS = ['bauerfield', 'airport', 'international airport', 'aéroport'];
+const CRUISE_KEYWORDS = ['cruise', 'cruise terminal', 'cruise ship', 'wharf', 'star wharf', 'port vila wharf'];
+
+export const isAirportLocation = (location: string): boolean => {
+  const lower = location.toLowerCase();
+  return AIRPORT_KEYWORDS.some((kw) => lower.includes(kw));
+};
+
+export const isCruiseTerminalLocation = (location: string): boolean => {
+  const lower = location.toLowerCase();
+  return CRUISE_KEYWORDS.some((kw) => lower.includes(kw));
+};
+
+/**
+ * Calculate location-based surcharge. Airport takes priority if both match.
+ */
+const getLocationSurcharge = (
+  pickup?: string,
+  dropoff?: string,
+): { amount: number; label: string | null } => {
+  const p = pickup || '';
+  const d = dropoff || '';
+
+  if (isAirportLocation(p) || isAirportLocation(d)) {
+    return { amount: AIRPORT_SURCHARGE, label: 'Airport surcharge' };
+  }
+  if (isCruiseTerminalLocation(p) || isCruiseTerminalLocation(d)) {
+    return { amount: CRUISE_TERMINAL_SURCHARGE, label: 'Cruise terminal surcharge' };
+  }
+  return { amount: 0, label: null };
+};
+
+// ---------------------------------------------------------------------------
+// Night Surcharge
+// ---------------------------------------------------------------------------
+
+const NIGHT_SURCHARGE_MULTIPLIER = 1.2;
+
+/** Returns 1.0 during the day, 1.2 between 10 PM and 5 AM */
+export const getNightMultiplier = (): number => {
+  const hour = new Date().getHours();
+  return hour >= 22 || hour < 5 ? NIGHT_SURCHARGE_MULTIPLIER : 1.0;
+};
+
+// ---------------------------------------------------------------------------
+// Delivery Handling Fee
+// ---------------------------------------------------------------------------
+
+export const HANDLING_FEE_RANGE = {
+  min: 100,
+  max: 1000,
+  default: 200,
+  currency: 'VUV',
+};
+
+export const validateHandlingFee = (fee: number): { valid: boolean; fee: number; message?: string } => {
+  if (fee < HANDLING_FEE_RANGE.min) {
+    return { valid: false, fee: HANDLING_FEE_RANGE.min, message: `Minimum handling fee is ${formatPrice(HANDLING_FEE_RANGE.min)}` };
+  }
+  if (fee > HANDLING_FEE_RANGE.max) {
+    return { valid: false, fee: HANDLING_FEE_RANGE.max, message: `Maximum handling fee is ${formatPrice(HANDLING_FEE_RANGE.max)}` };
+  }
+  return { valid: true, fee };
+};
+
+// ---------------------------------------------------------------------------
+// Rounding
+// ---------------------------------------------------------------------------
+
+/** Round to nearest 50 VUV */
+const roundTo50 = (amount: number): number => Math.round(amount / 50) * 50;
+
+// ---------------------------------------------------------------------------
+// Distance Calculation — Google Maps Distance Matrix (primary)
+// ---------------------------------------------------------------------------
+
+export interface DrivingResult {
+  distanceKm: number;
+  durationMinutes: number;
+  source: 'google' | 'haversine';
 }
 
 /**
- * Calculate distance between two coordinates using Haversine formula
+ * Get actual driving distance and duration via Google Maps Distance Matrix.
+ * Returns null if the API is unavailable or fails.
  */
+export const getGoogleDrivingDistance = async (
+  from: { lat: number; lng: number },
+  to: { lat: number; lng: number },
+): Promise<DrivingResult | null> => {
+  try {
+    if (!window.google?.maps) return null;
+
+    const service = new window.google.maps.DistanceMatrixService();
+
+    const response = await service.getDistanceMatrix({
+      origins: [new window.google.maps.LatLng(from.lat, from.lng)],
+      destinations: [new window.google.maps.LatLng(to.lat, to.lng)],
+      travelMode: window.google.maps.TravelMode.DRIVING,
+      unitSystem: window.google.maps.UnitSystem.METRIC,
+    });
+
+    const element = response.rows[0]?.elements[0];
+    if (!element || element.status !== 'OK') return null;
+
+    return {
+      distanceKm: element.distance.value / 1000,
+      durationMinutes: element.duration.value / 60,
+      source: 'google',
+    };
+  } catch (err) {
+    console.warn('[Pricing] Google Maps Distance Matrix failed, using fallback:', err);
+    return null;
+  }
+};
+
+// ---------------------------------------------------------------------------
+// Distance Calculation — Haversine fallback with road correction factor
+// ---------------------------------------------------------------------------
+
+/** Port Vila road correction factor (straight line → actual road distance) */
+const ROAD_FACTOR = 1.35;
+
 export const calculateDistance = (
   from: { lat: number; lng: number },
-  to: { lat: number; lng: number }
+  to: { lat: number; lng: number },
 ): number => {
-  const R = 6371; // Earth's radius in km
+  const R = 6371;
   const dLat = ((to.lat - from.lat) * Math.PI) / 180;
   const dLon = ((to.lng - from.lng) * Math.PI) / 180;
   const a =
@@ -155,106 +282,148 @@ export const calculateDistance = (
       Math.sin(dLon / 2) *
       Math.sin(dLon / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c; // Distance in km
+  return R * c;
 };
 
-/**
- * Estimate travel time based on distance
- * Assumes average speed: 30 km/h in Port Vila (accounting for traffic)
- */
-export const estimateTravelTime = (distanceKm: number): number => {
-  const averageSpeedKmh = 30;
-  return (distanceKm / averageSpeedKmh) * 60; // Convert to minutes
+/** Haversine with road correction factor applied */
+const getHaversineDrivingDistance = (
+  from: { lat: number; lng: number },
+  to: { lat: number; lng: number },
+): DrivingResult => {
+  const straightLine = calculateDistance(from, to);
+  const roadDistance = straightLine * ROAD_FACTOR;
+  const avgSpeedKmh = 25; // conservative for Port Vila roads
+  const duration = (roadDistance / avgSpeedKmh) * 60;
+  return { distanceKm: roadDistance, durationMinutes: duration, source: 'haversine' };
 };
 
-/**
- * Check if surge pricing should be applied
- * Based on time of day and demand
- */
-export const getSurgeMultiplier = (): number => {
-  const hour = new Date().getHours();
+// ---------------------------------------------------------------------------
+// Public: Get driving distance (tries Google first, falls back to Haversine)
+// ---------------------------------------------------------------------------
 
-  // Peak hours: 7-9 AM and 5-7 PM
-  if ((hour >= 7 && hour <= 9) || (hour >= 17 && hour <= 19)) {
-    return 1.5;
-  }
-
-  // Late night: 10 PM - 5 AM
-  if (hour >= 22 || hour <= 5) {
-    return 1.3;
-  }
-
-  return 1.0; // Normal pricing
+export const getDrivingDistance = async (
+  from: { lat: number; lng: number },
+  to: { lat: number; lng: number },
+): Promise<DrivingResult> => {
+  const google = await getGoogleDrivingDistance(from, to);
+  if (google) return google;
+  return getHaversineDrivingDistance(from, to);
 };
 
-/**
- * Calculate ride price estimate
- */
+/** Synchronous fallback — used when you can't await (e.g. pure calculations) */
+export const estimateDrivingDistance = (
+  from: { lat: number; lng: number },
+  to: { lat: number; lng: number },
+): DrivingResult => getHaversineDrivingDistance(from, to);
+
+// ---------------------------------------------------------------------------
+// Core Fare Calculation
+// ---------------------------------------------------------------------------
+
+const computeFare = (
+  vehicle: VehicleConfig,
+  distanceKm: number,
+  durationMinutes: number,
+  pickup?: string,
+  dropoff?: string,
+): {
+  basePrice: number;
+  distancePrice: number;
+  timePrice: number;
+  nightSurcharge: number;
+  locationSurcharge: number;
+  locationSurchargeLabel: string | null;
+  totalPrice: number;
+} => {
+  const base = vehicle.basePrice;
+  const distancePrice = distanceKm * vehicle.pricePerKm;
+  const timePrice = durationMinutes * vehicle.pricePerMinute;
+
+  const subtotal = base + distancePrice + timePrice;
+
+  // Night surcharge (applied as extra %, not multiplied into subtotal)
+  const nightMultiplier = getNightMultiplier();
+  const nightSurcharge = nightMultiplier > 1 ? roundTo50(subtotal * (nightMultiplier - 1)) : 0;
+
+  // Location surcharge
+  const locSurcharge = getLocationSurcharge(pickup, dropoff);
+
+  const rawTotal = subtotal + nightSurcharge + locSurcharge.amount;
+  const totalPrice = Math.max(roundTo50(rawTotal), vehicle.minimumFare);
+
+  return {
+    basePrice: roundTo50(base),
+    distancePrice: roundTo50(distancePrice),
+    timePrice: roundTo50(timePrice),
+    nightSurcharge,
+    locationSurcharge: locSurcharge.amount,
+    locationSurchargeLabel: locSurcharge.label,
+    totalPrice,
+  };
+};
+
+// ---------------------------------------------------------------------------
+// Public: Calculate Ride Price (async — uses Google Maps)
+// ---------------------------------------------------------------------------
+
+export const calculateRidePriceAsync = async (
+  pickup: { lat: number; lng: number; address?: string },
+  dropoff: { lat: number; lng: number; address?: string },
+  vehicleType: VehicleType,
+): Promise<PriceEstimate> => {
+  const vehicle = VEHICLE_CONFIGS[vehicleType];
+  const driving = await getDrivingDistance(pickup, dropoff);
+  const fare = computeFare(vehicle, driving.distanceKm, driving.durationMinutes, pickup.address, dropoff.address);
+
+  return {
+    ...fare,
+    distance: Math.round(driving.distanceKm * 10) / 10,
+    estimatedTime: Math.round(driving.durationMinutes),
+    vehicleType,
+    usedGoogleMaps: driving.source === 'google',
+  };
+};
+
+// ---------------------------------------------------------------------------
+// Public: Calculate Ride Price (sync fallback — Haversine only)
+// ---------------------------------------------------------------------------
+
 export const calculateRidePrice = (
   pickup: { lat: number; lng: number; address?: string },
   dropoff: { lat: number; lng: number; address?: string },
   vehicleType: VehicleType,
-  applySurge: boolean = true
 ): PriceEstimate => {
   const vehicle = VEHICLE_CONFIGS[vehicleType];
-  const distance = calculateDistance(pickup, dropoff);
-  const estimatedTime = estimateTravelTime(distance);
-
-  const basePrice = vehicle.basePrice;
-  const distancePrice = distance * vehicle.pricePerKm;
-  const timePrice = estimatedTime * vehicle.pricePerMinute;
-
-  let surgeMultiplier = 1.0;
-  if (applySurge) {
-    surgeMultiplier = getSurgeMultiplier();
-  }
-
-  const subtotal = basePrice + distancePrice + timePrice;
-  const surgePrice = subtotal * (surgeMultiplier - 1);
-  
-  // Calculate airport surcharge if applicable
-  const airportSurcharge = (pickup.address && dropoff.address) 
-    ? calculateAirportSurcharge(pickup.address, dropoff.address) 
-    : 0;
-  
-  const totalPrice = Math.round(subtotal * surgeMultiplier + airportSurcharge);
+  const driving = estimateDrivingDistance(pickup, dropoff);
+  const fare = computeFare(vehicle, driving.distanceKm, driving.durationMinutes, pickup.address, dropoff.address);
 
   return {
-    basePrice,
-    distancePrice: Math.round(distancePrice),
-    timePrice: Math.round(timePrice),
-    surgePrice: Math.round(surgePrice),
-    airportSurcharge,
-    totalPrice,
-    distance: Math.round(distance * 10) / 10, // Round to 1 decimal
-    estimatedTime: Math.round(estimatedTime),
+    ...fare,
+    distance: Math.round(driving.distanceKm * 10) / 10,
+    estimatedTime: Math.round(driving.durationMinutes),
     vehicleType,
+    usedGoogleMaps: false,
   };
 };
 
-/**
- * Calculate delivery price with handling fee
- */
-export const calculateDeliveryPrice = (
+// ---------------------------------------------------------------------------
+// Public: Calculate Delivery Price
+// ---------------------------------------------------------------------------
+
+export const calculateDeliveryPriceAsync = async (
   pickup: { lat: number; lng: number; address?: string },
   dropoff: { lat: number; lng: number; address?: string },
-  vehicleType: VehicleType,
-  driverHandlingFee: number = HANDLING_FEE_RANGE.default
-): DeliveryPriceEstimate => {
-  // Validate handling fee
-  const handlingFee = Math.min(
-    Math.max(driverHandlingFee, HANDLING_FEE_RANGE.min),
-    HANDLING_FEE_RANGE.max
-  );
-
-  const baseEstimate = calculateRidePrice(pickup, dropoff, vehicleType, true);
+  driverHandlingFee: number = HANDLING_FEE_RANGE.default,
+): Promise<DeliveryPriceEstimate> => {
+  const base = await calculateRidePriceAsync(pickup, dropoff, 'moto');
+  const handlingFee = Math.min(Math.max(driverHandlingFee, HANDLING_FEE_RANGE.min), HANDLING_FEE_RANGE.max);
   const commissionRate = COMMISSION_RATES.delivery;
-  const commissionAmount = Math.round(baseEstimate.totalPrice * commissionRate);
-  const driverEarnings = baseEstimate.totalPrice - commissionAmount + handlingFee;
+  const commissionAmount = roundTo50(base.totalPrice * commissionRate);
+  const driverEarnings = base.totalPrice - commissionAmount + handlingFee;
 
   return {
-    ...baseEstimate,
-    totalPrice: baseEstimate.totalPrice + handlingFee,
+    ...base,
+    totalPrice: roundTo50(base.totalPrice + handlingFee),
     handlingFee,
     isDelivery: true,
     commissionRate,
@@ -262,101 +431,78 @@ export const calculateDeliveryPrice = (
   };
 };
 
-/**
- * Calculate driver earnings from a completed ride
- */
+export const calculateDeliveryPrice = (
+  pickup: { lat: number; lng: number; address?: string },
+  dropoff: { lat: number; lng: number; address?: string },
+  vehicleType: VehicleType,
+  driverHandlingFee: number = HANDLING_FEE_RANGE.default,
+): DeliveryPriceEstimate => {
+  const base = calculateRidePrice(pickup, dropoff, 'moto');
+  const handlingFee = Math.min(Math.max(driverHandlingFee, HANDLING_FEE_RANGE.min), HANDLING_FEE_RANGE.max);
+  const commissionRate = COMMISSION_RATES.delivery;
+  const commissionAmount = roundTo50(base.totalPrice * commissionRate);
+  const driverEarnings = base.totalPrice - commissionAmount + handlingFee;
+
+  return {
+    ...base,
+    totalPrice: roundTo50(base.totalPrice + handlingFee),
+    handlingFee,
+    isDelivery: true,
+    commissionRate,
+    driverEarnings,
+  };
+};
+
+// ---------------------------------------------------------------------------
+// Public: Driver Earnings
+// ---------------------------------------------------------------------------
+
 export const calculateDriverEarnings = (
   totalFare: number,
   serviceType: ServiceType = 'vanucar',
-  handlingFee: number = 0
+  handlingFee: number = 0,
 ): EarningsBreakdown => {
   const commissionRate = COMMISSION_RATES[serviceType];
-  const commissionAmount = Math.round(totalFare * commissionRate);
+  const commissionAmount = roundTo50(totalFare * commissionRate);
   const netEarnings = totalFare - commissionAmount;
-  const totalDriverEarnings = netEarnings + handlingFee;
-
   return {
     grossFare: totalFare,
     commissionRate,
     commissionAmount,
     netEarnings,
     handlingFee,
-    totalDriverEarnings,
+    totalDriverEarnings: netEarnings + handlingFee,
   };
 };
 
-/**
- * Format price for display
- */
-export const formatPrice = (price: number): string => {
-  return `VUV ${price.toLocaleString()}`;
-};
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 
-/**
- * Get vehicle configuration by type
- */
-export const getVehicleConfig = (type: VehicleType): VehicleConfig => {
-  return VEHICLE_CONFIGS[type];
-};
+export const formatPrice = (price: number): string => `VUV ${price.toLocaleString()}`;
 
-/**
- * Get all available vehicle types
- */
-export const getAllVehicles = (): VehicleConfig[] => {
-  return Object.values(VEHICLE_CONFIGS);
-};
+export const getVehicleConfig = (type: VehicleType): VehicleConfig => VEHICLE_CONFIGS[type];
 
-/**
- * Get vehicles by service type
- */
+export const getAllVehicles = (): VehicleConfig[] => Object.values(VEHICLE_CONFIGS);
+
+export const getPassengerVehicles = (): VehicleConfig[] =>
+  PASSENGER_VEHICLES.map((t) => VEHICLE_CONFIGS[t]);
+
 export const getVehiclesByService = (serviceType: ServiceType): VehicleConfig[] => {
-  if (serviceType === 'delivery') {
-    return Object.values(VEHICLE_CONFIGS).filter(v => v.supportsDelivery);
-  }
-  const allowedTypes = serviceType === 'vanucar' ? VANUCAR_VEHICLES : VANURIDE_VEHICLES;
-  return Object.values(VEHICLE_CONFIGS).filter(v => allowedTypes.includes(v.type));
+  if (serviceType === 'delivery') return DELIVERY_VEHICLES.map((t) => VEHICLE_CONFIGS[t]);
+  return PASSENGER_VEHICLES.map((t) => VEHICLE_CONFIGS[t]);
 };
 
-/**
- * Check if location is airport
- */
-export const isAirportLocation = (location: string): boolean => {
-  const normalizedLocation = location.toLowerCase();
-  return AIRPORT_LOCATIONS.some(keyword => normalizedLocation.includes(keyword));
-};
+export const getCommissionRate = (serviceType: ServiceType): number => COMMISSION_RATES[serviceType];
 
-/**
- * Calculate airport surcharge
- */
 export const calculateAirportSurcharge = (pickupLocation: string, dropoffLocation: string): number => {
-  const isAirportTrip = isAirportLocation(pickupLocation) || isAirportLocation(dropoffLocation);
-  return isAirportTrip ? AIRPORT_SURCHARGE : 0;
+  if (isAirportLocation(pickupLocation) || isAirportLocation(dropoffLocation)) return AIRPORT_SURCHARGE;
+  if (isCruiseTerminalLocation(pickupLocation) || isCruiseTerminalLocation(dropoffLocation)) return CRUISE_TERMINAL_SURCHARGE;
+  return 0;
 };
 
-/**
- * Get commission rate for a service type
- */
-export const getCommissionRate = (serviceType: ServiceType): number => {
-  return COMMISSION_RATES[serviceType];
-};
+/** @deprecated Use getNightMultiplier instead */
+export const getSurgeMultiplier = (): number => getNightMultiplier();
 
-/**
- * Validate handling fee is within allowed range
- */
-export const validateHandlingFee = (fee: number): { valid: boolean; fee: number; message?: string } => {
-  if (fee < HANDLING_FEE_RANGE.min) {
-    return { 
-      valid: false, 
-      fee: HANDLING_FEE_RANGE.min, 
-      message: `Minimum handling fee is ${formatPrice(HANDLING_FEE_RANGE.min)}` 
-    };
-  }
-  if (fee > HANDLING_FEE_RANGE.max) {
-    return { 
-      valid: false, 
-      fee: HANDLING_FEE_RANGE.max, 
-      message: `Maximum handling fee is ${formatPrice(HANDLING_FEE_RANGE.max)}` 
-    };
-  }
-  return { valid: true, fee };
-};
+/** @deprecated Use getDrivingDistance instead */
+export const estimateTravelTime = (distanceKm: number): number => (distanceKm / 25) * 60;
