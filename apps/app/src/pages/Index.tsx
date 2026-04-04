@@ -154,6 +154,22 @@ const Index = () => {
   const navigate = useNavigate();
   const [currentPromo, setCurrentPromo] = useState(0);
   const [userLocation, setUserLocation] = useState('Port Vila, Vanuatu');
+  const [firstName, setFirstName] = useState<string | null>(null);
+
+  // Fetch user's first name from profile
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from('profiles')
+      .select('full_name')
+      .eq('id', user.id)
+      .single()
+      .then(({ data }) => {
+        if (data?.full_name) {
+          setFirstName(data.full_name.split(' ')[0]);
+        }
+      });
+  }, [user]);
 
   // Auto-rotate promotions
   useEffect(() => {
@@ -219,7 +235,7 @@ const Index = () => {
 
   const getUserName = () => {
     if (!user) return 'Guest';
-    // Try to get name from profile or email
+    if (firstName) return firstName;
     return user.email?.split('@')[0] || 'there';
   };
 
