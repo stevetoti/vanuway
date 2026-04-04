@@ -63,6 +63,7 @@ const AdminDrivers = lazy(() => import("./pages/admin/Drivers"));
 const AdminAnalytics = lazy(() => import("./pages/admin/Analytics"));
 const AdminUsers = lazy(() => import("./pages/admin/Users"));
 const AdminOrders = lazy(() => import("./pages/admin/Orders"));
+const AdminRides = lazy(() => import("./pages/admin/Rides"));
 const HotelOwnerRegister = lazy(() => import("./pages/hotels/OwnerRegister"));
 const HotelOwnerDashboard = lazy(() => import("./pages/hotels/OwnerDashboard"));
 const HotelOwnerWelcome = lazy(() => import("./pages/hotels/OwnerWelcome"));
@@ -228,6 +229,7 @@ const AppContent = () => {
                 <Route path="/admin/tour-operators" element={<AdminRoute><AdminTourOperators /></AdminRoute>} />
                 <Route path="/admin/users" element={<AdminRoute><AdminUsers /></AdminRoute>} />
                 <Route path="/admin/orders" element={<AdminRoute><AdminOrders /></AdminRoute>} />
+                <Route path="/admin/rides" element={<AdminRoute><AdminRides /></AdminRoute>} />
 
                 <Route path="/hotels" element={<ProtectedRoute><BrowseHotels /></ProtectedRoute>} />
                 <Route path="/hotels/messages" element={<ProtectedRoute><HotelMessages /></ProtectedRoute>} />

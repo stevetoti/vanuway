@@ -171,6 +171,7 @@ const AdminDashboard = () => {
       icon: Car,
       color: 'text-purple-600',
       bgColor: 'bg-purple-100',
+      onClick: () => navigate('/admin/rides'),
     },
     {
       title: "Today's Earnings",
@@ -178,6 +179,7 @@ const AdminDashboard = () => {
       icon: DollarSign,
       color: 'text-indigo-600',
       bgColor: 'bg-indigo-100',
+      onClick: () => navigate('/admin/rides'),
     },
     {
       title: 'Total Hotels',
@@ -278,6 +280,14 @@ const AdminDashboard = () => {
             >
               <Users className="h-6 w-6" />
               <span>Manage Drivers</span>
+            </Button>
+            <Button
+              variant="outline"
+              className="h-auto py-4 flex flex-col gap-2"
+              onClick={() => navigate('/admin/rides')}
+            >
+              <Car className="h-6 w-6" />
+              <span>Manage Rides</span>
             </Button>
             <Button
               variant="outline"
