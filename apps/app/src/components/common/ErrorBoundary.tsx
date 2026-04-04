@@ -73,12 +73,12 @@ export class ErrorBoundary extends Component<Props, State> {
                 We're sorry for the inconvenience. An unexpected error occurred.
               </p>
 
-              {process.env.NODE_ENV === 'development' && this.state.error && (
+              {this.state.error && (
                 <details className="text-left mb-6 p-4 bg-muted rounded-lg">
                   <summary className="cursor-pointer font-semibold mb-2">
-                    Error Details (Development Only)
+                    Error Details
                   </summary>
-                  <pre className="text-xs overflow-auto text-destructive">
+                  <pre className="text-xs overflow-auto text-destructive whitespace-pre-wrap">
                     {this.state.error.toString()}
                     {'\n\n'}
                     {this.state.errorInfo?.componentStack}
