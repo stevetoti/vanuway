@@ -58,6 +58,7 @@ const Profile = () => {
   const [driverInfo, setDriverInfo] = useState<DriverInfo | null>(null);
   const [vendorRoles, setVendorRoles] = useState<VendorInfo[]>([]);
   const [rolesLoaded, setRolesLoaded] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const vehicleInputRef = useRef<HTMLInputElement>(null);
 
@@ -128,14 +129,26 @@ const Profile = () => {
     const vendors: VendorInfo[] = [];
 
     try {
-      const { data: driver } = await supabase
+      // Check admin role from user_roles table
+      const { data: adminRole } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .eq('role', 'admin')
+        .maybeSingle();
+
+      if (adminRole) setIsAdmin(true);
+
+      // Check driver (cast to any to handle columns not in generated types)
+      const { data: driver } = await (supabase
         .from('drivers')
-        .select('id, vehicle_type, vehicle_model, license_plate, status, rating, total_rides, total_earnings, is_verified, application_status, vehicle_photo_url')
+        .select('id, vehicle_type, vehicle_model, license_plate, status, rating, total_rides, total_earnings, is_verified, application_status, vehicle_photo_url') as any)
         .eq('user_id', user.id)
         .maybeSingle();
 
       if (driver) setDriverInfo(driver as DriverInfo);
 
+      // Check hotel owner
       const { data: hotelOwner } = await supabase
         .from('hotel_owners')
         .select('business_name')
@@ -146,10 +159,11 @@ const Profile = () => {
         vendors.push({
           type: 'hotel', label: 'Hotel Owner', icon: Hotel,
           dashboardPath: '/hotels/owner/dashboard',
-          businessName: hotelOwner.business_name,
+          businessName: (hotelOwner as any).business_name,
         });
       }
 
+      // Check restaurant owner
       const { data: restaurantOwner } = await supabase
         .from('restaurant_owners')
         .select('business_name')
@@ -160,10 +174,11 @@ const Profile = () => {
         vendors.push({
           type: 'restaurant', label: 'Restaurant Owner', icon: Utensils,
           dashboardPath: '/food/owner/dashboard',
-          businessName: restaurantOwner.business_name,
+          businessName: (restaurantOwner as any).business_name,
         });
       }
 
+      // Check tour operator
       const { data: tourOp } = await supabase
         .from('tour_operators')
         .select('business_name, application_status')
@@ -174,24 +189,27 @@ const Profile = () => {
         vendors.push({
           type: 'tour', label: 'Tour Operator', icon: Map,
           dashboardPath: '/tours/provider/dashboard',
-          businessName: tourOp.business_name,
-          status: tourOp.application_status,
+          businessName: (tourOp as any).business_name,
+          status: (tourOp as any).application_status,
         });
       }
 
-      const { data: serviceProvider } = await supabase
-        .from('service_providers')
-        .select('business_name')
-        .eq('user_id', user.id)
-        .maybeSingle();
+      // Check service provider (table may not be in generated types)
+      try {
+        const { data: serviceProvider } = await (supabase
+          .from('service_providers' as any)
+          .select('business_name') as any)
+          .eq('user_id', user.id)
+          .maybeSingle();
 
-      if (serviceProvider) {
-        vendors.push({
-          type: 'service_provider', label: 'Service Provider', icon: Wrench,
-          dashboardPath: '/providers/dashboard',
-          businessName: serviceProvider.business_name,
-        });
-      }
+        if (serviceProvider) {
+          vendors.push({
+            type: 'service_provider', label: 'Service Provider', icon: Wrench,
+            dashboardPath: '/providers/dashboard',
+            businessName: serviceProvider.business_name,
+          });
+        }
+      } catch { /* table may not exist */ }
 
       setVendorRoles(vendors);
     } catch (error) {
@@ -264,7 +282,7 @@ const Profile = () => {
 
       const url = `${publicUrl}?t=${Date.now()}`;
 
-      await supabase.from('drivers').update({ vehicle_photo_url: url }).eq('user_id', user.id);
+      await supabase.from('drivers').update({ vehicle_photo_url: url } as any).eq('user_id', user.id);
       setDriverInfo({ ...driverInfo, vehicle_photo_url: url });
       toast.success('Vehicle photo updated!');
     } catch (error: any) {
@@ -376,6 +394,11 @@ const Profile = () => {
                   {phone && <p className="text-sm text-muted-foreground">{phone}</p>}
                   <p className="text-xs text-muted-foreground mt-1">Member since {memberSince}</p>
                   <div className="flex flex-wrap gap-1.5 mt-2">
+                    {isAdmin && (
+                      <Badge className="bg-red-600 text-white text-xs">
+                        <Shield className="h-3 w-3 mr-1" />Admin
+                      </Badge>
+                    )}
                     {isApprovedDriver && (
                       <Badge className="bg-blue-600 text-white text-xs">
                         <Car className="h-3 w-3 mr-1" />Driver
@@ -431,6 +454,33 @@ const Profile = () => {
             <p className="text-xs text-muted-foreground">VUV Spent</p>
           </Card>
         </div>
+
+        {/* Admin Section */}
+        {isAdmin && (
+          <div>
+            <h3 className="text-sm font-semibold text-muted-foreground uppercase mb-3 px-1">Administration</h3>
+            <Card>
+              <div className="p-4 bg-gradient-to-r from-red-50 to-red-100/50 border-b">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 bg-red-600 rounded-full flex items-center justify-center">
+                    <Shield className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <p className="font-semibold">Platform Administrator</p>
+                    <p className="text-xs text-muted-foreground">Full access to manage VanuWay</p>
+                  </div>
+                </div>
+              </div>
+              <div className="divide-y">
+                <MenuItem icon={LayoutDashboard} label="Admin Dashboard" path="/admin/dashboard" color="text-red-600" />
+                <MenuItem icon={Car} label="Manage Rides" path="/admin/rides" color="text-purple-600" />
+                <MenuItem icon={UserPlus} label="Driver Applications" path="/admin/applications" color="text-amber-600" />
+                <MenuItem icon={Hotel} label="Manage Hotels" path="/admin/hotels" color="text-teal-600" />
+                <MenuItem icon={Utensils} label="Manage Restaurants" path="/admin/restaurants" color="text-rose-600" />
+              </div>
+            </Card>
+          </div>
+        )}
 
         {/* Driver Section */}
         {isApprovedDriver && driverInfo && (
