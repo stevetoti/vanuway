@@ -59,8 +59,6 @@ const DriverDashboard = () => {
   useEffect(() => {
     if (!driver || !isOnline) return;
 
-    const driverVehicleType = driver.vehicle_type === 'car' ? 'VanuCar' : 'VanuRide';
-
     // Subscribe to ride_bookings changes (INSERT and UPDATE)
     const channel = supabase
       .channel('driver-ride-requests')
@@ -74,10 +72,10 @@ const DriverDashboard = () => {
         (payload) => {
           const newRide = payload.new as RideRequest;
           // Only process pending rides matching driver's vehicle type
-          if (newRide && 
-              newRide.status === 'pending' && 
-              newRide.vehicle_type === driverVehicleType &&
-              !('driver_id' in newRide && newRide.driver_id)) {
+          if (newRide &&
+              newRide.status === 'pending' &&
+              newRide.vehicle_type === driver.vehicle_type &&
+              !('driver_id' in newRide && (newRide as any).driver_id)) {
             toast('New ride request nearby!', {
               description: `${newRide.pickup_location} → ${newRide.dropoff_location}`,
             });
@@ -139,11 +137,10 @@ const DriverDashboard = () => {
     if (!driver) return;
 
     try {
-      const vehicleType = driver.vehicle_type === 'car' ? 'VanuCar' : 'VanuRide';
       const { data, error } = await supabase
         .from('ride_bookings')
         .select('*')
-        .eq('vehicle_type', vehicleType)
+        .eq('vehicle_type', driver.vehicle_type)
         .eq('status', 'pending')
         .is('driver_id', null)
         .order('created_at', { ascending: true })

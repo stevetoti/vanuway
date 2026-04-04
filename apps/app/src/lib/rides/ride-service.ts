@@ -85,7 +85,7 @@ export const createRideRequest = async (
         dropoff_location: request.dropoffLocation,
         dropoff_lat: request.dropoffLat,
         dropoff_lng: request.dropoffLng,
-        vehicle_type: request.vehicleType === 'car' ? 'VanuCar' : 'VanuRide',
+        vehicle_type: request.vehicleType,
         passenger_count: request.passengerCount,
         price: request.priceEstimate.totalPrice,
         status: 'pending',
@@ -99,8 +99,11 @@ export const createRideRequest = async (
 
     if (error) throw error;
 
-    // Try to auto-assign a driver (this happens in the background)
-    autoAssignDriver(ride.id).catch(console.error);
+    // Note: auto-assignment is NOT done client-side because the passenger's
+    // RLS session cannot update the drivers table. Instead, drivers see
+    // pending rides on their Dashboard and accept manually. If a Supabase
+    // Edge Function or DB trigger is set up for auto-assignment in the future,
+    // it would run with service_role privileges and bypass RLS.
 
     // Create notification for user
     await supabase.from('notifications').insert({

@@ -14,6 +14,7 @@ import {
   Loader2, CheckCircle2, Phone, MessageCircle, Shield, X, Truck
 } from 'lucide-react';
 import { calculateRidePrice, formatPrice as formatVUV, type VehicleType as PricingVehicleType } from '@/lib/rides/pricing';
+import { createRideRequest, subscribeToRideUpdates, cancelRide as cancelRideService } from '@/lib/rides/ride-service';
 import { lazy, Suspense } from 'react';
 import type { RideMapDriver } from '@/components/rides/RideMap';
 
@@ -91,6 +92,8 @@ export default function RequestRide() {
   const [searchingProgress, setSearchingProgress] = useState(0);
   const [locationSheetOpen, setLocationSheetOpen] = useState(false);
   const [activeField, setActiveField] = useState<'pickup' | 'dropoff'>('pickup');
+  const [createdRideId, setCreatedRideId] = useState<string | null>(null);
+  const [isCreatingRide, setIsCreatingRide] = useState(false);
 
   // Route polyline
   const routePoints = useMemo(() => {
@@ -119,23 +122,48 @@ export default function RequestRide() {
     };
   }, [pickupLocation, dropoffLocation, selectedVehicle]);
 
-  // Searching animation - finds a real driver
+  // Real-time subscription: listen for driver assignment on created ride
   useEffect(() => {
-    if (step !== 'searching') return;
+    if (step !== 'searching' || !createdRideId) return;
+
     setSearchingProgress(0);
-    const timer = setInterval(() => {
-      setSearchingProgress(prev => {
-        if (prev >= 100) {
-          clearInterval(timer);
-          toast.error('No drivers available at the moment. Please try again later.');
-          setStep('vehicle');
-          return 100;
-        }
-        return prev + 4;
-      });
-    }, 120);
-    return () => clearInterval(timer);
-  }, [step]);
+
+    // Animate the progress bar (visual only — not controlling logic)
+    const progressTimer = setInterval(() => {
+      setSearchingProgress(prev => (prev >= 95 ? 95 : prev + 2));
+    }, 300);
+
+    // Timeout: if no driver found after 60 seconds, redirect to TrackRide
+    // where the passenger can continue waiting or cancel
+    const timeout = setTimeout(() => {
+      toast.info('Still looking for a driver. You can wait or cancel from the tracking page.');
+      navigate(`/rides/track/${createdRideId}`);
+    }, 60000);
+
+    // Subscribe to ride updates — when status changes to 'accepted', driver was assigned
+    // Note: payload.new from Supabase uses snake_case column names
+    const channel = subscribeToRideUpdates(createdRideId, (updatedRide: any) => {
+      if (updatedRide.status === 'accepted' && updatedRide.driver_id) {
+        clearTimeout(timeout);
+        clearInterval(progressTimer);
+        setSearchingProgress(100);
+        toast.success('Driver found! Redirecting to tracking...');
+        // Navigate to the real TrackRide page
+        setTimeout(() => navigate(`/rides/track/${createdRideId}`), 600);
+      } else if (updatedRide.status === 'cancelled') {
+        clearTimeout(timeout);
+        clearInterval(progressTimer);
+        setStep('vehicle');
+        setSearchingProgress(0);
+      }
+    });
+
+    return () => {
+      clearTimeout(timeout);
+      clearInterval(progressTimer);
+      supabase.removeChannel(channel);
+    };
+  }, [step, createdRideId, navigate]);
 
   // Auto-advance: after pickup selected, go to destination
   const handleSelectLocation = (loc: typeof popularLocations[0]) => {
@@ -167,7 +195,48 @@ export default function RequestRide() {
       navigate('/login');
       return;
     }
-    setStep('searching');
+    if (!pickupLocation || !dropoffLocation || !estimate) {
+      toast.error('Please select pickup and destination');
+      return;
+    }
+    if (isCreatingRide) return;
+
+    setIsCreatingRide(true);
+    try {
+      const priceResult = calculateRidePrice(
+        { lat: pickupLocation.lat, lng: pickupLocation.lng, address: pickupLocation.name },
+        { lat: dropoffLocation.lat, lng: dropoffLocation.lng, address: dropoffLocation.name },
+        selectedVehicle as PricingVehicleType,
+      );
+
+      const result = await createRideRequest({
+        userId: user.id,
+        pickupLocation: pickupLocation.name,
+        pickupLat: pickupLocation.lat,
+        pickupLng: pickupLocation.lng,
+        dropoffLocation: dropoffLocation.name,
+        dropoffLat: dropoffLocation.lat,
+        dropoffLng: dropoffLocation.lng,
+        vehicleType: selectedVehicle as PricingVehicleType,
+        passengerCount: passengerCount,
+        priceEstimate: priceResult,
+        serviceType: 'vanucar',
+        paymentMethodType: selectedPayment,
+      });
+
+      if (!result.success || !result.data) {
+        toast.error(result.error || 'Failed to create ride request');
+        return;
+      }
+
+      setCreatedRideId(result.data.id);
+      setStep('searching');
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Something went wrong';
+      toast.error(message);
+    } finally {
+      setIsCreatingRide(false);
+    }
   };
 
   const fprice = (price: number) => formatVUV(price);
@@ -445,9 +514,19 @@ export default function RequestRide() {
             <Button
               className="w-full h-14 text-base font-semibold bg-blue-600 hover:bg-blue-700 rounded-xl shadow-lg"
               onClick={handleFindDriver}
+              disabled={isCreatingRide}
             >
-              <Navigation className="h-5 w-5 mr-2" />
-              Find Driver  •  {estimate ? fprice(estimate.price) : ''}
+              {isCreatingRide ? (
+                <>
+                  <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                  Creating ride...
+                </>
+              ) : (
+                <>
+                  <Navigation className="h-5 w-5 mr-2" />
+                  Find Driver  •  {estimate ? fprice(estimate.price) : ''}
+                </>
+              )}
             </Button>
           </div>
         )}
@@ -486,7 +565,15 @@ export default function RequestRide() {
             <Button
               variant="ghost"
               className="w-full mt-4 text-muted-foreground"
-              onClick={() => { setStep('vehicle'); setSearchingProgress(0); }}
+              onClick={async () => {
+                if (createdRideId && user) {
+                  await cancelRideService(createdRideId, user.id);
+                  setCreatedRideId(null);
+                }
+                setStep('vehicle');
+                setSearchingProgress(0);
+                toast.info('Ride request cancelled');
+              }}
             >
               Cancel
             </Button>

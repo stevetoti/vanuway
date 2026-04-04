@@ -2,6 +2,16 @@
 
 ## 2026-04-04
 
+### No Client-Side Auto-Assign (RLS Limitation)
+**Context:** `autoAssignDriver()` ran from the passenger's browser after creating a ride, but it needs to update the `drivers` table (set status to 'busy'), which RLS blocks because the passenger isn't the driver.
+**Decision:** Removed client-side auto-assign. Drivers accept rides manually via their Dashboard. If auto-assignment is needed in the future, it should be a Supabase Edge Function or DB trigger running with `service_role`.
+**Reason:** RLS policies correctly restrict driver profile updates to the driver themselves. Working around this client-side would require weakening security.
+
+### Store Actual Vehicle Types in ride_bookings
+**Context:** `createRideRequest` was mapping all vehicle types to 'VanuCar'/'VanuRide', but the drivers table stores actual types ('car', 'suv', 'van', etc.), causing a match failure.
+**Decision:** Store the actual vehicle type (car/suv/van/wheelchair_van) in ride_bookings. Updated Dashboard filter accordingly.
+**Reason:** Consistent vehicle types across tables makes matching work correctly.
+
 ### react-leaflet v4 (not v5)
 **Context:** react-leaflet v5.0.0 requires React 19 as a peer dependency. VanuWay runs React 18.
 **Decision:** Downgraded to react-leaflet@4.2.1 + @react-leaflet/core@2.1.0.

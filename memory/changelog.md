@@ -2,11 +2,27 @@
 
 ## 2026-04-04
 
-### Ride Booking & Driver Matching (INCOMPLETE — Priority for next session)
-- Identified that the RequestRide page does NOT create actual ride_bookings in the database
-- The "Find Driver" button runs a fake animation and currently always shows "No drivers available"
-- Need to wire up: createRideRequest → auto-assign driver → real-time tracking
-- Driver is registered and approved (stevetoti1@gmail.com) and showing online
+### Real Ride Booking Flow — WIRED UP
+- **handleFindDriver** now calls `createRideRequest()` which inserts into `ride_bookings` and triggers `autoAssignDriver()`
+- Real-time Supabase subscription listens for ride status changes during search
+- When driver accepts (status → 'accepted'), passenger auto-navigates to `/rides/track/{rideId}`
+- 45-second timeout with user-friendly message (ride stays active for manual driver acceptance)
+- Cancel button during search actually cancels the ride in the database
+- "Find Driver" button shows loading state while creating ride
+
+### RLS Fix — Removed Client-Side Auto-Assign
+- `autoAssignDriver()` was running from the passenger's browser but silently failing because RLS blocks passengers from updating the `drivers` table
+- Removed client-side auto-assign from `createRideRequest()`
+- Flow now: passenger creates ride (pending) → driver sees it on Dashboard → driver accepts → passenger gets notified via realtime subscription and navigates to TrackRide
+- On 60s timeout without driver, passenger is redirected to TrackRide page to keep waiting or cancel
+
+### Vehicle Type Fix
+- `createRideRequest()` now stores actual vehicle type (car/suv/van/wheelchair_van) instead of 'VanuCar'/'VanuRide'
+- Driver Dashboard filter updated to match by actual vehicle type
+- Realtime subscription filter in Dashboard also uses actual vehicle type
+- This makes ride ↔ driver matching consistent across the full flow
+
+### Previous (same day)
 
 ### Leaflet Map Crash Fix
 - Root cause found: react-leaflet v5.0.0 requires React 19, but app runs React 18

@@ -2,34 +2,45 @@ import { Layout } from '@/components/layout/Layout';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/hooks/useAuth';
 import {
-  LogOut,
-  Calendar,
-  MapPin,
-  CreditCard,
-  Bell,
-  Globe,
-  HelpCircle,
-  FileText,
-  Shield,
-  Info,
-  Edit,
-  ChevronRight,
-  Car,
-  UtensilsCrossed,
-  Star,
-  Trash2,
-  UserPlus,
+  LogOut, Calendar, MapPin, CreditCard, Bell, Globe, HelpCircle,
+  FileText, Shield, Info, Edit, ChevronRight, Car, UtensilsCrossed,
+  Star, Trash2, UserPlus, LayoutDashboard, Wallet, TrendingUp,
+  Hotel, Utensils, Map, Ship, Stethoscope, Wrench, Clock,
+  CheckCircle2, AlertCircle,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { usePWA } from '@/hooks/usePWA';
+
+interface DriverInfo {
+  id: string;
+  vehicle_type: string;
+  vehicle_model: string;
+  license_plate: string;
+  status: string;
+  rating: number;
+  total_rides: number;
+  total_earnings: number;
+  is_verified: boolean;
+  application_status: string;
+}
+
+interface VendorInfo {
+  type: 'hotel' | 'restaurant' | 'tour' | 'service_provider';
+  label: string;
+  icon: typeof Hotel;
+  dashboardPath: string;
+  businessName?: string;
+  status?: string;
+}
 
 const Profile = () => {
   const { user, signOut } = useAuth();
@@ -39,11 +50,10 @@ const Profile = () => {
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [stats, setStats] = useState({
-    rides: 0,
-    orders: 0,
-    totalSpent: 0,
-  });
+  const [stats, setStats] = useState({ rides: 0, orders: 0, totalSpent: 0 });
+  const [driverInfo, setDriverInfo] = useState<DriverInfo | null>(null);
+  const [vendorRoles, setVendorRoles] = useState<VendorInfo[]>([]);
+  const [rolesLoaded, setRolesLoaded] = useState(false);
 
   const handleClearCache = async () => {
     try {
@@ -59,6 +69,7 @@ const Profile = () => {
     if (user) {
       fetchUserProfile();
       fetchUserStats();
+      fetchUserRoles();
     }
   }, [user]);
 
@@ -81,19 +92,16 @@ const Profile = () => {
 
   const fetchUserStats = async () => {
     try {
-      // Fetch ride bookings count
       const { count: rideCount } = await supabase
         .from('ride_bookings')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', user!.id);
 
-      // Fetch food orders count
       const { count: orderCount } = await supabase
         .from('food_orders')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', user!.id);
 
-      // Fetch total spent from transactions
       const { data: transactions } = await supabase
         .from('transactions')
         .select('amount')
@@ -102,14 +110,92 @@ const Profile = () => {
         .eq('currency', 'VUV');
 
       const totalSpent = transactions?.reduce((sum, t) => sum + t.amount, 0) || 0;
-
-      setStats({
-        rides: rideCount || 0,
-        orders: orderCount || 0,
-        totalSpent,
-      });
+      setStats({ rides: rideCount || 0, orders: orderCount || 0, totalSpent });
     } catch (error) {
       console.error('Error fetching stats:', error);
+    }
+  };
+
+  const fetchUserRoles = async () => {
+    if (!user) return;
+    const vendors: VendorInfo[] = [];
+
+    try {
+      // Check driver
+      const { data: driver } = await supabase
+        .from('drivers')
+        .select('id, vehicle_type, vehicle_model, license_plate, status, rating, total_rides, total_earnings, is_verified, application_status')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (driver) setDriverInfo(driver as DriverInfo);
+
+      // Check hotel owner
+      const { data: hotelOwner } = await supabase
+        .from('hotel_owners')
+        .select('business_name')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (hotelOwner) {
+        vendors.push({
+          type: 'hotel', label: 'Hotel Owner', icon: Hotel,
+          dashboardPath: '/hotels/owner/dashboard',
+          businessName: hotelOwner.business_name,
+        });
+      }
+
+      // Check restaurant owner
+      const { data: restaurantOwner } = await supabase
+        .from('restaurant_owners')
+        .select('business_name')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (restaurantOwner) {
+        vendors.push({
+          type: 'restaurant', label: 'Restaurant Owner', icon: Utensils,
+          dashboardPath: '/food/owner/dashboard',
+          businessName: restaurantOwner.business_name,
+        });
+      }
+
+      // Check tour operator
+      const { data: tourOp } = await supabase
+        .from('tour_operators')
+        .select('business_name, application_status')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (tourOp) {
+        vendors.push({
+          type: 'tour', label: 'Tour Operator', icon: Map,
+          dashboardPath: '/tours/provider/dashboard',
+          businessName: tourOp.business_name,
+          status: tourOp.application_status,
+        });
+      }
+
+      // Check service provider
+      const { data: serviceProvider } = await supabase
+        .from('service_providers')
+        .select('business_name')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (serviceProvider) {
+        vendors.push({
+          type: 'service_provider', label: 'Service Provider', icon: Wrench,
+          dashboardPath: '/providers/dashboard',
+          businessName: serviceProvider.business_name,
+        });
+      }
+
+      setVendorRoles(vendors);
+    } catch (error) {
+      console.error('Error fetching roles:', error);
+    } finally {
+      setRolesLoaded(true);
     }
   };
 
@@ -118,9 +204,7 @@ const Profile = () => {
       toast.error('Please enter your full name');
       return;
     }
-
     setIsSubmitting(true);
-
     try {
       const { error } = await supabase
         .from('profiles')
@@ -130,9 +214,7 @@ const Profile = () => {
           phone: phone,
           updated_at: new Date().toISOString(),
         });
-
       if (error) throw error;
-
       toast.success('Profile updated successfully');
       setShowEditModal(false);
       fetchUserProfile();
@@ -149,36 +231,29 @@ const Profile = () => {
     navigate('/login');
   };
 
-  const menuSections = [
-    {
-      title: 'Account',
-      items: [
-        { icon: Calendar, label: 'My Bookings', path: '/bookings', color: 'text-primary' },
-        { icon: MapPin, label: 'Saved Addresses', path: '/profile/addresses', color: 'text-secondary' },
-        { icon: CreditCard, label: 'Payment Methods', path: '/profile/payments', color: 'text-green-600' },
-        { icon: UserPlus, label: 'Become a Driver', path: '/driver/register', color: 'text-amber-600' },
-      ],
-    },
-    {
-      title: 'Preferences',
-      items: [
-        { icon: Bell, label: 'Notifications', path: '/profile/notifications', color: 'text-orange-600' },
-        { icon: Globe, label: 'Language', path: '/profile/language', color: 'text-blue-600', badge: 'EN' },
-      ],
-    },
-    {
-      title: 'Support & Info',
-      items: [
-        { icon: HelpCircle, label: 'Help & Support', path: '/support', color: 'text-purple-600' },
-        { icon: FileText, label: 'Terms & Conditions', path: '/terms', color: 'text-gray-600' },
-        { icon: Shield, label: 'Privacy Policy', path: '/privacy', color: 'text-gray-600' },
-        { icon: Info, label: 'About Vanuway', path: '/about', color: 'text-gray-600' },
-      ],
-    },
-  ];
-
   const displayName = fullName || user?.email?.split('@')[0] || 'User';
   const memberSince = user?.created_at ? new Date(user.created_at).getFullYear() : new Date().getFullYear();
+
+  const isDriver = !!driverInfo;
+  const isApprovedDriver = isDriver && driverInfo!.application_status === 'approved' && driverInfo!.is_verified;
+  const isPendingDriver = isDriver && driverInfo!.application_status !== 'approved';
+
+  // Build account menu items dynamically based on roles
+  const accountItems: { icon: typeof Car; label: string; path: string; color: string; badge?: string }[] = [
+    { icon: Calendar, label: 'My Bookings', path: '/bookings', color: 'text-primary' },
+    { icon: MapPin, label: 'Saved Addresses', path: '/profile/addresses', color: 'text-secondary' },
+    { icon: CreditCard, label: 'Payment Methods', path: '/profile/payments', color: 'text-green-600' },
+  ];
+
+  // Only show "Become a Driver" if NOT already a driver
+  if (!isDriver && rolesLoaded) {
+    accountItems.push({ icon: UserPlus, label: 'Become a Driver', path: '/driver/register', color: 'text-amber-600' });
+  }
+
+  // Show "Become a Partner" only if they have no vendor roles
+  if (vendorRoles.length === 0 && rolesLoaded) {
+    accountItems.push({ icon: UserPlus, label: 'Become a Partner', path: '/partners', color: 'text-orange-600' });
+  }
 
   return (
     <Layout>
@@ -188,24 +263,43 @@ const Profile = () => {
           <div className="flex items-start gap-4">
             <Avatar className="h-20 w-20">
               <AvatarImage src={undefined} />
-              <AvatarFallback className="bg-primary text-primary-foreground text-2xl">
+              <AvatarFallback className="bg-gradient-to-br from-primary to-primary/70 text-primary-foreground text-2xl font-bold">
                 {displayName.charAt(0).toUpperCase()}
               </AvatarFallback>
             </Avatar>
-            <div className="flex-1">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h2 className="text-2xl font-bold">{displayName}</h2>
-                  <p className="text-muted-foreground">{user?.email}</p>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <h2 className="text-2xl font-bold truncate">{displayName}</h2>
+                  <p className="text-muted-foreground text-sm truncate">{user?.email}</p>
                   {phone && <p className="text-sm text-muted-foreground">{phone}</p>}
                   <p className="text-xs text-muted-foreground mt-1">Member since {memberSince}</p>
+                  {/* Role badges */}
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {isApprovedDriver && (
+                      <Badge className="bg-blue-600 text-white text-xs">
+                        <Car className="h-3 w-3 mr-1" />Driver
+                      </Badge>
+                    )}
+                    {isPendingDriver && (
+                      <Badge variant="outline" className="text-amber-600 border-amber-300 text-xs">
+                        <Clock className="h-3 w-3 mr-1" />Driver (Pending)
+                      </Badge>
+                    )}
+                    {vendorRoles.map(v => (
+                      <Badge key={v.type} className="bg-orange-600 text-white text-xs">
+                        <v.icon className="h-3 w-3 mr-1" />{v.label}
+                      </Badge>
+                    ))}
+                  </div>
                 </div>
                 <Button
                   variant="outline"
                   size="sm"
+                  className="flex-shrink-0"
                   onClick={() => setShowEditModal(true)}
                 >
-                  <Edit className="h-4 w-4 mr-2" />
+                  <Edit className="h-4 w-4 mr-1" />
                   Edit
                 </Button>
               </div>
@@ -214,60 +308,179 @@ const Profile = () => {
         </Card>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-3 gap-3">
           <Card className="p-4 text-center">
             <div className="h-10 w-10 mx-auto rounded-full bg-primary/10 flex items-center justify-center mb-2">
               <Car className="h-5 w-5 text-primary" />
             </div>
             <p className="text-2xl font-bold text-primary">{stats.rides}</p>
-            <p className="text-sm text-muted-foreground">Rides Taken</p>
+            <p className="text-xs text-muted-foreground">Rides Taken</p>
           </Card>
           <Card className="p-4 text-center">
             <div className="h-10 w-10 mx-auto rounded-full bg-secondary/10 flex items-center justify-center mb-2">
               <UtensilsCrossed className="h-5 w-5 text-secondary" />
             </div>
             <p className="text-2xl font-bold text-secondary">{stats.orders}</p>
-            <p className="text-sm text-muted-foreground">Orders Placed</p>
+            <p className="text-xs text-muted-foreground">Orders Placed</p>
           </Card>
           <Card className="p-4 text-center">
             <div className="h-10 w-10 mx-auto rounded-full bg-green-100 flex items-center justify-center mb-2">
               <Star className="h-5 w-5 text-green-600" />
             </div>
             <p className="text-2xl font-bold text-green-600">{stats.totalSpent.toLocaleString()}</p>
-            <p className="text-sm text-muted-foreground">VUV Spent</p>
+            <p className="text-xs text-muted-foreground">VUV Spent</p>
           </Card>
         </div>
 
-        {/* Menu Sections */}
-        {menuSections.map((section) => (
-          <div key={section.title}>
+        {/* Driver Section */}
+        {isApprovedDriver && driverInfo && (
+          <div>
             <h3 className="text-sm font-semibold text-muted-foreground uppercase mb-3 px-1">
-              {section.title}
+              Driver
+            </h3>
+            <Card>
+              {/* Driver summary bar */}
+              <div className="p-4 bg-gradient-to-r from-blue-50 to-blue-100/50 border-b">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 bg-blue-600 rounded-full flex items-center justify-center">
+                      <Car className="h-5 w-5 text-white" />
+                    </div>
+                    <div>
+                      <p className="font-semibold">{driverInfo.vehicle_model}</p>
+                      <p className="text-xs text-muted-foreground">{driverInfo.license_plate} · {driverInfo.vehicle_type.toUpperCase()}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="flex items-center gap-1">
+                      <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
+                      <span className="font-semibold">{Number(driverInfo.rating).toFixed(1)}</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">{driverInfo.total_rides} rides</p>
+                  </div>
+                </div>
+              </div>
+              <div className="divide-y">
+                <MenuItem icon={LayoutDashboard} label="Driver Dashboard" path="/driver/dashboard" color="text-blue-600" />
+                <MenuItem icon={TrendingUp} label="Earnings" path="/driver/earnings" color="text-green-600" />
+                <MenuItem icon={Wallet} label="Payouts" path="/driver/payouts" color="text-purple-600" />
+                <MenuItem icon={Calendar} label="Availability & Schedule" path="/driver/availability" color="text-orange-600" />
+              </div>
+            </Card>
+          </div>
+        )}
+
+        {/* Pending Driver Application */}
+        {isPendingDriver && (
+          <div>
+            <h3 className="text-sm font-semibold text-muted-foreground uppercase mb-3 px-1">
+              Driver Application
+            </h3>
+            <Card className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 bg-amber-100 rounded-full flex items-center justify-center">
+                  <Clock className="h-5 w-5 text-amber-600" />
+                </div>
+                <div className="flex-1">
+                  <p className="font-semibold">Application {driverInfo!.application_status === 'rejected' ? 'Not Approved' : 'Under Review'}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {driverInfo!.application_status === 'rejected'
+                      ? 'Your application was not approved. Contact support for details.'
+                      : 'Your driver application is being reviewed. This usually takes 24-48 hours.'}
+                  </p>
+                </div>
+                {driverInfo!.application_status === 'rejected' ? (
+                  <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0" />
+                ) : (
+                  <Badge variant="outline" className="text-amber-600 border-amber-300">Pending</Badge>
+                )}
+              </div>
+            </Card>
+          </div>
+        )}
+
+        {/* Vendor Sections */}
+        {vendorRoles.length > 0 && (
+          <div>
+            <h3 className="text-sm font-semibold text-muted-foreground uppercase mb-3 px-1">
+              My Businesses
             </h3>
             <Card>
               <div className="divide-y">
-                {section.items.map((item, index) => (
+                {vendorRoles.map(vendor => (
                   <div
-                    key={item.path}
+                    key={vendor.type}
                     className="p-4 cursor-pointer hover:bg-muted/50 transition-colors"
-                    onClick={() => navigate(item.path)}
+                    onClick={() => navigate(vendor.dashboardPath)}
                   >
                     <div className="flex items-center gap-3">
-                      <div className={`${item.color}`}>
-                        <item.icon className="h-5 w-5" />
+                      <div className="h-10 w-10 bg-orange-100 rounded-full flex items-center justify-center">
+                        <vendor.icon className="h-5 w-5 text-orange-600" />
                       </div>
-                      <span className="flex-1 font-medium">{item.label}</span>
-                      {item.badge && (
-                        <span className="text-xs bg-muted px-2 py-1 rounded">{item.badge}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium">{vendor.label}</p>
+                        {vendor.businessName && (
+                          <p className="text-xs text-muted-foreground truncate">{vendor.businessName}</p>
+                        )}
+                      </div>
+                      {vendor.status && vendor.status !== 'approved' && (
+                        <Badge variant="outline" className="text-amber-600 border-amber-300 text-xs">
+                          {vendor.status}
+                        </Badge>
                       )}
-                      <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                      {(!vendor.status || vendor.status === 'approved') && (
+                        <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
+                      )}
+                      <ChevronRight className="h-5 w-5 text-muted-foreground flex-shrink-0" />
                     </div>
                   </div>
                 ))}
               </div>
             </Card>
           </div>
-        ))}
+        )}
+
+        {/* Account Section */}
+        <div>
+          <h3 className="text-sm font-semibold text-muted-foreground uppercase mb-3 px-1">
+            Account
+          </h3>
+          <Card>
+            <div className="divide-y">
+              {accountItems.map((item) => (
+                <MenuItem key={item.path} icon={item.icon} label={item.label} path={item.path} color={item.color} badge={item.badge} />
+              ))}
+            </div>
+          </Card>
+        </div>
+
+        {/* Preferences */}
+        <div>
+          <h3 className="text-sm font-semibold text-muted-foreground uppercase mb-3 px-1">
+            Preferences
+          </h3>
+          <Card>
+            <div className="divide-y">
+              <MenuItem icon={Bell} label="Notifications" path="/profile/notifications" color="text-orange-600" />
+              <MenuItem icon={Globe} label="Language" path="/profile/language" color="text-blue-600" badge="EN" />
+            </div>
+          </Card>
+        </div>
+
+        {/* Support & Info */}
+        <div>
+          <h3 className="text-sm font-semibold text-muted-foreground uppercase mb-3 px-1">
+            Support & Info
+          </h3>
+          <Card>
+            <div className="divide-y">
+              <MenuItem icon={HelpCircle} label="Help & Support" path="/support" color="text-purple-600" />
+              <MenuItem icon={FileText} label="Terms & Conditions" path="/terms" color="text-gray-600" />
+              <MenuItem icon={Shield} label="Privacy Policy" path="/privacy" color="text-gray-600" />
+              <MenuItem icon={Info} label="About Vanuway" path="/about" color="text-gray-600" />
+            </div>
+          </Card>
+        </div>
 
         {/* Action Buttons */}
         <div className="space-y-3">
@@ -333,5 +546,25 @@ const Profile = () => {
     </Layout>
   );
 };
+
+/** Reusable menu row */
+function MenuItem({ icon: Icon, label, path, color, badge }: {
+  icon: typeof Car; label: string; path: string; color: string; badge?: string;
+}) {
+  const navigate = useNavigate();
+  return (
+    <div
+      className="p-4 cursor-pointer hover:bg-muted/50 transition-colors"
+      onClick={() => navigate(path)}
+    >
+      <div className="flex items-center gap-3">
+        <div className={color}><Icon className="h-5 w-5" /></div>
+        <span className="flex-1 font-medium">{label}</span>
+        {badge && <span className="text-xs bg-muted px-2 py-1 rounded">{badge}</span>}
+        <ChevronRight className="h-5 w-5 text-muted-foreground" />
+      </div>
+    </div>
+  );
+}
 
 export default Profile;
