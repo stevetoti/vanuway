@@ -54,7 +54,7 @@ const AdminApplications = () => {
       // Fetch drivers separately
       const { data: driversData, error: driversError } = await supabase
         .from('drivers')
-        .select('id, first_name, last_name, email, phone_number, application_status, verification_status')
+        .select('id, first_name, last_name, email, phone_number, application_status, verification_status, profile_photo_url')
         .in('id', driverIds);
 
       if (driversError) {
@@ -104,20 +104,20 @@ const AdminApplications = () => {
   };
 
   const getStatusBadge = (status: string) => {
-    const statusConfig: Record<string, { variant: any; label: string; icon: any }> = {
-      in_progress: { variant: 'secondary', label: 'In Progress', icon: Clock },
-      submitted: { variant: 'default', label: 'Submitted', icon: Clock },
-      under_review: { variant: 'default', label: 'Under Review', icon: Eye },
-      approved: { variant: 'default', label: 'Approved', icon: CheckCircle },
-      rejected: { variant: 'destructive', label: 'Rejected', icon: XCircle },
-      withdrawn: { variant: 'secondary', label: 'Withdrawn', icon: XCircle },
+    const statusConfig: Record<string, { className: string; label: string; icon: typeof Clock }> = {
+      in_progress: { className: 'bg-gray-100 text-gray-700 border-gray-200', label: 'In Progress', icon: Clock },
+      submitted: { className: 'bg-blue-100 text-blue-700 border-blue-200', label: 'Submitted', icon: Clock },
+      under_review: { className: 'bg-amber-100 text-amber-700 border-amber-200', label: 'Under Review', icon: Eye },
+      approved: { className: 'bg-green-100 text-green-700 border-green-200', label: 'Approved', icon: CheckCircle },
+      rejected: { className: 'bg-red-100 text-red-700 border-red-200', label: 'Rejected', icon: XCircle },
+      withdrawn: { className: 'bg-gray-100 text-gray-500 border-gray-200', label: 'Withdrawn', icon: XCircle },
     };
 
     const config = statusConfig[status] || statusConfig.in_progress;
     const Icon = config.icon;
 
     return (
-      <Badge variant={config.variant} className="flex items-center gap-1 w-fit">
+      <Badge variant="outline" className={`flex items-center gap-1 w-fit ${config.className}`}>
         <Icon className="h-3 w-3" />
         {config.label}
       </Badge>
@@ -195,54 +195,50 @@ const AdminApplications = () => {
             </Card>
           ) : (
             filteredApps.map((app) => (
-              <Card key={app.id} className="p-6 hover:shadow-lg transition-shadow">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1 space-y-3">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <h3 className="text-lg font-semibold">
-                          {app.driver?.first_name} {app.driver?.last_name}
-                        </h3>
-                        <p className="text-sm text-muted-foreground">
-                          {app.driver?.email}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {app.driver?.phone_number}
-                        </p>
+              <Card key={app.id} className="p-5 hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate(`/admin/applications/${app.driver_id}`)}>
+                <div className="flex items-center gap-4">
+                  {/* Profile Photo */}
+                  <div className="flex-shrink-0">
+                    {app.driver?.profile_photo_url ? (
+                      <img
+                        src={app.driver.profile_photo_url}
+                        alt=""
+                        className="h-14 w-14 rounded-full object-cover border-2 border-gray-100"
+                      />
+                    ) : (
+                      <div className="h-14 w-14 rounded-full bg-gradient-to-br from-primary to-orange-500 flex items-center justify-center text-white text-lg font-bold">
+                        {(app.driver?.first_name?.[0] || '?')}{(app.driver?.last_name?.[0] || '')}
                       </div>
+                    )}
+                  </div>
+
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-3 mb-1">
+                      <h3 className="text-lg font-semibold truncate">
+                        {app.driver?.first_name} {app.driver?.last_name}
+                      </h3>
                       {getStatusBadge(app.status)}
                     </div>
-
-                    <div className="flex flex-wrap gap-4 text-sm">
-                      <div>
-                        <span className="text-muted-foreground">Submitted:</span>{' '}
-                        <span className="font-medium">
-                          {app.submitted_at
-                            ? formatDate(app.submitted_at)
-                            : 'Not yet submitted'}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">Progress:</span>{' '}
-                        <span className="font-medium">
-                          {app.current_step} / {app.total_steps} steps
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">Created:</span>{' '}
-                        <span className="font-medium">
-                          {formatDate(app.created_at)}
-                        </span>
-                      </div>
+                    <p className="text-sm text-muted-foreground truncate">
+                      {app.driver?.email} · {app.driver?.phone_number}
+                    </p>
+                    <div className="flex flex-wrap gap-3 text-xs text-muted-foreground mt-1">
+                      <span>Submitted: <strong>{app.submitted_at ? formatDate(app.submitted_at) : 'Pending'}</strong></span>
+                      <span>Steps: <strong>{app.current_step}/{app.total_steps}</strong></span>
                     </div>
                   </div>
 
+                  {/* Review Button */}
                   <Button
-                    onClick={() =>
-                      navigate(`/admin/applications/${app.id}`)
-                    }
+                    size="sm"
+                    variant="outline"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate(`/admin/applications/${app.driver_id}`);
+                    }}
                   >
-                    <Eye className="h-4 w-4 mr-2" />
+                    <Eye className="h-4 w-4 mr-1" />
                     Review
                   </Button>
                 </div>
