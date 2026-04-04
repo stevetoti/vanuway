@@ -60,8 +60,10 @@ const Register = () => {
           toast.error(error.message);
         }
       } else {
-        toast.success('Account created! Welcome to VanuWay.');
-        navigate('/onboarding/welcome', { replace: true });
+        toast.success('Account created! Please check your email to verify your account.', {
+          duration: 8000,
+        });
+        navigate('/login', { replace: true });
       }
     } catch (error) {
       toast.error('An unexpected error occurred');

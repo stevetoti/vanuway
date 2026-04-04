@@ -17,6 +17,8 @@ import { usePWA } from "@/hooks/usePWA";
 const Index = lazy(() => import("./pages/Index"));
 const Login = lazy(() => import("./pages/Login"));
 const Register = lazy(() => import("./pages/Register"));
+const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const OnboardingWelcome = lazy(() => import("./pages/onboarding/Welcome"));
 const OnboardingIndex = lazy(() => import("./pages/onboarding/Index"));
 const Partners = lazy(() => import("./pages/partners/Index"));
@@ -171,6 +173,8 @@ const AppContent = () => {
               <Routes>
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
+                <Route path="/forgot-password" element={<ForgotPassword />} />
+                <Route path="/reset-password" element={<ResetPassword />} />
 
                 <Route path="/onboarding" element={<ProtectedRoute><OnboardingIndex /></ProtectedRoute>} />
                 <Route path="/onboarding/welcome" element={<ProtectedRoute><OnboardingWelcome /></ProtectedRoute>} />
@@ -311,9 +315,9 @@ const AppContent = () => {
                 <Route path="/profile/language" element={<ProtectedRoute><LanguageSelector /></ProtectedRoute>} />
 
                 <Route path="/support" element={<ProtectedRoute><Support /></ProtectedRoute>} />
-                <Route path="/terms" element={<ProtectedRoute><Terms /></ProtectedRoute>} />
-                <Route path="/privacy" element={<ProtectedRoute><Privacy /></ProtectedRoute>} />
-                <Route path="/about" element={<ProtectedRoute><About /></ProtectedRoute>} />
+                <Route path="/terms" element={<Terms />} />
+                <Route path="/privacy" element={<Privacy />} />
+                <Route path="/about" element={<About />} />
 
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
