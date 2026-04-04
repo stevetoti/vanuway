@@ -56,10 +56,16 @@ const statusConfig: Record<string, { label: string; color: string; icon: any; de
     description: 'Searching for available drivers nearby...'
   },
   accepted: {
-    label: 'Driver On The Way',
+    label: 'Driver Assigned',
     color: 'bg-blue-500',
     icon: Car,
-    description: 'Your driver is heading to pickup location'
+    description: 'Your driver has accepted the ride'
+  },
+  arriving: {
+    label: 'Driver On The Way',
+    color: 'bg-blue-600',
+    icon: Navigation,
+    description: 'Your driver is heading to your pickup location'
   },
   arrived: {
     label: 'Driver Arrived',
@@ -237,9 +243,9 @@ export default function TrackRide() {
 
   const status = statusConfig[booking.status] || statusConfig.pending;
   const StatusIcon = status.icon;
-  const canCancel = ['pending', 'accepted'].includes(booking.status);
-  const showDriverInfo = ['accepted', 'arrived', 'in_progress'].includes(booking.status);
-  const showChat = ['accepted', 'arrived', 'in_progress'].includes(booking.status) && driver;
+  const canCancel = ['pending', 'accepted', 'arriving'].includes(booking.status);
+  const showDriverInfo = ['accepted', 'arriving', 'arrived', 'in_progress'].includes(booking.status);
+  const showChat = ['accepted', 'arriving', 'arrived', 'in_progress'].includes(booking.status) && driver;
 
   return (
     <div className="min-h-screen bg-gray-50 pb-32">
