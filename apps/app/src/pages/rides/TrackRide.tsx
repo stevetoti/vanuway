@@ -43,6 +43,7 @@ interface Driver {
   current_lng?: number;
   first_name?: string;
   last_name?: string;
+  vehicle_photo_url?: string;
 }
 
 const statusConfig: Record<string, { label: string; color: string; icon: any; description: string }> = {
@@ -137,7 +138,7 @@ export default function TrackRide() {
     // driver_id = auth.users.id (new pattern)
     let { data: driverData } = await supabase
       .from('drivers')
-      .select('id, user_id, vehicle_model, vehicle_type, vehicle_color, license_plate, rating, total_rides, current_lat, current_lng, first_name, last_name')
+      .select('id, user_id, vehicle_model, vehicle_type, vehicle_color, license_plate, rating, total_rides, current_lat, current_lng, first_name, last_name, vehicle_photo_url')
       .eq('user_id', driverUserId)
       .maybeSingle();
 
@@ -145,7 +146,7 @@ export default function TrackRide() {
     if (!driverData) {
       const { data: fallbackDriver } = await supabase
         .from('drivers')
-        .select('id, user_id, vehicle_model, vehicle_type, vehicle_color, license_plate, rating, total_rides, current_lat, current_lng, first_name, last_name')
+        .select('id, user_id, vehicle_model, vehicle_type, vehicle_color, license_plate, rating, total_rides, current_lat, current_lng, first_name, last_name, vehicle_photo_url')
         .eq('id', driverUserId)
         .maybeSingle();
       driverData = fallbackDriver;
@@ -269,6 +270,7 @@ export default function TrackRide() {
                 license_plate: driver.license_plate,
                 current_lat: driver.current_lat,
                 current_lng: driver.current_lng,
+                vehicle_photo_url: driver.vehicle_photo_url,
               } : undefined}
               rideStatus={booking.status}
               showDriverMarker={showDriverInfo}
@@ -286,15 +288,21 @@ export default function TrackRide() {
           <Card className="shadow-lg">
             <CardContent className="p-4">
               <div className="flex items-center gap-4">
-                <div
-                  className="h-16 w-16 rounded-full border-2 flex items-center justify-center text-2xl"
-                  style={{
-                    borderColor: getVehicleColor(driver.vehicle_color),
-                    backgroundColor: getVehicleColor(driver.vehicle_color) + '15'
-                  }}
-                >
-                  {getVehicleEmoji(driver.vehicle_type)}
-                </div>
+                {driver.vehicle_photo_url ? (
+                  <div className="h-16 w-16 rounded-xl overflow-hidden border-2 flex-shrink-0" style={{ borderColor: getVehicleColor(driver.vehicle_color) }}>
+                    <img src={driver.vehicle_photo_url} alt="Vehicle" className="w-full h-full object-cover" />
+                  </div>
+                ) : (
+                  <div
+                    className="h-16 w-16 rounded-full border-2 flex items-center justify-center text-2xl flex-shrink-0"
+                    style={{
+                      borderColor: getVehicleColor(driver.vehicle_color),
+                      backgroundColor: getVehicleColor(driver.vehicle_color) + '15'
+                    }}
+                  >
+                    {getVehicleEmoji(driver.vehicle_type)}
+                  </div>
+                )}
                 <div className="flex-1">
                   <h3 className="font-semibold text-lg">
                     {driver.first_name ? `${driver.first_name} ${driver.last_name || ''}`.trim() : 'Your Driver'}

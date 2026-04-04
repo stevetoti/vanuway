@@ -19,6 +19,7 @@ interface DriverInfo {
   current_lng?: number;
   first_name?: string;
   last_name?: string;
+  vehicle_photo_url?: string;
 }
 
 interface LiveTrackingMapProps {
@@ -56,18 +57,33 @@ const dropoffIcon = L.divIcon({
   iconAnchor: [9, 9],
 });
 
-const createCarIcon = (rotation: number = 0) => L.divIcon({
-  className: '',
-  html: `<div style="transform:rotate(${rotation}deg);width:36px;height:36px;display:flex;align-items:center;justify-content:center;">
-    <div style="background:#3B82F6;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.3);border:3px solid white;">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg">
-        <path d="M5 11l1.5-4.5h11L19 11M19 17a1.5 1.5 0 100-3 1.5 1.5 0 000 3zM5 17a1.5 1.5 0 100-3 1.5 1.5 0 000 3zM3 11l1-3.5C4.5 5.5 6 5 7 5h10c1 0 2.5.5 3 2.5L21 11v6a1 1 0 01-1 1h-1a1 1 0 01-1-1v-1H6v1a1 1 0 01-1 1H4a1 1 0 01-1-1v-6z"/>
-      </svg>
-    </div>
-  </div>`,
-  iconSize: [36, 36],
-  iconAnchor: [18, 18],
-});
+const createCarIcon = (rotation: number = 0, photoUrl?: string) => {
+  if (photoUrl) {
+    return L.divIcon({
+      className: '',
+      html: `<div style="width:48px;height:48px;display:flex;align-items:center;justify-content:center;">
+        <div style="width:48px;height:48px;border-radius:12px;overflow:hidden;box-shadow:0 3px 12px rgba(0,0,0,0.35);border:3px solid white;background:#3B82F6;">
+          <img src="${photoUrl}" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display='none'" />
+        </div>
+        <div style="position:absolute;bottom:-4px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-top:6px solid white;"></div>
+      </div>`,
+      iconSize: [48, 48],
+      iconAnchor: [24, 48],
+    });
+  }
+  return L.divIcon({
+    className: '',
+    html: `<div style="transform:rotate(${rotation}deg);width:36px;height:36px;display:flex;align-items:center;justify-content:center;">
+      <div style="background:#3B82F6;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.3);border:3px solid white;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg">
+          <path d="M5 11l1.5-4.5h11L19 11M19 17a1.5 1.5 0 100-3 1.5 1.5 0 000 3zM5 17a1.5 1.5 0 100-3 1.5 1.5 0 000 3zM3 11l1-3.5C4.5 5.5 6 5 7 5h10c1 0 2.5.5 3 2.5L21 11v6a1 1 0 01-1 1h-1a1 1 0 01-1-1v-1H6v1a1 1 0 01-1 1H4a1 1 0 01-1-1v-6z"/>
+        </svg>
+      </div>
+    </div>`,
+    iconSize: [36, 36],
+    iconAnchor: [18, 18],
+  });
+};
 
 /** Calculate bearing between two points */
 function calcBearing(from: { lat: number; lng: number }, to: { lat: number; lng: number }): number {
@@ -107,21 +123,21 @@ function BoundsController({ points }: { points: [number, number][] }) {
 }
 
 /** Driver marker that animates on position change */
-function DriverMarker({ position, rotation }: { position: [number, number]; rotation: number }) {
+function DriverMarker({ position, rotation, photoUrl }: { position: [number, number]; rotation: number; photoUrl?: string }) {
   const markerRef = useRef<L.Marker | null>(null);
 
   useEffect(() => {
     if (markerRef.current) {
       markerRef.current.setLatLng(position);
-      markerRef.current.setIcon(createCarIcon(rotation));
+      markerRef.current.setIcon(createCarIcon(rotation, photoUrl));
     }
-  }, [position, rotation]);
+  }, [position, rotation, photoUrl]);
 
   return (
     <Marker
       ref={markerRef}
       position={position}
-      icon={createCarIcon(rotation)}
+      icon={createCarIcon(rotation, photoUrl)}
     >
       <Popup>Your driver is on the way!</Popup>
     </Marker>
@@ -273,11 +289,12 @@ export const LiveTrackingMap = ({
             />
           )}
 
-          {/* Driver marker */}
+          {/* Driver marker — shows vehicle photo if available */}
           {showDriverMarker && driverPosition && (
             <DriverMarker
               position={[driverPosition.lat, driverPosition.lng]}
               rotation={heading}
+              photoUrl={driverInfo?.vehicle_photo_url}
             />
           )}
         </MapContainer>
@@ -299,9 +316,15 @@ export const LiveTrackingMap = ({
       {driverInfo && showDriverMarker && (
         <div className="absolute bottom-3 left-3 right-3 z-[1000]">
           <div className="bg-background/95 backdrop-blur-sm rounded-lg p-3 shadow-lg flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-              <Car className="h-5 w-5 text-blue-600" />
-            </div>
+            {driverInfo.vehicle_photo_url ? (
+              <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 border">
+                <img src={driverInfo.vehicle_photo_url} alt="Vehicle" className="w-full h-full object-cover" />
+              </div>
+            ) : (
+              <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                <Car className="h-5 w-5 text-blue-600" />
+              </div>
+            )}
             <div className="flex-1 min-w-0">
               <p className="font-semibold truncate">
                 {driverInfo.vehicle_model || 'Vehicle'}
