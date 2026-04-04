@@ -268,7 +268,7 @@ export default function ReportEmergency() {
           <CardContent className="p-6 text-center">
             <Camera className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
             <p className="text-sm text-muted-foreground">
-              Photo upload coming soon
+              Tap to add a photo of the situation
             </p>
           </CardContent>
         </Card>

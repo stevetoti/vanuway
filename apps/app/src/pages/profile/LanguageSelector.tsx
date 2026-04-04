@@ -137,7 +137,7 @@ export default function LanguageSelector() {
 
         <Card className="p-4 bg-muted/30">
           <p className="text-sm text-muted-foreground">
-            ℹ️ Language translation is coming soon. Currently, the app is available in English only.
+            The app is currently available in English. Bislama and French translations are being prepared.
           </p>
         </Card>
 

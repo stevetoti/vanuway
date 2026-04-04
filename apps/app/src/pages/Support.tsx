@@ -88,7 +88,7 @@ export default function Support() {
     {
       icon: Mail,
       title: 'Email Support',
-      subtitle: 'support@vanuway.vu',
+      subtitle: 'support@vanuway.com',
       color: 'text-purple-600',
       bgColor: 'bg-purple-100',
       action: 'Send Email',

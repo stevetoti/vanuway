@@ -107,8 +107,8 @@ export class ErrorBoundary extends Component<Props, State> {
               <div className="mt-8 p-4 bg-primary/5 rounded-lg">
                 <p className="text-sm text-muted-foreground">
                   If this problem persists, please contact support at{' '}
-                  <a href="mailto:support@vanuway.vu" className="text-primary hover:underline">
-                    support@vanuway.vu
+                  <a href="mailto:support@vanuway.com" className="text-primary hover:underline">
+                    support@vanuway.com
                   </a>
                 </p>
               </div>

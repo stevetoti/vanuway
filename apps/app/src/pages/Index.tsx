@@ -7,7 +7,6 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import {
   Car,
-  Bike,
   UtensilsCrossed,
   Hotel,
   Palmtree,
@@ -43,11 +42,11 @@ const quickServices = [
     bgColor: 'bg-primary/10',
   },
   {
-    id: 'vanuride',
-    icon: Bike,
-    title: 'VanuRide',
-    subtitle: 'Quick & affordable',
-    path: '/rides/request/vanuride',
+    id: 'delivery',
+    icon: Navigation,
+    title: 'Delivery',
+    subtitle: 'Send packages',
+    path: '/delivery',
     gradient: 'from-purple-500 to-pink-500',
     bgColor: 'bg-purple-500/10',
   },

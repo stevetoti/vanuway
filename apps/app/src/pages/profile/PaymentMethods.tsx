@@ -19,7 +19,7 @@ export default function PaymentMethods() {
             </Button>
             <h1 className="text-3xl font-bold">Payment Methods</h1>
           </div>
-          <Button onClick={() => toast.info('Add payment method coming soon')}>
+          <Button onClick={() => toast.info('Payment methods can be added when booking a ride')}>
             <Plus className="h-4 w-4 mr-2" />
             Add Method
           </Button>

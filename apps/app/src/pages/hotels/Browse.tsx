@@ -224,9 +224,6 @@ const BrowseHotels = () => {
       // Use sample data if no hotels in database
       if (!data || data.length === 0) {
         setHotels(sampleHotels);
-        toast.info('Showing sample properties', {
-          description: 'Real listings coming soon!',
-        });
       } else {
         setHotels(data);
       }

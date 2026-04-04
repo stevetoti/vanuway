@@ -10,10 +10,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import {
-  ArrowLeft, MapPin, Navigation, Search, Clock, Users, Car, Bike,
+  ArrowLeft, MapPin, Navigation, Search, Clock, Users, Car,
   ChevronRight, ChevronDown, Locate, Star, CreditCard, Banknote, Plus, Minus,
   Loader2, CheckCircle2, Phone, MessageCircle, Shield, X, Truck
 } from 'lucide-react';
+import { calculateRidePrice, formatPrice as formatVUV, type VehicleType as PricingVehicleType } from '@/lib/rides/pricing';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -167,9 +168,10 @@ const popularLocations = [
 ];
 
 const vehicleTypes = [
-  { id: 'standard', name: 'Standard', icon: Car, capacity: 4, basePrice: 500, perKm: 50, description: 'Sedan — Affordable daily rides', eta: '3-5 min', color: 'bg-blue-500' },
-  { id: 'premium', name: 'Premium', icon: Truck, capacity: 4, basePrice: 800, perKm: 80, description: 'SUV — Comfortable with AC', eta: '5-8 min', color: 'bg-purple-500' },
-  { id: 'van', name: 'Van', icon: Users, capacity: 6, basePrice: 1000, perKm: 100, description: '6-seater — Perfect for groups', eta: '8-12 min', color: 'bg-green-500' },
+  { id: 'car', name: 'VanuCar Standard', icon: Car, capacity: 4, description: 'Comfortable sedan for up to 4 passengers', eta: '3-5 min', color: 'bg-blue-500' },
+  { id: 'suv', name: 'VanuCar SUV', icon: Truck, capacity: 6, description: 'Spacious SUV for larger groups', eta: '5-8 min', color: 'bg-purple-500' },
+  { id: 'van', name: 'VanuCar Van', icon: Users, capacity: 8, description: 'Large van for groups or extra luggage', eta: '8-12 min', color: 'bg-green-500' },
+  { id: 'wheelchair_van', name: 'VanuAccess', icon: Car, capacity: 4, description: 'Wheelchair-accessible van with ramp', eta: '8-12 min', color: 'bg-teal-500' },
 ];
 
 interface Location {
@@ -243,7 +245,7 @@ export default function RequestRide() {
   const [dropoffLocation, setDropoffLocation] = useState<Location | null>(null);
   const [pickupSearch, setPickupSearch] = useState('');
   const [dropoffSearch, setDropoffSearch] = useState('');
-  const [selectedVehicle, setSelectedVehicle] = useState('standard');
+  const [selectedVehicle, setSelectedVehicle] = useState('car');
   const [selectedPayment, setSelectedPayment] = useState('cash');
   const [passengerCount, setPassengerCount] = useState(1);
   const [mapCenter, setMapCenter] = useState<[number, number]>(PORT_VILA_CENTER);
@@ -266,23 +268,19 @@ export default function RequestRide() {
     return null;
   }, [pickupLocation, dropoffLocation]);
 
-  // Calculate fare
+  // Calculate fare using production pricing engine
   const estimate = useMemo(() => {
     if (!pickupLocation || !dropoffLocation) return null;
-    const vehicle = vehicleTypes.find(v => v.id === selectedVehicle)!;
-    const R = 6371;
-    const dLat = (dropoffLocation.lat - pickupLocation.lat) * Math.PI / 180;
-    const dLng = (dropoffLocation.lng - pickupLocation.lng) * Math.PI / 180;
-    const a = Math.sin(dLat / 2) ** 2 +
-      Math.cos(pickupLocation.lat * Math.PI / 180) * Math.cos(dropoffLocation.lat * Math.PI / 180) *
-      Math.sin(dLng / 2) ** 2;
-    const distance = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    const price = vehicle.basePrice + distance * vehicle.perKm * 1000; // perKm is per actual km
-    const duration = Math.max(5, Math.round(distance * 4 + 3));
+    const vehicleId = selectedVehicle as PricingVehicleType;
+    const result = calculateRidePrice(
+      { lat: pickupLocation.lat, lng: pickupLocation.lng, address: pickupLocation.name },
+      { lat: dropoffLocation.lat, lng: dropoffLocation.lng, address: dropoffLocation.name },
+      vehicleId,
+    );
     return {
-      price: Math.round(price / 50) * 50,
-      distance: Math.max(0.5, parseFloat(distance.toFixed(1))),
-      duration,
+      price: result.totalPrice,
+      distance: result.distance,
+      duration: result.estimatedTime,
     };
   }, [pickupLocation, dropoffLocation, selectedVehicle]);
 
@@ -344,8 +342,7 @@ export default function RequestRide() {
     setStep('searching');
   };
 
-  const formatPrice = (price: number) =>
-    new Intl.NumberFormat('en-VU', { style: 'currency', currency: 'VUV', maximumFractionDigits: 0 }).format(price);
+  const fprice = (price: number) => formatVUV(price);
 
   const filteredLocations = popularLocations.filter(loc =>
     loc.name.toLowerCase().includes((activeField === 'pickup' ? pickupSearch : dropoffSearch).toLowerCase()) ||
@@ -404,7 +401,7 @@ export default function RequestRide() {
             </h1>
           </div>
           {step === 'vehicle' && estimate && (
-            <Badge className="bg-blue-600">{formatPrice(estimate.price)}</Badge>
+            <Badge className="bg-blue-600">{fprice(estimate.price)}</Badge>
           )}
         </div>
       </div>
@@ -593,9 +590,14 @@ export default function RequestRide() {
               {vehicleTypes.map(v => {
                 const Icon = v.icon;
                 const isSelected = selectedVehicle === v.id;
-                const vEstimate = estimate ? {
-                  price: Math.round((v.basePrice + (estimate.distance * v.perKm * 1000)) / 50) * 50,
-                } : null;
+                const vEstimate = (pickupLocation && dropoffLocation) ? (() => {
+                  const r = calculateRidePrice(
+                    { lat: pickupLocation.lat, lng: pickupLocation.lng, address: pickupLocation.name },
+                    { lat: dropoffLocation.lat, lng: dropoffLocation.lng, address: dropoffLocation.name },
+                    v.id as PricingVehicleType,
+                  );
+                  return { price: r.totalPrice };
+                })() : null;
                 return (
                   <button
                     key={v.id}
@@ -621,7 +623,7 @@ export default function RequestRide() {
                     <div className="text-right">
                       {vEstimate && (
                         <p className={`font-bold text-lg ${isSelected ? 'text-blue-600' : ''}`}>
-                          {formatPrice(vEstimate.price)}
+                          {fprice(vEstimate.price)}
                         </p>
                       )}
                       <p className="text-[10px] text-muted-foreground">{v.eta}</p>
@@ -765,7 +767,7 @@ export default function RequestRide() {
                 <Phone className="h-4 w-4 mr-2" />
                 Call
               </Button>
-              <Button variant="outline" className="flex-1 h-12 rounded-xl" onClick={() => toast.info('Chat coming soon!')}>
+              <Button variant="outline" className="flex-1 h-12 rounded-xl" onClick={() => toast.info('Messaging will be available during your ride')}>
                 <MessageCircle className="h-4 w-4 mr-2" />
                 Message
               </Button>
