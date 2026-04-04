@@ -123,7 +123,7 @@ export const RideMessaging = ({
   if (!isOpen) return null;
 
   return (
-    <Card className="fixed bottom-20 right-4 w-96 h-[500px] shadow-2xl z-50 flex flex-col">
+    <Card className="fixed bottom-20 left-3 right-3 sm:left-auto sm:right-4 sm:w-96 h-[70vh] max-h-[500px] shadow-2xl z-50 flex flex-col">
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b bg-primary text-primary-foreground rounded-t-lg">
         <div className="flex items-center gap-2">

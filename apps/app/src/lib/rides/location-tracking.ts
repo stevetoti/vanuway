@@ -27,6 +27,7 @@ export const updateDriverLocation = async (
   location: Location
 ): Promise<LocationUpdateResult> => {
   try {
+    // driverId is auth.users.id (passed from useAuth), so match on user_id
     const { error } = await supabase
       .from('drivers')
       .update({
@@ -34,7 +35,7 @@ export const updateDriverLocation = async (
         current_lng: location.lng,
         last_active_at: new Date().toISOString(),
       })
-      .eq('id', driverId);
+      .eq('user_id', driverId);
 
     if (error) throw error;
 
@@ -146,7 +147,7 @@ export const subscribeToDriverLocation = (
         event: 'UPDATE',
         schema: 'public',
         table: 'drivers',
-        filter: `id=eq.${driverId}`,
+        filter: `user_id=eq.${driverId}`,
       },
       (payload: any) => {
         if (payload.new.current_lat && payload.new.current_lng) {
