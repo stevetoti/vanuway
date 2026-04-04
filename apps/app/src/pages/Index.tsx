@@ -1,215 +1,58 @@
 import { Layout } from '@/components/layout/Layout';
-import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/hooks/useAuth';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import {
-  Car,
-  UtensilsCrossed,
-  Hotel,
-  TreePalm,
-  MapPin,
-  Star,
-  Clock,
-  ChevronRight,
-  Sparkles,
-  Shield,
-  Zap,
-  ArrowRight,
-  Navigation,
-  Percent,
-  Heart,
-  BookOpen,
-  AlertTriangle,
-  Store,
-  Ship,
-  Calendar,
+  Car, UtensilsCrossed, Hotel, TreePalm, MapPin, Clock,
+  ChevronRight, Sparkles, Shield, Navigation, BookOpen,
+  AlertTriangle, Store, Ship, Calendar, Search, Package,
+  Stethoscope, Briefcase, ArrowRight, Zap,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 
-// Quick service cards data
-const quickServices = [
-  {
-    id: 'vanucar',
-    icon: Car,
-    title: 'VanuCar',
-    subtitle: 'Comfortable rides',
-    path: '/rides/request/vanucar',
-    gradient: 'from-primary to-orange-600',
-    bgColor: 'bg-primary/10',
-  },
-  {
-    id: 'delivery',
-    icon: Navigation,
-    title: 'Delivery',
-    subtitle: 'Send packages',
-    path: '/delivery',
-    gradient: 'from-purple-500 to-pink-500',
-    bgColor: 'bg-purple-500/10',
-  },
-  {
-    id: 'food',
-    icon: UtensilsCrossed,
-    title: 'VanuEats',
-    subtitle: 'Food delivery',
-    path: '/food',
-    gradient: 'from-green-500 to-emerald-600',
-    bgColor: 'bg-green-500/10',
-  },
-  {
-    id: 'hotels',
-    icon: Hotel,
-    title: 'VanuStay',
-    subtitle: 'Hotels & resorts',
-    path: '/hotels',
-    gradient: 'from-blue-500 to-cyan-500',
-    bgColor: 'bg-blue-500/10',
-  },
-  {
-    id: 'tours',
-    icon: TreePalm,
-    title: 'VanuTours',
-    subtitle: 'Explore Vanuatu',
-    path: '/tours',
-    gradient: 'from-amber-500 to-yellow-500',
-    bgColor: 'bg-amber-500/10',
-  },
-  {
-    id: 'bislama',
-    icon: BookOpen,
-    title: 'Learn Bislama',
-    subtitle: 'Language lessons',
-    path: '/bislama',
-    gradient: 'from-indigo-500 to-violet-500',
-    bgColor: 'bg-indigo-500/10',
-  },
-  {
-    id: 'emergency',
-    icon: AlertTriangle,
-    title: 'Emergency',
-    subtitle: 'Safety alerts',
-    path: '/emergency',
-    gradient: 'from-red-500 to-rose-600',
-    bgColor: 'bg-red-500/10',
-  },
-  {
-    id: 'marketplace',
-    icon: Store,
-    title: 'Marketplace',
-    subtitle: 'Buy & sell locally',
-    path: '/marketplace',
-    gradient: 'from-teal-500 to-cyan-600',
-    bgColor: 'bg-teal-500/10',
-  },
-  {
-    id: 'ferry',
-    icon: Ship,
-    title: 'Ferry & Flights',
-    subtitle: 'Inter-island travel',
-    path: '/ferry',
-    gradient: 'from-sky-500 to-blue-600',
-    bgColor: 'bg-sky-500/10',
-  },
-  {
-    id: 'events',
-    icon: Calendar,
-    title: 'Events',
-    subtitle: 'Local happenings',
-    path: '/events',
-    gradient: 'from-pink-500 to-rose-500',
-    bgColor: 'bg-pink-500/10',
-  },
+// Primary services (top row — Uber style)
+const primaryServices = [
+  { id: 'ride', icon: Car, label: 'Ride', path: '/rides/request/vanucar', color: 'bg-gray-900 text-white' },
+  { id: 'delivery', icon: Package, label: 'Delivery', path: '/delivery', color: 'bg-gray-900 text-white' },
+  { id: 'food', icon: UtensilsCrossed, label: 'Food', path: '/food', color: 'bg-green-600 text-white' },
+  { id: 'hotels', icon: Hotel, label: 'Stay', path: '/hotels', color: 'bg-blue-600 text-white' },
 ];
 
-// Promotional banners
-const promotions = [
-  {
-    id: 1,
-    title: '50% Off First Ride',
-    subtitle: 'Use code WELCOME50',
-    gradient: 'from-primary to-orange-500',
-    icon: Zap,
-  },
-  {
-    id: 2,
-    title: 'Free Delivery',
-    subtitle: 'On orders over 2000 VUV',
-    gradient: 'from-green-500 to-emerald-500',
-    icon: Percent,
-  },
-  {
-    id: 3,
-    title: 'Safe Rides',
-    subtitle: 'Verified drivers only',
-    gradient: 'from-blue-500 to-indigo-500',
-    icon: Shield,
-  },
+// All services grid
+const allServices = [
+  { id: 'tours', icon: TreePalm, label: 'Tours', path: '/tours', color: 'text-amber-600', bg: 'bg-amber-50' },
+  { id: 'ferry', icon: Ship, label: 'Ferry', path: '/ferry', color: 'text-sky-600', bg: 'bg-sky-50' },
+  { id: 'marketplace', icon: Store, label: 'Market', path: '/marketplace', color: 'text-teal-600', bg: 'bg-teal-50' },
+  { id: 'events', icon: Calendar, label: 'Events', path: '/events', color: 'text-pink-600', bg: 'bg-pink-50' },
+  { id: 'health', icon: Stethoscope, label: 'Health', path: '/health', color: 'text-red-600', bg: 'bg-red-50' },
+  { id: 'jobs', icon: Briefcase, label: 'Jobs', path: '/jobs', color: 'text-indigo-600', bg: 'bg-indigo-50' },
+  { id: 'bislama', icon: BookOpen, label: 'Bislama', path: '/bislama', color: 'text-violet-600', bg: 'bg-violet-50' },
+  { id: 'emergency', icon: AlertTriangle, label: 'SOS', path: '/emergency', color: 'text-red-700', bg: 'bg-red-100' },
 ];
 
 const Index = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [currentPromo, setCurrentPromo] = useState(0);
-  const [userLocation, setUserLocation] = useState('Port Vila, Vanuatu');
   const [firstName, setFirstName] = useState<string | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
-  // Fetch user's first name from profile
   useEffect(() => {
     if (!user) return;
     supabase
       .from('profiles')
-      .select('full_name')
+      .select('full_name, avatar_url')
       .eq('id', user.id)
       .single()
       .then(({ data }) => {
-        if (data?.full_name) {
-          setFirstName(data.full_name.split(' ')[0]);
-        }
+        if (data?.full_name) setFirstName(data.full_name.split(' ')[0]);
+        if (data?.avatar_url) setAvatarUrl(data.avatar_url);
       });
   }, [user]);
 
-  // Auto-rotate promotions
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentPromo((prev) => (prev + 1) % promotions.length);
-    }, 4000);
-    return () => clearInterval(interval);
-  }, []);
-
-  // Fetch featured restaurants
-  const { data: restaurants } = useQuery({
-    queryKey: ['featured-restaurants'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('restaurants')
-        .select('*')
-        .eq('is_open', true)
-        .order('rating', { ascending: false })
-        .limit(4);
-      if (error) throw error;
-      return data;
-    },
-  });
-
-  // Fetch featured hotels
-  const { data: hotels } = useQuery({
-    queryKey: ['featured-hotels'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('hotels')
-        .select('*')
-        .eq('status', 'active')
-        .order('star_rating', { ascending: false })
-        .limit(4);
-      if (error) throw error;
-      return data;
-    },
-  });
-
-  // Fetch user's recent bookings
   const { data: recentBookings } = useQuery({
     queryKey: ['recent-bookings', user?.id],
     queryFn: async () => {
@@ -218,12 +61,31 @@ const Index = () => {
         .from('ride_bookings')
         .select('*')
         .eq('user_id', user.id)
+        .in('status', ['completed', 'cancelled'])
         .order('created_at', { ascending: false })
         .limit(3);
       if (error) throw error;
       return data;
     },
     enabled: !!user,
+  });
+
+  const { data: activeRide } = useQuery({
+    queryKey: ['active-ride', user?.id],
+    queryFn: async () => {
+      if (!user) return null;
+      const { data } = await supabase
+        .from('ride_bookings')
+        .select('*')
+        .eq('user_id', user.id)
+        .in('status', ['pending', 'accepted', 'arriving', 'arrived', 'in_progress'])
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!user,
+    refetchInterval: 10000,
   });
 
   const getGreeting = () => {
@@ -233,349 +95,229 @@ const Index = () => {
     return 'Good evening';
   };
 
-  const getUserName = () => {
-    if (!user) return 'Guest';
-    if (firstName) return firstName;
-    return user.email?.split('@')[0] || 'there';
+  const displayName = firstName || user?.email?.split('@')[0] || 'Guest';
+
+  const statusLabel: Record<string, string> = {
+    pending: 'Finding driver...',
+    accepted: 'Driver on the way',
+    arriving: 'Driver arriving',
+    arrived: 'Driver is here',
+    in_progress: 'On your trip',
   };
 
   return (
     <Layout>
-      <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-800">
-        {/* Hero Section */}
-        <div className="bg-gradient-to-br from-primary via-primary to-orange-600 text-white">
-          <div className="container py-8 space-y-6">
-            {/* Greeting & Location */}
-            <div className="flex items-start justify-between">
-              <div className="space-y-1">
-                <p className="text-white/80 text-sm">{getGreeting()}</p>
-                <h1 className="text-2xl font-bold">{getUserName()} 👋</h1>
+      <div className="min-h-screen bg-gray-50">
+        {/* Header */}
+        <div className="bg-white border-b sticky top-0 z-50">
+          <div className="container flex items-center justify-between py-3">
+            <div className="flex items-center gap-3">
+              <Avatar className="h-10 w-10" onClick={() => navigate('/profile')}>
+                <AvatarImage src={avatarUrl || undefined} />
+                <AvatarFallback className="bg-gray-900 text-white font-bold">
+                  {displayName.charAt(0).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <p className="text-xs text-muted-foreground">{getGreeting()}</p>
+                <h1 className="text-base font-bold leading-tight">{displayName}</h1>
               </div>
+            </div>
+            <div className="flex items-center gap-2">
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-white hover:bg-white/20 gap-2"
+                className="text-xs text-muted-foreground gap-1"
               >
-                <MapPin className="h-4 w-4" />
-                <span className="text-sm">{userLocation}</span>
+                <MapPin className="h-3.5 w-3.5" />
+                Port Vila
               </Button>
-            </div>
-
-            {/* Quick Ride Widget */}
-            <Card className="bg-white/95 backdrop-blur shadow-xl border-0">
-              <CardContent className="p-4">
-                <div
-                  className="flex items-center gap-3 cursor-pointer"
-                  onClick={() => navigate('/rides/request/vanucar')}
-                >
-                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                    <Navigation className="h-5 w-5 text-primary" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm text-muted-foreground">Where to?</p>
-                    <p className="font-medium text-gray-900">Enter destination</p>
-                  </div>
-                  <ChevronRight className="h-5 w-5 text-gray-400" />
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Promotional Banner Carousel */}
-            <div className="relative overflow-hidden rounded-xl">
-              <div
-                className="flex transition-transform duration-500 ease-out"
-                style={{ transform: `translateX(-${currentPromo * 100}%)` }}
-              >
-                {promotions.map((promo) => (
-                  <div
-                    key={promo.id}
-                    className={`min-w-full p-4 rounded-xl bg-gradient-to-r ${promo.gradient}`}
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center">
-                        <promo.icon className="h-6 w-6 text-white" />
-                      </div>
-                      <div>
-                        <h3 className="font-bold text-lg">{promo.title}</h3>
-                        <p className="text-white/80 text-sm">{promo.subtitle}</p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              {/* Carousel Indicators */}
-              <div className="flex justify-center gap-2 mt-3">
-                {promotions.map((_, idx) => (
-                  <button
-                    key={idx}
-                    className={`w-2 h-2 rounded-full transition-all ${
-                      idx === currentPromo ? 'bg-white w-6' : 'bg-white/50'
-                    }`}
-                    onClick={() => setCurrentPromo(idx)}
-                  />
-                ))}
-              </div>
             </div>
           </div>
         </div>
 
-        {/* Main Content */}
-        <div className="container py-6 space-y-8">
-          {/* Services Grid */}
-          <section>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold">Services</h2>
-              <Button variant="ghost" size="sm" onClick={() => navigate('/services')}>
-                See all <ChevronRight className="h-4 w-4 ml-1" />
-              </Button>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-              {quickServices.map((service) => (
-                <Card
+        <div className="container pb-8">
+          {/* Where to? Search Bar */}
+          <div className="pt-4 pb-2">
+            <button
+              className="w-full flex items-center gap-3 bg-white rounded-full px-5 py-3.5 shadow-sm border hover:shadow-md transition-shadow text-left"
+              onClick={() => navigate('/rides/request/vanucar')}
+            >
+              <Search className="h-5 w-5 text-muted-foreground" />
+              <span className="text-muted-foreground flex-1">Where to?</span>
+              <div className="h-8 w-px bg-gray-200" />
+              <div className="flex items-center gap-1.5 text-sm font-medium">
+                <Clock className="h-4 w-4" />
+                Now
+              </div>
+            </button>
+          </div>
+
+          {/* Active Ride Banner */}
+          {activeRide && (
+            <button
+              className="w-full mt-3 p-4 bg-gray-900 text-white rounded-2xl flex items-center gap-4 text-left"
+              onClick={() => navigate(`/rides/track/${activeRide.id}`)}
+            >
+              <div className="h-12 w-12 rounded-full bg-white/10 flex items-center justify-center">
+                <Car className="h-6 w-6" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold">{statusLabel[activeRide.status] || 'Active Ride'}</p>
+                <p className="text-sm text-white/70 truncate">{activeRide.dropoff_location}</p>
+              </div>
+              <div className="flex items-center gap-1 text-primary">
+                <span className="text-sm font-medium">Track</span>
+                <ChevronRight className="h-4 w-4" />
+              </div>
+            </button>
+          )}
+
+          {/* Primary Services Row */}
+          <div className="grid grid-cols-4 gap-3 mt-5">
+            {primaryServices.map((service) => {
+              const Icon = service.icon;
+              return (
+                <button
                   key={service.id}
-                  className="relative overflow-hidden cursor-pointer hover:shadow-lg transition-all duration-300 hover:-translate-y-1"
+                  className="flex flex-col items-center gap-2"
                   onClick={() => navigate(service.path)}
                 >
-                  <CardContent className="p-4 text-center">
-                    <div className={`mx-auto w-14 h-14 rounded-2xl ${service.bgColor} flex items-center justify-center mb-3`}>
-                      <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${service.gradient} flex items-center justify-center`}>
-                        <service.icon className="h-5 w-5 text-white" />
-                      </div>
-                    </div>
-                    <h3 className="font-semibold text-sm">{service.title}</h3>
-                    <p className="text-xs text-muted-foreground mt-1">{service.subtitle}</p>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </section>
-
-          {/* Featured Restaurants */}
-          {restaurants && restaurants.length > 0 && (
-            <section>
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h2 className="text-xl font-bold">Popular Restaurants</h2>
-                  <p className="text-sm text-muted-foreground">Order from the best in town</p>
-                </div>
-                <Button variant="ghost" size="sm" onClick={() => navigate('/food')}>
-                  See all <ChevronRight className="h-4 w-4 ml-1" />
-                </Button>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {restaurants.map((restaurant) => (
-                  <Card
-                    key={restaurant.id}
-                    className="overflow-hidden cursor-pointer hover:shadow-lg transition-all duration-300 hover:-translate-y-1"
-                    onClick={() => navigate(`/food/restaurant/${restaurant.id}`)}
-                  >
-                    <div className="relative h-32">
-                      <img
-                        src={restaurant.cover_image_url || 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400'}
-                        alt={restaurant.name}
-                        className="w-full h-full object-cover"
-                      />
-                      <div className="absolute top-2 right-2">
-                        <Badge className="bg-white text-black shadow-sm">
-                          <Star className="h-3 w-3 mr-1 fill-yellow-400 text-yellow-400" />
-                          {Number(restaurant.rating).toFixed(1)}
-                        </Badge>
-                      </div>
-                      {restaurant.is_open && (
-                        <Badge className="absolute bottom-2 left-2 bg-green-500">
-                          Open Now
-                        </Badge>
-                      )}
-                    </div>
-                    <CardContent className="p-3">
-                      <h3 className="font-semibold truncate">{restaurant.name}</h3>
-                      <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
-                        <Clock className="h-3 w-3" />
-                        <span>{restaurant.delivery_time_minutes || 30} min</span>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </section>
-          )}
-
-          {/* Learn Bislama Feature */}
-          <section>
-            <Card 
-              className="p-6 cursor-pointer hover:shadow-xl transition-all duration-300 hover:-translate-y-1 bg-gradient-to-r from-indigo-500/10 via-violet-500/5 to-purple-500/10 border-2 border-indigo-200 dark:border-indigo-800"
-              onClick={() => navigate('/bislama')}
-            >
-              <div className="flex items-center gap-4">
-                <div className="p-4 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 shadow-lg shadow-indigo-500/30">
-                  <BookOpen className="h-8 w-8 text-white" />
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Badge className="bg-indigo-500 text-white">New</Badge>
-                    <Badge variant="outline" className="text-indigo-600 border-indigo-300">Free</Badge>
+                  <div className={`h-14 w-14 rounded-2xl ${service.color} flex items-center justify-center shadow-sm`}>
+                    <Icon className="h-6 w-6" />
                   </div>
-                  <h3 className="text-lg font-bold">Learn Bislama</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Master the language of Vanuatu with fun, interactive lessons
-                  </p>
-                </div>
-                <ChevronRight className="h-6 w-6 text-indigo-400" />
-              </div>
-            </Card>
-          </section>
+                  <span className="text-xs font-semibold">{service.label}</span>
+                </button>
+              );
+            })}
+          </div>
 
-          {/* Featured Hotels */}
-          {hotels && hotels.length > 0 && (
-            <section>
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h2 className="text-xl font-bold">Top Hotels</h2>
-                  <p className="text-sm text-muted-foreground">Best places to stay in Vanuatu</p>
-                </div>
-                <Button variant="ghost" size="sm" onClick={() => navigate('/hotels')}>
-                  See all <ChevronRight className="h-4 w-4 ml-1" />
-                </Button>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {hotels.map((hotel) => (
-                  <Card
-                    key={hotel.id}
-                    className="overflow-hidden cursor-pointer hover:shadow-lg transition-all duration-300 hover:-translate-y-1"
-                    onClick={() => navigate(`/hotels/${hotel.id}`)}
-                  >
-                    <div className="relative h-32 bg-gradient-to-br from-blue-100 to-cyan-100">
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <Hotel className="h-12 w-12 text-blue-300" />
-                      </div>
-                      <div className="absolute top-2 right-2">
-                        <Badge className="bg-white text-black shadow-sm">
-                          {Array.from({ length: hotel.star_rating || 0 }).map((_, i) => (
-                            <Star key={i} className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                          ))}
-                        </Badge>
-                      </div>
-                      {hotel.featured && (
-                        <Badge className="absolute bottom-2 left-2 bg-primary">
-                          <Sparkles className="h-3 w-3 mr-1" />
-                          Featured
-                        </Badge>
-                      )}
-                    </div>
-                    <CardContent className="p-3">
-                      <h3 className="font-semibold truncate">{hotel.name}</h3>
-                      <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
-                        <MapPin className="h-3 w-3" />
-                        <span className="truncate">{hotel.city}</span>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </section>
-          )}
-
-          {/* Recent Activity */}
-          <section>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold">Recent Activity</h2>
-              {recentBookings && recentBookings.length > 0 && (
-                <Button variant="ghost" size="sm" onClick={() => navigate('/bookings')}>
-                  View all <ChevronRight className="h-4 w-4 ml-1" />
-                </Button>
-              )}
+          {/* All Services Grid */}
+          <div className="mt-6">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wide">More services</h2>
+              <Button variant="ghost" size="sm" className="text-xs h-7" onClick={() => navigate('/services')}>
+                View all
+              </Button>
             </div>
-            {recentBookings && recentBookings.length > 0 ? (
-              <div className="space-y-3">
+            <div className="grid grid-cols-4 gap-3">
+              {allServices.map((service) => {
+                const Icon = service.icon;
+                return (
+                  <button
+                    key={service.id}
+                    className="flex flex-col items-center gap-1.5 py-3"
+                    onClick={() => navigate(service.path)}
+                  >
+                    <div className={`h-12 w-12 rounded-xl ${service.bg} flex items-center justify-center`}>
+                      <Icon className={`h-5 w-5 ${service.color}`} />
+                    </div>
+                    <span className="text-xs font-medium">{service.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Promo Banner */}
+          <div className="mt-6">
+            <button
+              className="w-full p-4 bg-gradient-to-r from-primary to-orange-500 rounded-2xl text-white text-left flex items-center gap-4"
+              onClick={() => navigate('/rides/request/vanucar')}
+            >
+              <div className="h-12 w-12 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
+                <Zap className="h-6 w-6" />
+              </div>
+              <div className="flex-1">
+                <p className="font-bold text-lg">Your first ride</p>
+                <p className="text-white/80 text-sm">Try VanuCar today — safe, comfortable rides across Port Vila</p>
+              </div>
+              <ArrowRight className="h-5 w-5 flex-shrink-0" />
+            </button>
+          </div>
+
+          {/* Recent Rides */}
+          {recentBookings && recentBookings.length > 0 && (
+            <div className="mt-6">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wide">Recent</h2>
+                <Button variant="ghost" size="sm" className="text-xs h-7" onClick={() => navigate('/bookings')}>
+                  View all
+                </Button>
+              </div>
+              <div className="space-y-2">
                 {recentBookings.map((booking) => (
-                  <Card key={booking.id} className="p-4">
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                        <Car className="h-5 w-5 text-primary" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium truncate">{booking.dropoff_location}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {new Date(booking.created_at).toLocaleDateString()}
-                        </p>
-                      </div>
-                      <Badge variant={booking.status === 'completed' ? 'default' : 'secondary'}>
+                  <button
+                    key={booking.id}
+                    className="w-full flex items-center gap-3 p-3 bg-white rounded-xl border hover:bg-gray-50 transition-colors text-left"
+                    onClick={() => navigate(`/rides/track/${booking.id}`)}
+                  >
+                    <div className="h-10 w-10 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
+                      <Navigation className="h-4 w-4 text-gray-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm truncate">{booking.dropoff_location}</p>
+                      <p className="text-xs text-muted-foreground">{booking.pickup_location}</p>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <p className="text-xs font-medium">VUV {Number(booking.price).toLocaleString()}</p>
+                      <Badge
+                        variant="outline"
+                        className={`text-[10px] mt-0.5 ${
+                          booking.status === 'completed' ? 'text-green-600 border-green-200' : 'text-red-600 border-red-200'
+                        }`}
+                      >
                         {booking.status}
                       </Badge>
                     </div>
-                  </Card>
+                  </button>
                 ))}
               </div>
-            ) : (
-              <Card className="p-8 text-center bg-gray-50 dark:bg-gray-800/50">
-                <div className="w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-700 mx-auto flex items-center justify-center mb-4">
-                  <Clock className="h-8 w-8 text-gray-400" />
-                </div>
-                <h3 className="font-semibold mb-2">No recent activity</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Book your first ride or order food to get started
-                </p>
-                <Button onClick={() => navigate('/rides/request/vanucar')}>
-                  Book a ride <ArrowRight className="h-4 w-4 ml-2" />
-                </Button>
-              </Card>
-            )}
-          </section>
+            </div>
+          )}
 
-          {/* Partner With Us */}
-          <section className="pb-4">
-            <Card 
-              className="p-6 cursor-pointer hover:shadow-lg transition-shadow bg-gradient-to-r from-primary/10 via-primary/5 to-background border-2 border-primary/20"
+          {/* Learn Bislama Card */}
+          <div className="mt-6">
+            <button
+              className="w-full p-4 bg-white rounded-2xl border flex items-center gap-4 text-left hover:shadow-md transition-shadow"
+              onClick={() => navigate('/bislama')}
+            >
+              <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center flex-shrink-0">
+                <BookOpen className="h-6 w-6 text-white" />
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-0.5">
+                  <span className="text-sm font-bold">Learn Bislama</span>
+                  <Badge className="bg-indigo-500 text-white text-[10px] h-4">Free</Badge>
+                </div>
+                <p className="text-xs text-muted-foreground">Interactive lessons to master Vanuatu's language</p>
+              </div>
+              <ChevronRight className="h-5 w-5 text-gray-300 flex-shrink-0" />
+            </button>
+          </div>
+
+          {/* Partner CTA */}
+          <div className="mt-6 mb-4">
+            <button
+              className="w-full p-4 bg-white rounded-2xl border flex items-center gap-4 text-left hover:shadow-md transition-shadow"
               onClick={() => navigate('/partners')}
             >
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
-                  <Sparkles className="h-6 w-6 text-primary" />
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-semibold text-lg">Want to earn with VanuWay?</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Become a driver, hotel owner, or restaurant partner
-                  </p>
-                </div>
-                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+              <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                <Sparkles className="h-6 w-6 text-primary" />
               </div>
-            </Card>
-          </section>
+              <div className="flex-1">
+                <span className="text-sm font-bold">Earn with VanuWay</span>
+                <p className="text-xs text-muted-foreground">Drive, deliver, or list your business</p>
+              </div>
+              <ChevronRight className="h-5 w-5 text-gray-300 flex-shrink-0" />
+            </button>
+          </div>
 
-          {/* Why Choose Vanuway */}
-          <section className="pb-8">
-            <h2 className="text-xl font-bold mb-4">Why Choose Vanuway</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <Card className="p-4 text-center">
-                <div className="w-12 h-12 rounded-full bg-green-100 dark:bg-green-900/30 mx-auto flex items-center justify-center mb-3">
-                  <Shield className="h-6 w-6 text-green-600" />
-                </div>
-                <h3 className="font-semibold">Safe & Secure</h3>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Verified drivers and secure payments
-                </p>
-              </Card>
-              <Card className="p-4 text-center">
-                <div className="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900/30 mx-auto flex items-center justify-center mb-3">
-                  <Zap className="h-6 w-6 text-blue-600" />
-                </div>
-                <h3 className="font-semibold">Fast & Reliable</h3>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Quick pickups and on-time deliveries
-                </p>
-              </Card>
-              <Card className="p-4 text-center">
-                <div className="w-12 h-12 rounded-full bg-purple-100 dark:bg-purple-900/30 mx-auto flex items-center justify-center mb-3">
-                  <Heart className="h-6 w-6 text-purple-600" />
-                </div>
-                <h3 className="font-semibold">Local Love</h3>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Built for Vanuatu, by Vanuatu
-                </p>
-              </Card>
-            </div>
-          </section>
+          {/* Safety footer */}
+          <div className="flex items-center gap-2 justify-center py-4 text-xs text-muted-foreground">
+            <Shield className="h-3.5 w-3.5" />
+            <span>Safe rides with verified drivers</span>
+          </div>
         </div>
       </div>
     </Layout>
