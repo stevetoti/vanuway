@@ -252,19 +252,37 @@ export default function RequestRide() {
   const getCurrentLocation = () => {
     if (!navigator.geolocation) return toast.error('Geolocation not supported');
     navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const loc: Location = {
-          name: 'Current Location',
-          address: 'Your position',
-          lat: pos.coords.latitude,
-          lng: pos.coords.longitude,
-        };
-        setPickupLocation(loc);
-        setMapCenter([loc.lat, loc.lng]);
+      async (pos) => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+
+        // Set immediately with temporary name while we reverse geocode
+        const tempLoc: Location = { name: 'Locating...', address: 'Getting address...', lat, lng };
+        setPickupLocation(tempLoc);
+        setMapCenter([lat, lng]);
         setMapZoom(16);
         setLocationSheetOpen(false);
         setActiveField('dropoff');
         setStep('destination');
+
+        // Reverse geocode to get real address via Nominatim
+        try {
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1`,
+            { headers: { 'Accept-Language': 'en' } }
+          );
+          const data = await res.json();
+          if (data && data.display_name) {
+            const parts = data.display_name.split(',');
+            const name = parts[0]?.trim() || 'Your Location';
+            const address = parts.slice(1, 3).join(',').trim() || 'Port Vila, Vanuatu';
+            setPickupLocation({ name, address, lat, lng });
+          } else {
+            setPickupLocation({ name: 'Your Location', address: `${lat.toFixed(4)}, ${lng.toFixed(4)}`, lat, lng });
+          }
+        } catch {
+          setPickupLocation({ name: 'Your Location', address: `${lat.toFixed(4)}, ${lng.toFixed(4)}`, lat, lng });
+        }
         toast.success('Location detected');
       },
       () => {

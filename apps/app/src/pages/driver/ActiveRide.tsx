@@ -164,16 +164,17 @@ const ActiveRide = () => {
       if (error) throw error;
 
       setRide({ ...ride, status: newStatus });
+      toast.success(getStatusSuccessMessage(newStatus));
 
-      // Send notification to passenger
-      await supabase.from('notifications').insert({
+      // Send notification to passenger (non-blocking)
+      supabase.from('notifications').insert({
         user_id: ride.user_id,
         title: getStatusTitle(newStatus),
         message: getStatusMessage(newStatus, ride),
         type: 'ride_update',
+      }).then(({ error: notifError }) => {
+        if (notifError) console.warn('Notification failed:', notifError);
       });
-
-      toast.success(getStatusSuccessMessage(newStatus));
     } catch (error: any) {
       toast.error('Failed to update ride status');
     }
@@ -213,22 +214,22 @@ const ActiveRide = () => {
 
       if (driverError) throw driverError;
 
-      // Create transaction record
-      await supabase.from('transactions').insert({
+      // Create transaction record (non-blocking)
+      supabase.from('transactions').insert({
         user_id: driverData.user_id,
         amount: ride.price,
         type: 'ride_earning',
         description: `Ride earnings: ${ride.pickup_location} → ${ride.dropoff_location}`,
         balance_after: driverData.total_earnings + ride.price,
-      });
+      }).catch(console.warn);
 
-      // Notify passenger
-      await supabase.from('notifications').insert({
+      // Notify passenger (non-blocking)
+      supabase.from('notifications').insert({
         user_id: ride.user_id,
         title: 'Ride Completed',
         message: 'Thank you for riding with us! Please rate your experience.',
         type: 'ride_completed',
-      });
+      }).catch(console.warn);
 
       toast.success('Ride completed! Earnings added to your account.');
       navigate('/driver/dashboard');
@@ -263,13 +264,13 @@ const ActiveRide = () => {
 
       if (driverError) throw driverError;
 
-      // Notify passenger
-      await supabase.from('notifications').insert({
+      // Notify passenger (non-blocking)
+      supabase.from('notifications').insert({
         user_id: ride.user_id,
         title: 'Ride Cancelled',
         message: 'Your driver has cancelled the ride. Please request a new one.',
         type: 'ride_cancelled',
-      });
+      }).catch(console.warn);
 
       toast.success('Ride cancelled');
       navigate('/driver/dashboard');
