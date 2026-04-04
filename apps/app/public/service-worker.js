@@ -1,206 +1,129 @@
-// VanuWay Service Worker
-const CACHE_NAME = 'vanuway-v1';
-const OFFLINE_URL = '/offline.html';
+// VanuWay Service Worker — Network-first for pages, cache-first for static assets
+const CACHE_NAME = 'vanuway-v2';
 
-// Assets to cache immediately on install
-const STATIC_ASSETS = [
-  '/',
-  '/manifest.json',
-];
-
-// Install event - cache static assets
-self.addEventListener('install', (event) => {
-  console.log('[Service Worker] Installing...');
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      console.log('[Service Worker] Caching static assets');
-      // Cache assets individually with error handling
-      return Promise.allSettled(
-        STATIC_ASSETS.map(url =>
-          cache.add(new Request(url, { cache: 'reload' }))
-            .catch(err => console.log('[Service Worker] Failed to cache:', url, err))
-        )
-      );
-    }).then(() => {
-      console.log('[Service Worker] Install complete');
-      return self.skipWaiting();
-    }).catch((error) => {
-      console.error('[Service Worker] Install failed:', error);
-    })
-  );
+// Install — skip waiting immediately to activate new SW
+self.addEventListener('install', () => {
+  console.log('[SW] Installing v2...');
+  self.skipWaiting();
 });
 
-// Activate event - clean up old caches
+// Activate — delete all old caches
 self.addEventListener('activate', (event) => {
-  console.log('[Service Worker] Activating...');
+  console.log('[SW] Activating v2...');
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME) {
-            console.log('[Service Worker] Deleting old cache:', cacheName);
-            return caches.delete(cacheName);
-          }
-        })
-      );
-    }).then(() => {
-      return self.clients.claim();
-    })
+    caches.keys().then((names) =>
+      Promise.all(
+        names.filter((n) => n !== CACHE_NAME).map((n) => caches.delete(n))
+      )
+    ).then(() => self.clients.claim())
   );
 });
 
-// Fetch event - serve from cache, fallback to network
+// Fetch handler
 self.addEventListener('fetch', (event) => {
-  // Skip cross-origin requests
-  if (!event.request.url.startsWith(self.location.origin)) {
-    return;
-  }
+  const { request } = event;
+  const url = new URL(request.url);
 
-  // Skip non-GET requests
-  if (event.request.method !== 'GET') {
-    return;
-  }
+  // Skip non-GET and cross-origin
+  if (request.method !== 'GET') return;
+  if (url.origin !== self.location.origin) return;
 
-  event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) {
-        // Return cached version
-        return cachedResponse;
-      }
+  // Skip Supabase API calls — never cache these
+  if (url.pathname.startsWith('/rest/') || url.pathname.startsWith('/auth/')) return;
 
-      // Try to fetch from network
-      return fetch(event.request)
+  // Navigation requests (HTML pages) — NETWORK FIRST
+  if (request.mode === 'navigate') {
+    event.respondWith(
+      fetch(request)
         .then((response) => {
-          // Don't cache non-successful responses
-          if (!response || response.status !== 200 || response.type !== 'basic') {
-            return response;
-          }
-
-          // Clone the response
-          const responseToCache = response.clone();
-
-          // Cache the fetched response
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseToCache);
-          });
-
+          // Cache the latest page
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
           return response;
         })
-        .catch((error) => {
-          console.log('[Service Worker] Fetch failed:', error);
+        .catch(() =>
+          caches.match(request).then((cached) =>
+            cached || new Response(
+              '<html><body style="font-family:sans-serif;text-align:center;padding:40px"><h1>Offline</h1><p>Please check your internet connection.</p></body></html>',
+              { headers: { 'Content-Type': 'text/html' } }
+            )
+          )
+        )
+    );
+    return;
+  }
 
-          // Return offline page for navigation requests
-          if (event.request.mode === 'navigate') {
-            return caches.match(OFFLINE_URL).then(response => {
-              // If offline page not cached, return a basic offline response
-              if (!response) {
-                return new Response(
-                  '<html><body><h1>Offline</h1><p>You are currently offline. Please check your internet connection.</p></body></html>',
-                  { headers: { 'Content-Type': 'text/html' } }
-                );
-              }
-              return response;
-            });
-          }
+  // Static assets (JS, CSS, images, fonts) — STALE-WHILE-REVALIDATE
+  if (
+    url.pathname.startsWith('/assets/') ||
+    url.pathname.endsWith('.js') ||
+    url.pathname.endsWith('.css') ||
+    url.pathname.endsWith('.png') ||
+    url.pathname.endsWith('.jpg') ||
+    url.pathname.endsWith('.svg') ||
+    url.pathname.endsWith('.woff2')
+  ) {
+    event.respondWith(
+      caches.match(request).then((cached) => {
+        const fetchPromise = fetch(request)
+          .then((response) => {
+            if (response && response.status === 200) {
+              const clone = response.clone();
+              caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+            }
+            return response;
+          })
+          .catch(() => cached);
 
-          // For other requests, throw the error
-          throw error;
-        });
-    })
-  );
+        return cached || fetchPromise;
+      })
+    );
+    return;
+  }
+
+  // Everything else — network only
+  event.respondWith(fetch(request));
 });
 
-// Listen for messages from the client
+// Message handlers
 self.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'SKIP_WAITING') {
+  if (event.data?.type === 'SKIP_WAITING') {
     self.skipWaiting();
   }
 
-  if (event.data && event.data.type === 'CLEAR_CACHE') {
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cacheName) => {
-          return caches.delete(cacheName);
-        })
-      );
-    }).then(() => {
-      event.ports[0].postMessage({ success: true });
-    });
+  if (event.data?.type === 'CLEAR_CACHE') {
+    caches.keys()
+      .then((names) => Promise.all(names.map((n) => caches.delete(n))))
+      .then(() => event.ports[0]?.postMessage({ success: true }));
   }
 });
 
-// Background sync for pending actions (future enhancement)
-self.addEventListener('sync', (event) => {
-  console.log('[Service Worker] Background sync:', event.tag);
-
-  if (event.tag === 'sync-orders') {
-    event.waitUntil(syncPendingOrders());
-  }
-
-  if (event.tag === 'sync-bookings') {
-    event.waitUntil(syncPendingBookings());
-  }
-});
-
-async function syncPendingOrders() {
-  // Future: Sync pending food orders when connection is restored
-  console.log('[Service Worker] Syncing pending orders...');
-}
-
-async function syncPendingBookings() {
-  // Future: Sync pending ride bookings when connection is restored
-  console.log('[Service Worker] Syncing pending bookings...');
-}
-
-// Push notification handler (future enhancement)
+// Push notifications
 self.addEventListener('push', (event) => {
-  console.log('[Service Worker] Push notification received');
-
-  if (!event.data) {
-    return;
-  }
+  if (!event.data) return;
 
   const data = event.data.json();
-  const options = {
-    body: data.body || 'You have a new notification',
-    icon: '/icon-192.png',
-    badge: '/icon-96.png',
-    vibrate: [200, 100, 200],
-    data: {
-      url: data.url || '/',
-      timestamp: Date.now(),
-    },
-    actions: data.actions || [],
-    tag: data.tag || 'notification',
-    requireInteraction: data.requireInteraction || false,
-  };
-
   event.waitUntil(
-    self.registration.showNotification(data.title || 'VanuWay', options)
+    self.registration.showNotification(data.title || 'VanuWay', {
+      body: data.body || 'You have a new notification',
+      icon: '/icon-192.png',
+      badge: '/icon-96.png',
+      vibrate: [200, 100, 200],
+      data: { url: data.url || '/' },
+      tag: data.tag || 'notification',
+    })
   );
 });
 
-// Notification click handler
 self.addEventListener('notificationclick', (event) => {
-  console.log('[Service Worker] Notification clicked');
-
   event.notification.close();
-
-  const urlToOpen = event.notification.data?.url || '/';
-
+  const url = event.notification.data?.url || '/';
   event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-      // Check if there's already a window open
-      for (const client of clientList) {
-        if (client.url === urlToOpen && 'focus' in client) {
-          return client.focus();
-        }
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
+      for (const client of list) {
+        if (client.url === url && 'focus' in client) return client.focus();
       }
-
-      // Open new window if no existing window found
-      if (clients.openWindow) {
-        return clients.openWindow(urlToOpen);
-      }
+      return clients.openWindow(url);
     })
   );
 });
