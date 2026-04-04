@@ -14,145 +14,21 @@ import {
   Loader2, CheckCircle2, Phone, MessageCircle, Shield, X, Truck
 } from 'lucide-react';
 import { calculateRidePrice, formatPrice as formatVUV, type VehicleType as PricingVehicleType } from '@/lib/rides/pricing';
-import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
+import { lazy, Suspense } from 'react';
+import type { RideMapDriver } from '@/components/rides/RideMap';
+
+// Dynamically import the map to avoid react-leaflet initialization crash
+const RideMap = lazy(() => import('@/components/rides/RideMap'));
 
 // Port Vila center
 const PORT_VILA_CENTER: [number, number] = [-17.7334, 168.3273];
 
-// Fix default marker icon issue with webpack/vite
-const defaultIcon = L.divIcon({
-  className: '',
-  html: `<div style="width:14px;height:14px;background:#3B82F6;border:3px solid white;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,0.3);"></div>`,
-  iconSize: [14, 14],
-  iconAnchor: [7, 7],
-});
-
-const pickupIcon = L.divIcon({
-  className: '',
-  html: `<div style="position:relative;">
-    <div style="width:18px;height:18px;background:#22C55E;border:3px solid white;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,0.4);"></div>
-    <div style="position:absolute;top:-24px;left:50%;transform:translateX(-50%);background:#22C55E;color:white;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:bold;white-space:nowrap;">PICKUP</div>
-  </div>`,
-  iconSize: [18, 18],
-  iconAnchor: [9, 9],
-});
-
-const dropoffIcon = L.divIcon({
-  className: '',
-  html: `<div style="position:relative;">
-    <div style="width:18px;height:18px;background:#EF4444;border:3px solid white;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,0.4);"></div>
-    <div style="position:absolute;top:-24px;left:50%;transform:translateX(-50%);background:#EF4444;color:white;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:bold;white-space:nowrap;">DROP-OFF</div>
-  </div>`,
-  iconSize: [18, 18],
-  iconAnchor: [9, 9],
-});
-
-const createCarIcon = (rotation: number, color: string = '#1D4ED8') => L.divIcon({
-  className: '',
-  html: `<div style="transform:rotate(${rotation}deg);width:32px;height:32px;display:flex;align-items:center;justify-content:center;">
-    <svg width="28" height="28" viewBox="0 0 24 24" fill="${color}" xmlns="http://www.w3.org/2000/svg">
-      <path d="M5 11l1.5-4.5h11L19 11M19 17a1.5 1.5 0 100-3 1.5 1.5 0 000 3zM5 17a1.5 1.5 0 100-3 1.5 1.5 0 000 3zM3 11l1-3.5C4.5 5.5 6 5 7 5h10c1 0 2.5.5 3 2.5L21 11v6a1 1 0 01-1 1h-1a1 1 0 01-1-1v-1H6v1a1 1 0 01-1 1H4a1 1 0 01-1-1v-6z" stroke="white" stroke-width="0.5"/>
-    </svg>
-  </div>`,
-  iconSize: [32, 32],
-  iconAnchor: [16, 16],
-});
-
-// Driver type from database
-interface RealDriver {
-  id: string;
-  lat: number;
-  lng: number;
-  rotation: number;
-  name: string;
+// Driver type for UI display (rating, plate, model needed for "driver found" step)
+interface RealDriver extends RideMapDriver {
   rating: number;
   plate: string;
   model: string;
-  photo: string;
-  vehicleType: string;
-  vehicleColor: string;
 }
-
-// Fetch real drivers from database
-const useRealDrivers = () => {
-  const [drivers, setDrivers] = useState<RealDriver[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchDrivers = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('drivers')
-          .select('id, first_name, last_name, current_lat, current_lng, average_rating, license_plate, vehicle_model, vehicle_color, vehicle_type, profile_photo_url')
-          .eq('is_online', true)
-          .eq('is_available', true)
-          .eq('status', 'available')
-          .not('current_lat', 'is', null)
-          .not('current_lng', 'is', null);
-
-        if (error) throw error;
-
-        const mappedDrivers: RealDriver[] = (data || []).map(d => ({
-          id: d.id,
-          lat: d.current_lat!,
-          lng: d.current_lng!,
-          rotation: Math.random() * 360,
-          name: `${d.first_name || ''} ${d.last_name || ''}`.trim() || 'Driver',
-          rating: d.average_rating || 4.5,
-          plate: d.license_plate || 'N/A',
-          model: d.vehicle_model || 'Vehicle',
-          photo: d.profile_photo_url || '',
-          vehicleType: d.vehicle_type || 'car',
-          vehicleColor: d.vehicle_color || 'white',
-        }));
-
-        setDrivers(mappedDrivers);
-      } catch (err) {
-        console.error('Error fetching drivers:', err);
-        // Fallback to simulated drivers if fetch fails
-        setDrivers(generateFallbackDrivers());
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchDrivers();
-
-    // Set up realtime subscription for driver updates
-    const channel = supabase
-      .channel('drivers-location')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'drivers' }, () => {
-        fetchDrivers();
-      })
-      .subscribe();
-
-    return () => { supabase.removeChannel(channel); };
-  }, []);
-
-  return { drivers, loading, setDrivers };
-};
-
-// Fallback simulated drivers if database fetch fails
-const generateFallbackDrivers = (): RealDriver[] => {
-  const names = ['Tom Nakou', 'Marie Kalapa', 'John Wari', 'Sarah Tavi', 'Peter Moli', 'Anna Bulu', 'David Kali', 'Grace Nalo'];
-  const models = ['Toyota Hilux', 'Hyundai Tucson', 'Toyota Corolla', 'Nissan Navara', 'Suzuki Jimny', 'Mitsubishi L200', 'Toyota RAV4', 'Honda CRV'];
-  const plates = ['V1234', 'V5678', 'V9012', 'V3456', 'V7890', 'V2345', 'V6789', 'V0123'];
-  return names.map((name, i) => ({
-    id: `fallback-${i}`,
-    lat: PORT_VILA_CENTER[0] + (Math.random() - 0.5) * 0.025,
-    lng: PORT_VILA_CENTER[1] + (Math.random() - 0.5) * 0.025,
-    rotation: Math.random() * 360,
-    name,
-    rating: 4.3 + Math.random() * 0.7,
-    plate: plates[i],
-    model: models[i],
-    photo: '',
-    vehicleType: 'car',
-    vehicleColor: 'white',
-  }));
-};
 
 // Popular locations in Port Vila
 const popularLocations = [
@@ -182,45 +58,7 @@ interface Location {
 
 type BookingStep = 'pickup' | 'destination' | 'vehicle' | 'searching' | 'found';
 
-// Component to animate car markers (works with real or fallback drivers)
-function AnimatedCars({ cars, setCars }: { cars: RealDriver[]; setCars: React.Dispatch<React.SetStateAction<RealDriver[]>> }) {
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCars(prev => prev.map(car => ({
-        ...car,
-        lat: car.lat + (Math.random() - 0.5) * 0.0008,
-        lng: car.lng + (Math.random() - 0.5) * 0.0008,
-        rotation: car.rotation + (Math.random() - 0.5) * 30,
-      })));
-    }, 2000);
-    return () => clearInterval(interval);
-  }, [setCars]);
-
-  return (
-    <>
-      {cars.map(car => (
-        <Marker
-          key={car.id}
-          position={[car.lat, car.lng]}
-          icon={createCarIcon(car.rotation)}
-        />
-      ))}
-    </>
-  );
-}
-
-// Map controller to fly to locations
-function MapController({ center, zoom }: { center: [number, number] | null; zoom?: number }) {
-  const map = useMap();
-  useEffect(() => {
-    if (center) {
-      map.flyTo(center, zoom || 15, { duration: 1 });
-    }
-  }, [center, zoom, map]);
-  return null;
-}
-
-// Generate a fake route polyline between two points
+// Generate a simple route polyline between two points
 function generateRoute(from: [number, number], to: [number, number]): [number, number][] {
   const points: [number, number][] = [from];
   const steps = 8 + Math.floor(Math.random() * 5);
@@ -239,7 +77,6 @@ export default function RequestRide() {
   const { serviceType } = useParams();
   const { user } = useAuth();
 
-  const [mapReady, setMapReady] = useState(false);
   const [step, setStep] = useState<BookingStep>('pickup');
   const [pickupLocation, setPickupLocation] = useState<Location | null>(null);
   const [dropoffLocation, setDropoffLocation] = useState<Location | null>(null);
@@ -250,18 +87,10 @@ export default function RequestRide() {
   const [passengerCount, setPassengerCount] = useState(1);
   const [mapCenter, setMapCenter] = useState<[number, number]>(PORT_VILA_CENTER);
   const [mapZoom, setMapZoom] = useState(14);
-  // Use real drivers from database
-  const { drivers: realDrivers, loading: driversLoading, setDrivers } = useRealDrivers();
   const [assignedDriver, setAssignedDriver] = useState<RealDriver | null>(null);
   const [searchingProgress, setSearchingProgress] = useState(0);
   const [locationSheetOpen, setLocationSheetOpen] = useState(false);
   const [activeField, setActiveField] = useState<'pickup' | 'dropoff'>('pickup');
-
-  // Delay map rendering until after mount to prevent react-leaflet initialization crash
-  useEffect(() => {
-    const timer = setTimeout(() => setMapReady(true), 100);
-    return () => clearTimeout(timer);
-  }, []);
 
   // Route polyline
   const routePoints = useMemo(() => {
@@ -298,22 +127,15 @@ export default function RequestRide() {
       setSearchingProgress(prev => {
         if (prev >= 100) {
           clearInterval(timer);
-          // Pick a real driver from the database
-          if (realDrivers.length > 0) {
-            const driver = realDrivers[Math.floor(Math.random() * realDrivers.length)];
-            setAssignedDriver(driver);
-            setStep('found');
-          } else {
-            toast.error('No drivers available. Please try again later.');
-            setStep('vehicle');
-          }
+          toast.error('No drivers available at the moment. Please try again later.');
+          setStep('vehicle');
           return 100;
         }
         return prev + 4;
       });
     }, 120);
     return () => clearInterval(timer);
-  }, [step, realDrivers]);
+  }, [step]);
 
   // Auto-advance: after pickup selected, go to destination
   const handleSelectLocation = (loc: typeof popularLocations[0]) => {
@@ -414,62 +236,22 @@ export default function RequestRide() {
 
       {/* MAP */}
       <div className="flex-1 relative" style={{ zIndex: 1 }}>
-        {!mapReady ? (
+        <Suspense fallback={
           <div className="h-full w-full bg-gray-100 flex items-center justify-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
           </div>
-        ) : (
-        <MapContainer
-          center={PORT_VILA_CENTER}
-          zoom={14}
-          style={{ height: '100%', width: '100%' }}
-          zoomControl={false}
-          attributionControl={false}
-        >
-          <TileLayer
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        }>
+          <RideMap
+            mapCenter={mapCenter}
+            mapZoom={mapZoom}
+            pickupLocation={pickupLocation ? { lat: pickupLocation.lat, lng: pickupLocation.lng, name: pickupLocation.name } : null}
+            dropoffLocation={dropoffLocation ? { lat: dropoffLocation.lat, lng: dropoffLocation.lng, name: dropoffLocation.name } : null}
+            routePoints={routePoints}
+            drivers={[]}
+            assignedDriver={assignedDriver}
+            isSearching={step === 'searching'}
           />
-          <MapController center={mapCenter} zoom={mapZoom} />
-
-          {/* Animated cars */}
-          <AnimatedCars cars={realDrivers} setCars={setDrivers} />
-
-          {/* Pickup marker */}
-          {pickupLocation && (
-            <Marker position={[pickupLocation.lat, pickupLocation.lng]} icon={pickupIcon}>
-              <Popup>{pickupLocation.name}</Popup>
-            </Marker>
-          )}
-
-          {/* Dropoff marker */}
-          {dropoffLocation && (
-            <Marker position={[dropoffLocation.lat, dropoffLocation.lng]} icon={dropoffIcon}>
-              <Popup>{dropoffLocation.name}</Popup>
-            </Marker>
-          )}
-
-          {/* Route line */}
-          {routePoints && (
-            <Polyline
-              positions={routePoints}
-              color="#3B82F6"
-              weight={5}
-              opacity={0.8}
-              dashArray={step === 'searching' ? '10, 10' : undefined}
-            />
-          )}
-
-          {/* Assigned driver marker */}
-          {assignedDriver && (
-            <Marker
-              position={[assignedDriver.lat, assignedDriver.lng]}
-              icon={createCarIcon(assignedDriver.rotation, '#22C55E')}
-            >
-              <Popup>{assignedDriver.name} is on the way!</Popup>
-            </Marker>
-          )}
-        </MapContainer>
-        )}
+        </Suspense>
 
         {/* My location button */}
         <button
