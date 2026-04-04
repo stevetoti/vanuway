@@ -309,18 +309,26 @@ export default function RequestRide() {
     setIsSearching(true);
     searchTimeoutRef.current = setTimeout(async () => {
       try {
+        // dedupe=0 shows multiple branches of the same business
         const res = await fetch(
           `https://nominatim.openstreetmap.org/search?` +
-          `q=${encodeURIComponent(query + ', Vanuatu')}&format=json&limit=8&countrycodes=vu&addressdetails=1`,
+          `q=${encodeURIComponent(query)}&format=json&limit=12&countrycodes=vu&addressdetails=1&dedupe=0&viewbox=168.0,-18.0,168.6,-17.5&bounded=0`,
           { headers: { 'Accept-Language': 'en' } }
         );
         const data = await res.json();
-        const locations: Location[] = data.map((item: any) => ({
-          name: item.display_name.split(',')[0],
-          address: item.display_name.split(',').slice(1, 3).join(',').trim(),
-          lat: parseFloat(item.lat),
-          lng: parseFloat(item.lon),
-        }));
+        const locations: Location[] = data.map((item: any) => {
+          const parts = item.display_name.split(',');
+          const addr = item.address || {};
+          // Build a useful name: use the place name + area for disambiguation
+          const placeName = parts[0]?.trim() || query;
+          const area = addr.suburb || addr.neighbourhood || addr.city_district || parts[1]?.trim() || '';
+          return {
+            name: area ? `${placeName}, ${area}` : placeName,
+            address: parts.slice(1, 4).join(',').trim(),
+            lat: parseFloat(item.lat),
+            lng: parseFloat(item.lon),
+          };
+        });
         setSearchResults(locations);
       } catch {
         setSearchResults([]);
