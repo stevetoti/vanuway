@@ -100,11 +100,39 @@ const Bookings = () => {
       <div className="container py-6">
         <h1 className="text-3xl font-bold mb-6">My Bookings</h1>
 
-        <Tabs defaultValue="food" className="space-y-6">
+        <Tabs defaultValue="rides" className="space-y-6">
           <TabsList className="grid w-full grid-cols-2 max-w-md">
-            <TabsTrigger value="food">Food Orders</TabsTrigger>
-            <TabsTrigger value="rides">Ride Bookings</TabsTrigger>
+            <TabsTrigger value="rides">
+              Rides {rideBookings && rideBookings.length > 0 && `(${rideBookings.length})`}
+            </TabsTrigger>
+            <TabsTrigger value="food">
+              Food {foodOrders && foodOrders.length > 0 && `(${foodOrders.length})`}
+            </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="rides" className="space-y-4">
+            {!rideBookings || rideBookings.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">
+                No ride bookings yet. Book a ride to get started!
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {rideBookings.map((ride: any) => (
+                  <RideCard
+                    key={ride.id}
+                    id={ride.id}
+                    pickupLocation={ride.pickup_location}
+                    dropoffLocation={ride.dropoff_location}
+                    vehicleType={ride.vehicle_type}
+                    passengerCount={ride.passenger_count}
+                    price={Number(ride.price)}
+                    status={ride.status}
+                    createdAt={ride.created_at}
+                  />
+                ))}
+              </div>
+            )}
+          </TabsContent>
 
           <TabsContent value="food" className="space-y-4">
             {!foodOrders || foodOrders.length === 0 ? (
@@ -124,30 +152,6 @@ const Bookings = () => {
                     status={order.status}
                     paymentMethod={order.payment_method}
                     createdAt={order.created_at}
-                  />
-                ))}
-              </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="rides" className="space-y-4">
-            {!rideBookings || rideBookings.length === 0 ? (
-              <div className="text-center py-12 text-muted-foreground">
-                No ride bookings yet
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {rideBookings.map((ride: any) => (
-                  <RideCard
-                    key={ride.id}
-                    id={ride.id}
-                    pickupLocation={ride.pickup_location}
-                    dropoffLocation={ride.dropoff_location}
-                    vehicleType={ride.vehicle_type}
-                    passengerCount={ride.passenger_count}
-                    price={Number(ride.price)}
-                    status={ride.status}
-                    createdAt={ride.created_at}
                   />
                 ))}
               </div>

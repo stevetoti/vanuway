@@ -3,19 +3,15 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
-import { Input } from '@/components/ui/input';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import {
-  ArrowLeft, Phone, MessageSquare, X, Star, Clock, MapPin, Navigation,
-  Car, Send, CheckCircle2, Loader2, Shield, Share2
+  ArrowLeft, Phone, X, Star, Clock, MapPin, Navigation,
+  Car, CheckCircle2, Loader2, Shield, Share2
 } from 'lucide-react';
-import { PASSENGER_QUICK_MESSAGES } from '@/lib/rides/messaging-service';
 import { LiveTrackingMap } from '@/components/rides/LiveTrackingMap';
+import { RideMessaging, MessageButton } from '@/components/rides/RideMessaging';
 import { getVehicleEmoji, getVehicleColor } from '@/lib/rides/vehicle-icons';
 
 interface RideBooking {
@@ -97,8 +93,7 @@ export default function TrackRide() {
   const [driver, setDriver] = useState<Driver | null>(null);
   const [loading, setLoading] = useState(true);
   const [chatOpen, setChatOpen] = useState(false);
-  const [message, setMessage] = useState('');
-  const [messages, setMessages] = useState<{ id: string; text: string; fromUser: boolean; time: string }[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
   const [cancelling, setCancelling] = useState(false);
   const [eta, setEta] = useState<number | null>(null);
 
@@ -126,6 +121,8 @@ export default function TrackRide() {
             fetchDriverInfo(updated.driver_id);
           } else if (updated.status === 'arrived') {
             toast.success('Your driver has arrived!');
+          } else if (updated.status === 'completed') {
+            toast.success('Ride completed! Thanks for riding with VanuCar.');
           }
         }
       )
@@ -199,23 +196,6 @@ export default function TrackRide() {
     }
   };
 
-  const sendQuickMessage = (text: string) => {
-    const newMessage = {
-      id: Date.now().toString(),
-      text,
-      fromUser: true,
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    };
-    setMessages([...messages, newMessage]);
-    toast.success('Message sent to driver');
-  };
-
-  const handleSendMessage = () => {
-    if (!message.trim()) return;
-    sendQuickMessage(message);
-    setMessage('');
-  };
-
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('en-VU', { style: 'currency', currency: 'VUV', maximumFractionDigits: 0 }).format(price);
   };
@@ -237,6 +217,7 @@ export default function TrackRide() {
   const StatusIcon = status.icon;
   const canCancel = ['pending', 'accepted'].includes(booking.status);
   const showDriverInfo = ['accepted', 'arrived', 'in_progress'].includes(booking.status);
+  const showChat = ['accepted', 'arrived', 'in_progress'].includes(booking.status) && driver;
 
   return (
     <div className="min-h-screen bg-gray-50 pb-32">
@@ -300,40 +281,36 @@ export default function TrackRide() {
       </div>
 
       {/* Driver Card */}
-      {showDriverInfo && (
+      {showDriverInfo && driver && (
         <div className="px-4 -mt-4">
           <Card className="shadow-lg">
             <CardContent className="p-4">
               <div className="flex items-center gap-4">
-                <div 
+                <div
                   className="h-16 w-16 rounded-full border-2 flex items-center justify-center text-2xl"
-                  style={{ 
-                    borderColor: getVehicleColor(driver?.vehicle_color),
-                    backgroundColor: getVehicleColor(driver?.vehicle_color) + '15'
+                  style={{
+                    borderColor: getVehicleColor(driver.vehicle_color),
+                    backgroundColor: getVehicleColor(driver.vehicle_color) + '15'
                   }}
                 >
-                  {getVehicleEmoji(driver?.vehicle_type)}
+                  {getVehicleEmoji(driver.vehicle_type)}
                 </div>
                 <div className="flex-1">
-                  <h3 className="font-semibold text-lg">Your Driver</h3>
+                  <h3 className="font-semibold text-lg">
+                    {driver.first_name ? `${driver.first_name} ${driver.last_name || ''}`.trim() : 'Your Driver'}
+                  </h3>
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <span>{driver?.vehicle_model || 'Vehicle'}</span>
-                    <span>•</span>
-                    <div className="flex items-center gap-1">
-                      <div 
-                        className="w-3 h-3 rounded-full border border-background shadow-sm"
-                        style={{ backgroundColor: getVehicleColor(driver?.vehicle_color) }}
-                      />
-                      <span className="capitalize">{driver?.vehicle_color || 'Unknown'}</span>
-                    </div>
+                    <span>{driver.vehicle_model || 'Vehicle'}</span>
+                    <span>·</span>
+                    <span className="capitalize">{driver.vehicle_color || driver.vehicle_type}</span>
                   </div>
                   <div className="flex items-center gap-2 mt-1">
                     <Badge variant="secondary" className="font-mono">
-                      {driver?.license_plate || 'N/A'}
+                      {driver.license_plate || 'N/A'}
                     </Badge>
                     <div className="flex items-center gap-1">
                       <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
-                      <span className="font-medium">{driver?.rating?.toFixed(1) || '4.8'}</span>
+                      <span className="font-medium">{driver.rating?.toFixed(1) || '5.0'}</span>
                     </div>
                   </div>
                 </div>
@@ -345,84 +322,10 @@ export default function TrackRide() {
                   <Phone className="h-4 w-4" />
                   Call
                 </Button>
-                <Sheet open={chatOpen} onOpenChange={setChatOpen}>
-                  <SheetTrigger asChild>
-                    <Button variant="outline" className="flex-1 gap-2">
-                      <MessageSquare className="h-4 w-4" />
-                      Message
-                    </Button>
-                  </SheetTrigger>
-                  <SheetContent side="bottom" className="h-[80vh] rounded-t-3xl" aria-describedby="chat-description">
-                    <SheetHeader>
-                      <SheetTitle>Chat with Driver</SheetTitle>
-                      <p id="chat-description" className="sr-only">Send messages to your driver</p>
-                    </SheetHeader>
-
-                    {/* Quick Messages */}
-                    <div className="mt-4 mb-4">
-                      <p className="text-sm text-muted-foreground mb-2">Quick messages</p>
-                      <div className="flex flex-wrap gap-2">
-                        {PASSENGER_QUICK_MESSAGES.map((msg, index) => (
-                          <Button
-                            key={index}
-                            variant="outline"
-                            size="sm"
-                            className="text-xs"
-                            onClick={() => sendQuickMessage(msg)}
-                          >
-                            {msg}
-                          </Button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Messages */}
-                    <ScrollArea className="flex-1 h-[300px] border rounded-lg p-4 mb-4">
-                      {messages.length === 0 ? (
-                        <div className="text-center text-muted-foreground py-8">
-                          <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                          <p className="text-sm">No messages yet</p>
-                          <p className="text-xs">Send a quick message to your driver</p>
-                        </div>
-                      ) : (
-                        <div className="space-y-3">
-                          {messages.map((msg) => (
-                            <div
-                              key={msg.id}
-                              className={`flex ${msg.fromUser ? 'justify-end' : 'justify-start'}`}
-                            >
-                              <div
-                                className={`max-w-[80%] rounded-2xl px-4 py-2 ${
-                                  msg.fromUser
-                                    ? 'bg-primary text-white rounded-br-none'
-                                    : 'bg-gray-100 rounded-bl-none'
-                                }`}
-                              >
-                                <p className="text-sm">{msg.text}</p>
-                                <p className={`text-xs mt-1 ${msg.fromUser ? 'text-white/70' : 'text-muted-foreground'}`}>
-                                  {msg.time}
-                                </p>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </ScrollArea>
-
-                    {/* Input */}
-                    <div className="flex gap-2">
-                      <Input
-                        value={message}
-                        onChange={(e) => setMessage(e.target.value)}
-                        placeholder="Type a message..."
-                        onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                      />
-                      <Button onClick={handleSendMessage} disabled={!message.trim()}>
-                        <Send className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </SheetContent>
-                </Sheet>
+                <MessageButton
+                  onClick={() => setChatOpen(!chatOpen)}
+                  unreadCount={unreadCount}
+                />
               </div>
             </CardContent>
           </Card>
@@ -439,9 +342,9 @@ export default function TrackRide() {
                 <div>
                   <p className="text-sm text-muted-foreground">Estimated arrival</p>
                   <p className="font-bold text-lg">
-                    {booking.status === 'arrived' 
-                      ? 'Driver is here!' 
-                      : eta !== null 
+                    {booking.status === 'arrived'
+                      ? 'Driver is here!'
+                      : eta !== null
                         ? eta <= 1 ? 'Arriving now' : `${eta} minutes`
                         : '3-5 minutes'}
                   </p>
@@ -514,7 +417,7 @@ export default function TrackRide() {
 
       {/* Cancel Button */}
       {canCancel && (
-        <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t">
+        <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t z-40">
           <Button
             variant="destructive"
             className="w-full h-12"
@@ -538,7 +441,7 @@ export default function TrackRide() {
 
       {/* Completed State */}
       {booking.status === 'completed' && (
-        <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t">
+        <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t z-40">
           <Button
             className="w-full h-12 bg-primary"
             onClick={() => navigate('/')}
@@ -546,6 +449,19 @@ export default function TrackRide() {
             Book Another Ride
           </Button>
         </div>
+      )}
+
+      {/* Real-time Chat (uses ride_messages table) */}
+      {showChat && user && (
+        <RideMessaging
+          rideId={booking.id}
+          userId={user.id}
+          userType="passenger"
+          isOpen={chatOpen}
+          onClose={() => setChatOpen(false)}
+          unreadCount={unreadCount}
+          onUnreadCountChange={setUnreadCount}
+        />
       )}
     </div>
   );
