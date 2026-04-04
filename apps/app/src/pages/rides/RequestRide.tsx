@@ -653,7 +653,7 @@ export default function RequestRide() {
               onClick={handleFindDriver}
             >
               <Navigation className="h-5 w-5 mr-2" />
-              Find Driver  •  {estimate ? formatPrice(estimate.price) : ''}
+              Find Driver  •  {estimate ? fprice(estimate.price) : ''}
             </Button>
           </div>
         )}
@@ -740,7 +740,7 @@ export default function RequestRide() {
               </div>
               <div className="bg-green-50 rounded-xl p-3 text-center">
                 <Banknote className="h-5 w-5 text-green-600 mx-auto mb-1" />
-                <p className="text-lg font-bold text-green-700">{estimate ? formatPrice(estimate.price) : ''}</p>
+                <p className="text-lg font-bold text-green-700">{estimate ? fprice(estimate.price) : ''}</p>
                 <p className="text-xs text-green-500">Estimated fare</p>
               </div>
             </div>
