@@ -197,7 +197,7 @@ export default function TrackRide() {
           status: 'cancelled',
           cancellation_reason: reason,
           cancelled_by: 'passenger',
-        })
+        } as any)
         .eq('id', booking.id);
 
       if (error) throw error;
@@ -205,15 +205,16 @@ export default function TrackRide() {
       // Free up the driver if assigned
       if (booking.driver_id) {
         supabase.from('drivers').update({
-          status: 'available', is_available: true, current_ride_id: null,
-        }).eq('user_id', booking.driver_id).catch(console.warn);
+          status: 'available', is_available: true, is_online: true, current_ride_id: null,
+        } as any).eq('user_id', booking.driver_id)
+          .then(({ error: e }) => { if (e) console.warn('Driver update:', e); });
 
         supabase.from('notifications').insert({
           user_id: booking.driver_id,
           title: 'Ride Cancelled',
           message: `Passenger cancelled: ${reason}`,
           type: 'ride_cancelled',
-        }).catch(console.warn);
+        }).then(({ error: e }) => { if (e) console.warn('Notification:', e); });
       }
 
       toast.success('Ride cancelled');

@@ -211,7 +211,7 @@ const ActiveRide = () => {
         type: 'ride_earning',
         description: `Ride earnings: ${ride.pickup_location} → ${ride.dropoff_location}`,
         balance_after: driverData.total_earnings + ride.price,
-      }).catch(console.warn);
+      } as any).then(({ error: e }) => { if (e) console.warn('Transaction:', e); });
 
       // Notify passenger (non-blocking)
       supabase.from('notifications').insert({
@@ -219,7 +219,7 @@ const ActiveRide = () => {
         title: 'Ride Completed',
         message: 'Thank you for riding with us! Please rate your experience.',
         type: 'ride_completed',
-      }).catch(console.warn);
+      }).then(({ error: e }) => { if (e) console.warn('Notification:', e); });
 
       toast.success('Ride completed! Earnings added to your account.');
       navigate('/driver/dashboard');
@@ -239,21 +239,21 @@ const ActiveRide = () => {
           status: 'cancelled',
           cancellation_reason: reason,
           cancelled_by: 'driver',
-        })
+        } as any)
         .eq('id', ride.id);
 
       if (rideError) throw rideError;
 
       await supabase.from('drivers').update({
-        status: 'available', is_available: true, current_ride_id: null,
-      }).eq('user_id', user.id);
+        status: 'available', is_available: true, is_online: true, current_ride_id: null,
+      } as any).eq('user_id', user.id);
 
       supabase.from('notifications').insert({
         user_id: ride.user_id,
         title: 'Ride Cancelled by Driver',
         message: `Reason: ${reason}. Please request a new ride.`,
         type: 'ride_cancelled',
-      }).catch(console.warn);
+      }).then(({ error: e }) => { if (e) console.warn('Notification:', e); });
 
       toast.success('Ride cancelled');
       setCancelDialogOpen(false);

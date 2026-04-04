@@ -114,17 +114,27 @@ const DriverDashboard = () => {
 
       const driverData = data as any;
       setDriver(driverData);
-      // Derive online state from all three flags to match RLS policy
-      setIsOnline(
-        driverData.status === 'available' && 
-        driverData.is_online === true && 
-        driverData.is_available === true
-      );
+
+      const wasOnline = driverData.status === 'available' &&
+        driverData.is_online === true &&
+        driverData.is_available === true;
 
       if (data.current_ride_id) {
+        setIsOnline(true);
         fetchCurrentRide(data.current_ride_id);
-      } else if (data.status === 'available') {
+      } else if (wasOnline) {
+        setIsOnline(true);
         fetchPendingRides();
+      } else if (driverData.status !== 'busy' && driverData.is_verified && driverData.application_status === 'approved') {
+        // Auto-online: set driver online when they open dashboard (if approved and not busy)
+        setIsOnline(true);
+        await supabase.from('drivers').update({
+          status: 'available', is_online: true, is_available: true,
+        } as any).eq('id', driverData.id);
+        setDriver({ ...driverData, status: 'available', is_online: true, is_available: true });
+        fetchPendingRides();
+      } else {
+        setIsOnline(false);
       }
     } catch (error: any) {
       toast.error('Failed to load driver profile');
