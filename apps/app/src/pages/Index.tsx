@@ -9,7 +9,7 @@ import {
   Car,
   UtensilsCrossed,
   Hotel,
-  Palmtree,
+  TreePalm,
   MapPin,
   Star,
   Clock,
@@ -70,7 +70,7 @@ const quickServices = [
   },
   {
     id: 'tours',
-    icon: Palmtree,
+    icon: TreePalm,
     title: 'VanuTours',
     subtitle: 'Explore Vanuatu',
     path: '/tours',

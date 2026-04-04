@@ -12,7 +12,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import {
   ArrowLeft, MapPin, Clock, Users, Star, Check, X, Minus, Plus,
-  Mountain, Palmtree, Anchor, Camera, Fish, Compass, TreeDeciduous,
+  Mountain, TreePalm, Anchor, Camera, Fish, Compass, TreeDeciduous,
   ChefHat, Heart, Share2, Calendar as CalendarIcon, AlertCircle
 } from 'lucide-react';
 import { format } from 'date-fns';
@@ -23,7 +23,7 @@ const categoryIcons: Record<string, any> = {
   nature: TreeDeciduous,
   historical: Compass,
   water_sports: Anchor,
-  island_hopping: Palmtree,
+  island_hopping: TreePalm,
   wildlife: Fish,
   culinary: ChefHat,
 };

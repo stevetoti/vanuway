@@ -12,7 +12,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import {
   ArrowLeft, Search, SlidersHorizontal, MapPin, Clock, Users, Star,
-  Mountain, Palmtree, Anchor, Camera, Fish, Compass, TreeDeciduous,
+  Mountain, TreePalm, Anchor, Camera, Fish, Compass, TreeDeciduous,
   ChefHat, Heart, Calendar, Sparkles, TrendingUp
 } from 'lucide-react';
 
@@ -22,7 +22,7 @@ const categoryIcons: Record<string, any> = {
   nature: TreeDeciduous,
   historical: Compass,
   water_sports: Anchor,
-  island_hopping: Palmtree,
+  island_hopping: TreePalm,
   wildlife: Fish,
   culinary: ChefHat,
 };
@@ -33,7 +33,7 @@ const categories = [
   { id: 'cultural', name: 'Cultural', icon: Camera },
   { id: 'nature', name: 'Nature', icon: TreeDeciduous },
   { id: 'water_sports', name: 'Water Sports', icon: Anchor },
-  { id: 'island_hopping', name: 'Island Hopping', icon: Palmtree },
+  { id: 'island_hopping', name: 'Island Hopping', icon: TreePalm },
   { id: 'wildlife', name: 'Wildlife', icon: Fish },
   { id: 'culinary', name: 'Food Tours', icon: ChefHat },
   { id: 'historical', name: 'Historical', icon: Compass },

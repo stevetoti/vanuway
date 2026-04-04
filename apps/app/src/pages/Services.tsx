@@ -6,7 +6,7 @@ import {
   Car,
   UtensilsCrossed,
   Hotel,
-  Palmtree,
+  TreePalm,
   BookOpen,
   AlertTriangle,
   Wrench,
@@ -101,7 +101,7 @@ const serviceCategories = [
       },
       {
         id: 'tours',
-        icon: Palmtree,
+        icon: TreePalm,
         title: 'Tours & Attractions',
         description: 'Explore Vanuatu with guided tours',
         path: '/tours',
