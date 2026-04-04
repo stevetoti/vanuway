@@ -1,36 +1,54 @@
 # VanuWay TODO
 
-## High Priority
-- [x] Fix ride messaging (table missing in DB, service disabled)
-- [x] Fix delivery service (references non-existent columns current_lat/current_lng)
-- [x] Implement missing RPC functions
-- [x] Add Stripe webhook handler for payment confirmation
-- [x] Fix trip sharing token generation (uses Math.random)
-- [x] Fix duplicate driver earnings creation
-- [x] Add payment idempotency keys
+## CRITICAL — Next Session Priority
 
-## Medium Priority
-- [x] Fix payout processing stub (now marks as awaiting_transfer)
-- [x] Fix dual-key driver ID pattern
-- [x] Fix phone masking to store real numbers
-- [x] Website: implement contact form backend
-- [x] Website: remove unused framer-motion dependency
-- [x] Website: add not-found.tsx error page
-- [x] Clean up loose SQL files in app root
-- [x] Create .env.example files
+### 1. Wire Up Real Ride Booking Flow
+The RequestRide page currently does NOT create actual bookings. This must be fixed:
+- [ ] When user taps "Find Driver", call `createRideRequest()` from ride-service.ts to insert into ride_bookings
+- [ ] Use `autoAssignDriver()` from driver-assignment.ts to find and assign a nearby online driver
+- [ ] Show real driver info (name, vehicle, plate, rating) when matched
+- [ ] Create real-time subscription for ride status updates
+- [ ] Navigate to TrackRide page after driver accepts
+- [ ] Handle "no drivers available" gracefully with retry option
+- [ ] Send push notification to matched driver
 
-## Low Priority
-- [x] Fix PIN rate limiting (locks after max attempts)
-- [x] Fix emergency SOS to notify admin users
-- [x] Fix Next.js image config
+### 2. Driver App — Receiving & Accepting Rides
+- [ ] Driver Dashboard: show incoming ride requests in real-time
+- [ ] Accept/decline ride flow
+- [ ] Navigate to ActiveRide page when accepted
+- [ ] Update driver status (available → busy → available) on ride completion
+- [ ] Show ride details: pickup/dropoff, fare, passenger info
 
-## Remaining (for future sessions)
-- [ ] Run the SQL migration on the actual Supabase database
-- [ ] Configure Stripe webhook endpoint in Stripe dashboard (point to stripe-webhook edge function)
-- [ ] Integrate real mobile money APIs (Digicel My CASH, Vodafone M-Vatu) for driver payouts
-- [ ] Integrate real bank transfer API for driver payouts
-- [ ] Set up Resend domain verification for contact form emails
-- [ ] Add comprehensive test suite
-- [ ] Set up CI/CD pipeline
-- [ ] Performance audit (bundle size optimisation for large chunks)
-- [ ] Expand shared package with cross-app types
+### 3. Payment Integration
+- [ ] Wire up Stripe checkout for card payments on ride completion
+- [ ] Wire up COD flow (driver marks as collected)
+- [ ] Show payment status on ride tracking page
+
+## HIGH PRIORITY
+- [ ] Improve Driver Dashboard UI
+- [ ] Test all vendor registration flows end-to-end (hotel, restaurant, tour, ferry, pharmacy)
+- [ ] Add vendor admin review pages (hotels, restaurants, tours — similar to driver applications)
+- [ ] Set up Stripe webhook endpoint in Stripe dashboard
+- [ ] Configure DMARC DNS record for vanuway.com email deliverability
+
+## MEDIUM PRIORITY
+- [ ] Add real-time driver location tracking on the map
+- [ ] Implement ride cancellation flow with fee calculation
+- [ ] Add ride history with receipts
+- [ ] Food ordering flow end-to-end test
+- [ ] Hotel booking flow end-to-end test
+
+## COMPLETED
+- [x] All production readiness fixes (19 items)
+- [x] Pricing engine with Google Maps Distance Matrix
+- [x] 20% platform commission, fare rounding, surcharges
+- [x] Auth: forgot password, reset password, email verification via Resend
+- [x] Service worker fix (network-only for JS/CSS)
+- [x] Leaflet map crash fix (downgrade to react-leaflet v4)
+- [x] Partner page redesign with all 7 vendor types
+- [x] Admin Applications page: badges, profile photos, Review link
+- [x] Branded vendor notification emails
+- [x] Driver onboarding: Vanuatu provinces, auto-save, no postal code
+- [x] Database cleaned of all dummy data
+- [x] All edge functions deployed with Resend API key
+- [x] SMTP configured in Supabase for auth emails

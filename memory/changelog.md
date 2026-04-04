@@ -1,48 +1,73 @@
 # VanuWay Changelog
 
+## 2026-04-04
+
+### Ride Booking & Driver Matching (INCOMPLETE — Priority for next session)
+- Identified that the RequestRide page does NOT create actual ride_bookings in the database
+- The "Find Driver" button runs a fake animation and currently always shows "No drivers available"
+- Need to wire up: createRideRequest → auto-assign driver → real-time tracking
+- Driver is registered and approved (stevetoti1@gmail.com) and showing online
+
+### Leaflet Map Crash Fix
+- Root cause found: react-leaflet v5.0.0 requires React 19, but app runs React 18
+- Downgraded to react-leaflet@4.2.1 + @react-leaflet/core@2.1.0
+- Extracted map into RideMap.tsx with dynamic import via React.lazy()
+
+### Partner Page Redesign
+- Added all 7 vendor types: Driver, Hotel, Restaurant, Tour, Ferry, Pharmacy, Service Provider
+- Professional UI with orange accents, gradient hero, platform stats
+- Each card has gradient top bar, checkmark benefits, popular badges
+
+### Admin Fixes
+- Fixed "Application not found" — was querying by application.id, now uses driver_id
+- Fixed Review button link (same driver_id fix)
+- Added profile photo avatars with gradient initials fallback
+- Status badges now use distinct colors (green/red/amber/blue/gray)
+
+### Email Notifications
+- Fixed send-driver-notification edge function (field name mismatch: status vs type)
+- Added branded emails for all 7 vendor types with step-by-step onboarding guides
+- Orange-themed email design with dashboard links
+
+### Driver Onboarding
+- Province field: dropdown with 6 Vanuatu provinces
+- Removed postal code field
+- Added localStorage auto-save for form data
+
+### Auth & Infrastructure
+- Deployed SMTP via Resend for auth emails
+- Created Forgot Password + Reset Password pages
+- Made Terms/Privacy/About pages publicly accessible
+- Fixed registration flow to show "check email" message
+- Charlotte (senacharlotte4@gmail.com) confirmed and able to login
+- Both Stephen accounts set as super_admin
+- Deployed send-auth-email, stripe-webhook, all edge functions to Supabase
+
+### Production Fixes
+- Fixed Palmtree icon crash (deprecated, replaced with TreePalm)
+- Fixed service worker stale cache crash (v3: network-only for JS/CSS)
+- Fixed all "coming soon" messages, wrong email domain (vanuway.vu → vanuway.com)
+- Fixed hardcoded notification badge (now real unread count from DB)
+- Removed VanuRide from passenger services (moto is delivery-only)
+- Cleaned database: removed all dummy users/vendors/bookings
+
 ## 2026-04-03
 
-### Production Pricing Engine Rewrite
+### Production Pricing Engine
+- Google Maps Distance Matrix (primary) + Haversine×1.35 fallback
+- Passenger: Car/SUV/Van/Wheelchair Van only. Moto delivery-only.
+- 20% platform commission, fares rounded to nearest 50 VUV
+- Airport 3500 VUV, Cruise terminal 2500 VUV, Night 1.2x
 
-- Rewrote `pricing.ts` with Google Maps Distance Matrix API (primary) + Haversine with 1.35x road correction factor (fallback)
-- Passenger vehicles: Car, SUV, Van, Wheelchair Van only — removed moto/bike from passenger rides
-- Moto is delivery-only
-- Added cruise terminal surcharge (600 VUV) alongside airport surcharge (700 VUV)
-- Night surcharge: 1.2x between 10PM-5AM (replaced demand-based surge)
-- All fares rounded to nearest 50 VUV
-- Enforced minimum fares per vehicle (Car 600, SUV 800, Van 1000, Wheelchair 900, Moto 400)
-- Updated driver-assignment vehicle mapping for new types
-- Removed dual-key driver ID fallback from driver-assignment.ts
-- Updated delivery service: moto-only, removed bike option
-- Centralised commission rates: 18% rides, 15% delivery (single source of truth)
-
-### Production Readiness Fixes (19 issues resolved)
-
-**Critical Fixes:**
-- Created `ride_messages` table migration + enabled messaging service (was disabled)
-- Fixed delivery service to use `driver_locations` table instead of non-existent `current_lat`/`current_lng` columns
-- Created 6 missing RPC functions: `calculate_cancellation_fee`, `get_dashboard_stats`, `approve_driver_application`, `reject_driver_application`, `log_admin_activity`, plus `ride_messages` table
-- Added Stripe webhook edge function (`stripe-webhook`) for payment event handling
-- Fixed payout processing — now marks as `awaiting_transfer` with clear instructions instead of falsely marking as `completed`
-- Fixed trip sharing token — replaced `Math.random()` with `crypto.randomUUID()`
-- Added idempotency checks to `create-ride-payment` and `check-payment-status` edge functions
-- Fixed duplicate driver earnings creation — both webhook and polling now check for existing records
-
-**Significant Fixes:**
-- Standardised driver ID pattern — removed dual-key fallback in `ride-service.ts`, consistently uses `user_id` lookup
-- Fixed phone masking — now stores actual phone numbers from profile instead of 'private'
-- Website contact form now submits via Resend API (server action)
-- Created `.env.example` files for app, supabase functions, and website
-- Moved 16 loose SQL files from `apps/app/` root to `supabase/reference-sql/`
-
-**Minor Fixes:**
-- Removed unused `framer-motion` from website dependencies
-- Added `not-found.tsx` 404 page to website
-- Fixed PIN verification — locks PIN after max attempts by expiring it
-- Fixed emergency SOS — now notifies all active admin users, not just the triggering user
-- Replaced deprecated `images.domains` with `remotePatterns` in Next.js config
-- Deleted redundant `messaging-service-disabled.ts`
+### Production Readiness Fixes (19 issues)
+- ride_messages table + messaging service enabled
+- Delivery service fixed (driver_locations table)
+- Stripe webhook, payment idempotency, payout processing
+- Trip sharing security, phone masking, emergency SOS
+- Driver ID pattern standardised, PIN lockout
+- Website: contact form, 404 page, framer-motion removed
+- CLAUDE.md, AGENTS.md, memory directory created
 
 ### Initial Setup
-- Created CLAUDE.md, AGENTS.md, and memory/ directory
 - Full codebase audit completed
+- Created all project documentation

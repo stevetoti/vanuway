@@ -134,11 +134,48 @@ Vercel multi-project config deploys:
 
 No mobile money (My CASH, M-Vatu) or other providers in production.
 
+## Deployment
+
+```bash
+# Deploy super-app
+cd apps/app && npx vercel --prod --yes --token "$VERCEL_TOKEN" --scope pacificwaveprojects --force
+
+# Deploy website
+cd apps/website && npx vercel --prod --yes --token "$VERCEL_TOKEN" --scope pacificwaveprojects --force
+```
+
+Vercel token: use the Pacific Wave Digital token (scope: pacificwaveprojects).
+
+Edge functions are deployed via Supabase MCP tools (not CLI).
+
+## Current Production State (2026-04-04)
+
+### Working
+- Auth: signup, login, forgot/reset password (Resend SMTP)
+- Home page, services, all vendor partner pages
+- Driver onboarding (register → application → admin approval → email notification)
+- Admin dashboard with user management, driver applications review
+- Hotel, restaurant, tour browsing (with sample data when empty)
+- Ride request page loads with map (Leaflet v4)
+- All 7 vendor registration flows accessible
+- Pricing engine: Google Maps + Haversine fallback, 20% commission
+
+### NOT Working Yet (Priority for next session)
+- **Ride booking does NOT create real bookings** — RequestRide.tsx "Find Driver" always shows "no drivers"
+- **Driver app does NOT receive ride requests** — no real-time ride matching
+- **Payment not wired** — Stripe checkout + COD not triggered from ride flow
+- **Stripe webhook endpoint not configured** in Stripe dashboard
+
+### Accounts
+- `steve@pacificwavedigital.com` — super_admin
+- `totinarh24@gmail.com` — super_admin
+- `senacharlotte4@gmail.com` — user
+- `stevetoti1@gmail.com` — approved driver (online)
+
 ## Pending Setup
 
-1. **Run SQL migration** — `supabase/migrations/20260403_fix_production_issues.sql` must be executed on the Supabase database
-2. **Configure Stripe webhook** — Point Stripe dashboard webhook to the `stripe-webhook` edge function URL
-3. **Set up Resend** — Verify `vanuway.com` domain in Resend for contact form emails
+1. **Configure Stripe webhook** — Point Stripe dashboard to `https://ljervgzsovamehnlztxf.supabase.co/functions/v1/stripe-webhook`
+2. **Add DMARC DNS** — `_dmarc.vanuway.com` TXT `v=DMARC1; p=none; rua=mailto:steve@pacificwavedigital.com`
 
 ## Memory Protocol
 
