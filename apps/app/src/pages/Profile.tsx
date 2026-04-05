@@ -139,29 +139,14 @@ const Profile = () => {
 
       if (adminRole) setIsAdmin(true);
 
-      // Check driver — try direct query first
-      console.log('[Profile] Checking driver for user:', user.id);
-      const { data: driver, error: driverError } = await supabase
+      // Check driver
+      const { data: driver } = await supabase
         .from('drivers')
         .select('*')
         .eq('user_id', user.id)
         .maybeSingle();
 
-      console.log('[Profile] Driver result:', { driver, driverError });
-
-      if (driverError) {
-        console.warn('Driver fetch error:', driverError);
-        // RLS might be blocking — try fetching just the count
-        const { count } = await supabase
-          .from('drivers')
-          .select('*', { count: 'exact', head: true })
-          .eq('user_id', user.id);
-        console.log('[Profile] Driver count fallback:', count);
-      }
-
-      if (driver) {
-        setDriverInfo(driver as any as DriverInfo);
-      }
+      if (driver) setDriverInfo(driver as any as DriverInfo);
 
       // Check hotel owner
       const { data: hotelOwner } = await supabase
