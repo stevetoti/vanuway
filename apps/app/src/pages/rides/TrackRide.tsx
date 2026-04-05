@@ -46,6 +46,7 @@ interface Driver {
   first_name?: string;
   last_name?: string;
   vehicle_photo_url?: string;
+  phone?: string;
 }
 
 const statusConfig: Record<string, { label: string; color: string; icon: any; description: string }> = {
@@ -104,7 +105,11 @@ export default function TrackRide() {
         .eq('id', driverUserId).maybeSingle();
       data = res.data;
     }
-    if (data) setDriver(data);
+    if (data) {
+      // Get driver's phone number from profiles
+      const { data: profile } = await supabase.from('profiles').select('phone').eq('id', data.user_id).maybeSingle();
+      setDriver({ ...data, phone: profile?.phone || null });
+    }
   };
 
   const fetchBooking = async () => {
@@ -320,7 +325,13 @@ export default function TrackRide() {
             <Button
               variant="outline"
               className="flex-1 h-12 gap-2 text-base font-semibold"
-              onClick={() => toast.info('Calling driver...')}
+              onClick={() => {
+                if (driver?.phone) {
+                  window.open(`tel:${driver.phone}`, '_self');
+                } else {
+                  toast.error('Driver phone number not available');
+                }
+              }}
             >
               <Phone className="h-5 w-5 text-green-600" />
               Call Driver

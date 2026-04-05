@@ -48,6 +48,7 @@ const ActiveRide = () => {
   const locationServiceRef = useRef<DriverLocationService | null>(null);
   const [ride, setRide] = useState<RideDetails | null>(null);
   const [driverInfo, setDriverInfo] = useState<DriverInfo | null>(null);
+  const [passengerPhone, setPassengerPhone] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [chatOpen, setChatOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -88,7 +89,7 @@ const ActiveRide = () => {
   useEffect(() => {
     if (!user || !ride) return;
     
-    const activeStatuses = ['accepted', 'arriving', 'in_progress'];
+    const activeStatuses = ['accepted', 'arriving', 'arrived', 'in_progress'];
     if (activeStatuses.includes(ride.status)) {
       // Start location tracking
       if (!locationServiceRef.current) {
@@ -134,6 +135,12 @@ const ActiveRide = () => {
 
       if (error) throw error;
       setRide(data);
+
+      // Fetch passenger phone
+      if (data.user_id) {
+        const { data: profile } = await supabase.from('profiles').select('phone').eq('id', data.user_id).maybeSingle();
+        if (profile?.phone) setPassengerPhone(profile.phone);
+      }
     } catch (error: any) {
       toast.error('Failed to load ride details');
       navigate('/driver/dashboard');
@@ -266,8 +273,11 @@ const ActiveRide = () => {
   const openNavigation = () => {
     if (!ride) return;
 
-    const { pickup_lat, pickup_lng } = ride;
-    const url = `https://www.google.com/maps/dir/?api=1&destination=${pickup_lat},${pickup_lng}`;
+    // Navigate to pickup before trip starts, dropoff after trip starts
+    const isInTrip = ride.status === 'in_progress';
+    const destLat = isInTrip ? ride.dropoff_lat : ride.pickup_lat;
+    const destLng = isInTrip ? ride.dropoff_lng : ride.pickup_lng;
+    const url = `https://www.google.com/maps/dir/?api=1&destination=${destLat},${destLng}&travelmode=driving`;
     window.open(url, '_blank');
   };
 
@@ -366,14 +376,12 @@ const ActiveRide = () => {
                 <p className="text-sm text-muted-foreground">Pickup</p>
                 <p className="font-medium">{ride.pickup_location}</p>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={openNavigation}
-              >
-                <Navigation className="h-4 w-4 mr-2" />
-                Navigate
-              </Button>
+              {ride.status !== 'in_progress' && (
+                <Button variant="outline" size="sm" onClick={openNavigation}>
+                  <Navigation className="h-4 w-4 mr-2" />
+                  Navigate
+                </Button>
+              )}
             </div>
 
             <div className="ml-1.5 h-8 w-0.5 bg-border" />
@@ -386,6 +394,12 @@ const ActiveRide = () => {
                 <p className="text-sm text-muted-foreground">Dropoff</p>
                 <p className="font-medium">{ride.dropoff_location}</p>
               </div>
+              {ride.status === 'in_progress' && (
+                <Button variant="default" size="sm" onClick={openNavigation} className="bg-blue-600 hover:bg-blue-700">
+                  <Navigation className="h-4 w-4 mr-2" />
+                  Navigate
+                </Button>
+              )}
             </div>
           </div>
 
@@ -404,7 +418,18 @@ const ActiveRide = () => {
         {/* Contact Passenger */}
         <Card className="p-4">
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" className="flex-1">
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex-1"
+              onClick={() => {
+                if (passengerPhone) {
+                  window.open(`tel:${passengerPhone}`, '_self');
+                } else {
+                  toast.error('Passenger phone number not available');
+                }
+              }}
+            >
               <Phone className="h-4 w-4 mr-2" />
               Call Passenger
             </Button>
