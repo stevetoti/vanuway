@@ -118,7 +118,7 @@ const ActiveRide = () => {
       .from('drivers')
       .select('id, user_id, vehicle_type, vehicle_color, vehicle_model, license_plate, current_lat, current_lng')
       .eq('user_id', user.id)
-      .single();
+      .maybeSingle();
     
     if (data) {
       setDriverInfo(data);

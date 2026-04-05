@@ -97,19 +97,24 @@ const DriverDashboard = () => {
     if (!user?.id) return;
 
     try {
+      // Use maybeSingle instead of single to avoid PGRST116 on RLS issues
       const { data, error } = await supabase
         .from('drivers')
         .select('*')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
       if (error) {
-        if (error.code === 'PGRST116') {
-          // No driver profile found
-          navigate('/driver/register');
-          return;
-        }
-        throw error;
+        console.error('Driver fetch error:', error);
+        toast.error('Failed to load driver profile. Please try again.');
+        setLoading(false);
+        return;
+      }
+
+      if (!data) {
+        // No driver profile found
+        navigate('/driver/register');
+        return;
       }
 
       const driverData = data as any;
