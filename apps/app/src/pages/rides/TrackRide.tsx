@@ -159,7 +159,8 @@ export default function TrackRide() {
   const status = statusConfig[booking.status] || statusConfig.pending;
   const StatusIcon = status.icon;
   const isActive = ['pending', 'accepted', 'arriving', 'arrived', 'in_progress'].includes(booking.status);
-  const hasDriver = ['accepted', 'arriving', 'arrived', 'in_progress'].includes(booking.status) && driver;
+  const driverAssigned = ['accepted', 'arriving', 'arrived', 'in_progress'].includes(booking.status);
+  const hasDriver = driverAssigned && driver;
   const canCancel = ['pending', 'accepted', 'arriving'].includes(booking.status);
   const isCompleted = booking.status === 'completed';
   const isCancelled = booking.status === 'cancelled';
@@ -244,25 +245,10 @@ export default function TrackRide() {
                   <span>{Number(driver.rating).toFixed(1)}</span>
                 </div>
               </div>
-              {/* Call & Message - ALWAYS VISIBLE */}
-              <div className="flex gap-2 flex-shrink-0">
-                <Button variant="outline" size="icon" className="h-10 w-10 rounded-full">
-                  <Phone className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant={unreadCount > 0 ? 'default' : 'outline'}
-                  size="icon"
-                  className={`h-10 w-10 rounded-full relative ${unreadCount > 0 ? 'bg-primary' : ''}`}
-                  onClick={() => setChatOpen(!chatOpen)}
-                >
-                  <MessageSquare className="h-4 w-4" />
-                  {unreadCount > 0 && (
-                    <span className="absolute -top-1 -right-1 h-4 w-4 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center">
-                      {unreadCount}
-                    </span>
-                  )}
-                </Button>
-              </div>
+              {/* Status indicator */}
+              <Badge className={`${status.color} text-white text-[10px] flex-shrink-0`}>
+                {status.label.split(' ').pop()}
+              </Badge>
             </div>
           </div>
         )}
@@ -327,6 +313,35 @@ export default function TrackRide() {
         </div>
       </div>
 
+      {/* FIXED BOTTOM BAR — Call & Message (always visible when driver assigned) */}
+      {driverAssigned && (
+        <div className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t shadow-lg px-4 py-3 safe-area-bottom">
+          <div className="flex gap-3">
+            <Button
+              variant="outline"
+              className="flex-1 h-12 gap-2 text-base font-semibold"
+              onClick={() => toast.info('Calling driver...')}
+            >
+              <Phone className="h-5 w-5 text-green-600" />
+              Call Driver
+            </Button>
+            <Button
+              variant={unreadCount > 0 ? 'default' : 'outline'}
+              className={`flex-1 h-12 gap-2 text-base font-semibold relative ${unreadCount > 0 ? 'bg-primary' : ''}`}
+              onClick={() => setChatOpen(!chatOpen)}
+            >
+              <MessageSquare className="h-5 w-5" />
+              Message
+              {unreadCount > 0 && (
+                <span className="absolute -top-2 -right-2 h-6 w-6 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
+                  {unreadCount}
+                </span>
+              )}
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Dialogs */}
       <CancellationDialog
         open={cancelDialogOpen}
@@ -347,8 +362,8 @@ export default function TrackRide() {
         fare={booking.price}
       />
 
-      {/* Chat Panel */}
-      {hasDriver && user && (
+      {/* Chat Panel — renders when driver is assigned (even before driver info loads) */}
+      {driverAssigned && user && (
         <RideMessaging
           rideId={booking.id}
           userId={user.id}
@@ -359,6 +374,9 @@ export default function TrackRide() {
           onUnreadCountChange={setUnreadCount}
         />
       )}
+
+      {/* Bottom spacer for fixed action bar */}
+      {driverAssigned && <div className="h-20" />}
     </div>
   );
 }
