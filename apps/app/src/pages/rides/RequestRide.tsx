@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { calculateRidePrice, formatPrice as formatVUV, type VehicleType as PricingVehicleType } from '@/lib/rides/pricing';
 import { createRideRequest, subscribeToRideUpdates, cancelRide as cancelRideService } from '@/lib/rides/ride-service';
+import { loadGoogleMaps, isGoogleMapsAvailable, searchGooglePlaces, reverseGeocodeGoogle } from '@/lib/google-maps';
 import { lazy, Suspense } from 'react';
 import type { RideMapDriver } from '@/components/rides/RideMap';
 
@@ -102,7 +103,13 @@ export default function RequestRide() {
   const [isCreatingRide, setIsCreatingRide] = useState(false);
   const [searchResults, setSearchResults] = useState<Location[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [googleReady, setGoogleReady] = useState(false);
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Try to load Google Maps on mount (if API key is configured)
+  useEffect(() => {
+    loadGoogleMaps().then(() => setGoogleReady(true)).catch(() => {});
+  }, []);
 
   // Route polyline
   const routePoints = useMemo(() => {
@@ -272,29 +279,38 @@ export default function RequestRide() {
         setActiveField('dropoff');
         setStep('destination');
 
-        // Reverse geocode with zoom=18 for maximum detail
+        // Reverse geocode — try Google first, fallback to Nominatim
         try {
-          const res = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1&zoom=18`,
-            { headers: { 'Accept-Language': 'en' } }
-          );
-          const data = await res.json();
-          if (data?.address) {
-            const addr = data.address;
-            // Build a readable name from address components
-            const road = addr.road || addr.pedestrian || addr.footway || '';
-            const building = addr.building || addr.amenity || addr.shop || '';
-            const suburb = addr.suburb || addr.neighbourhood || addr.city_district || '';
+          let resolved = false;
 
-            let name = building || road || suburb || 'Your Location';
-            let address = [road, suburb, addr.city || 'Port Vila'].filter(Boolean).join(', ');
-            if (name === road) {
-              // If name is just the road, add suburb for context
-              name = suburb ? `${road}, ${suburb}` : road;
+          // Google reverse geocode (if available)
+          if (isGoogleMapsAvailable()) {
+            const googleResult = await reverseGeocodeGoogle(lat, lng);
+            if (googleResult) {
+              setPickupLocation({ name: googleResult.name, address: googleResult.address, lat, lng });
+              resolved = true;
             }
-            setPickupLocation({ name, address, lat, lng });
-          } else {
-            setPickupLocation({ name: 'Your Location', address: `${lat.toFixed(5)}, ${lng.toFixed(5)}`, lat, lng });
+          }
+
+          // Nominatim fallback
+          if (!resolved) {
+            const res = await fetch(
+              `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1&zoom=18`,
+              { headers: { 'Accept-Language': 'en' } }
+            );
+            const data = await res.json();
+            if (data?.address) {
+              const addr = data.address;
+              const road = addr.road || addr.pedestrian || addr.footway || '';
+              const building = addr.building || addr.amenity || addr.shop || '';
+              const suburb = addr.suburb || addr.neighbourhood || addr.city_district || '';
+              let name = building || road || suburb || 'Your Location';
+              const address = [road, suburb, addr.city || 'Port Vila'].filter(Boolean).join(', ');
+              if (name === road && suburb) name = `${road}, ${suburb}`;
+              setPickupLocation({ name, address, lat, lng });
+            } else {
+              setPickupLocation({ name: 'Your Location', address: `${lat.toFixed(5)}, ${lng.toFixed(5)}`, lat, lng });
+            }
           }
         } catch {
           setPickupLocation({ name: 'Your Location', address: `${lat.toFixed(5)}, ${lng.toFixed(5)}`, lat, lng });
@@ -314,7 +330,7 @@ export default function RequestRide() {
     );
   };
 
-  // Search places via OpenStreetMap Nominatim (free, no API key)
+  // Search places — Google Places if available, Nominatim fallback
   const searchPlaces = useCallback((query: string) => {
     if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
     if (!query || query.length < 2) {
@@ -325,7 +341,23 @@ export default function RequestRide() {
     setIsSearching(true);
     searchTimeoutRef.current = setTimeout(async () => {
       try {
-        // dedupe=0 shows multiple branches of the same business
+        // Try Google Places first (much better results)
+        if (isGoogleMapsAvailable()) {
+          const center = pickupLocation || { lat: -17.7334, lng: 168.3273 };
+          const googleResults = await searchGooglePlaces(query, center);
+          if (googleResults.length > 0) {
+            setSearchResults(googleResults.map(r => ({
+              name: r.name,
+              address: r.address,
+              lat: r.lat,
+              lng: r.lng,
+            })));
+            setIsSearching(false);
+            return;
+          }
+        }
+
+        // Nominatim fallback
         const res = await fetch(
           `https://nominatim.openstreetmap.org/search?` +
           `q=${encodeURIComponent(query)}&format=json&limit=12&countrycodes=vu&addressdetails=1&dedupe=0&viewbox=168.0,-18.0,168.6,-17.5&bounded=0`,
@@ -335,7 +367,6 @@ export default function RequestRide() {
         const locations: Location[] = data.map((item: any) => {
           const parts = item.display_name.split(',');
           const addr = item.address || {};
-          // Build a useful name: use the place name + area for disambiguation
           const placeName = parts[0]?.trim() || query;
           const area = addr.suburb || addr.neighbourhood || addr.city_district || parts[1]?.trim() || '';
           return {
@@ -351,8 +382,8 @@ export default function RequestRide() {
       } finally {
         setIsSearching(false);
       }
-    }, 400); // debounce 400ms
-  }, []);
+    }, 300);
+  }, [pickupLocation]);
 
   return (
     <div className="h-screen flex flex-col bg-gray-50 relative overflow-hidden">
