@@ -139,14 +139,18 @@ const Profile = () => {
 
       if (adminRole) setIsAdmin(true);
 
-      // Check driver (cast to any to handle columns not in generated types)
-      const { data: driver } = await (supabase
+      // Check driver
+      const { data: driver, error: driverError } = await supabase
         .from('drivers')
-        .select('id, vehicle_type, vehicle_model, license_plate, status, rating, total_rides, total_earnings, is_verified, application_status, vehicle_photo_url') as any)
+        .select('*')
         .eq('user_id', user.id)
         .maybeSingle();
 
-      if (driver) setDriverInfo(driver as DriverInfo);
+      if (driverError) {
+        console.warn('Driver fetch error:', driverError);
+      } else if (driver) {
+        setDriverInfo(driver as any as DriverInfo);
+      }
 
       // Check hotel owner
       const { data: hotelOwner } = await supabase
