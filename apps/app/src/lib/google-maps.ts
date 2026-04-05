@@ -3,8 +3,8 @@
  * Loads Google Maps JS API with Places library for autocomplete
  */
 
-// Google Maps API key — set your key here or via VITE_GOOGLE_MAPS_API_KEY env var
-const GOOGLE_MAPS_API_KEY = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_GOOGLE_MAPS_API_KEY) || '';
+// Google Maps API key
+const GOOGLE_MAPS_API_KEY = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_GOOGLE_MAPS_API_KEY) || 'AIzaSyBl1DYyQLvc_kRcFSTIrvbNGm8UaCH7lOE';
 
 let loadPromise: Promise<void> | null = null;
 let isLoaded = false;
