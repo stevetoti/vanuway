@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
-import { Card } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
 import { calculateETA } from '@/lib/rides/location-tracking';
 import { MapPin, Loader2, Clock, Car } from 'lucide-react';
@@ -225,12 +224,12 @@ export const LiveTrackingMap = ({
 
   if (!hasValidCoordinates) {
     return (
-      <Card className={`overflow-hidden ${className}`}>
+      <div className={`overflow-hidden ${className}`} style={{ minHeight: '300px' }}>
         <div className="w-full h-[300px] bg-muted flex flex-col items-center justify-center p-4 text-center">
           <MapPin className="h-8 w-8 text-muted-foreground mb-2" />
           <p className="font-medium text-sm">No location data</p>
         </div>
-      </Card>
+      </div>
     );
   }
 
@@ -257,12 +256,12 @@ export const LiveTrackingMap = ({
     : generateRoute([pickupLat, pickupLng], [dropoffLat, dropoffLng]);
 
   return (
-    <Card className={`overflow-hidden relative ${className}`}>
-      <div className="w-full h-[300px]">
+    <div className={`overflow-hidden relative ${className}`} style={{ minHeight: '300px' }}>
+      <div className="w-full" style={{ height: '100%', minHeight: '300px' }}>
         <MapContainer
           center={[pickupLat, pickupLng]}
           zoom={14}
-          style={{ height: '100%', width: '100%' }}
+          style={{ height: '100%', width: '100%', minHeight: '300px' }}
           zoomControl={false}
           attributionControl={false}
         >
@@ -338,6 +337,6 @@ export const LiveTrackingMap = ({
           </div>
         </div>
       )}
-    </Card>
+    </div>
   );
 };

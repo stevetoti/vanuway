@@ -171,7 +171,7 @@ export default function TrackRide() {
   const isCancelled = booking.status === 'cancelled';
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-gray-50">
       {/* Compact Header */}
       <div className="bg-white border-b px-4 py-3 flex items-center justify-between z-50">
         <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => navigate('/bookings')}>
@@ -181,13 +181,24 @@ export default function TrackRide() {
           <p className="text-sm font-bold">{status.label}</p>
           <p className="text-[10px] text-muted-foreground">{status.description}</p>
         </div>
-        <Badge className={`${status.color} text-white text-[10px]`}>
-          {booking.status === 'pending' ? <Loader2 className="h-3 w-3 animate-spin" /> : <StatusIcon className="h-3 w-3" />}
-        </Badge>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-9 w-9"
+          onClick={() => {
+            if (!booking) return;
+            const isInTrip = booking.status === 'in_progress';
+            const lat = isInTrip ? booking.dropoff_lat : booking.pickup_lat;
+            const lng = isInTrip ? booking.dropoff_lng : booking.pickup_lng;
+            window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`, '_blank');
+          }}
+        >
+          <Navigation className="h-5 w-5" />
+        </Button>
       </div>
 
-      {/* Map - takes available space */}
-      <div className="flex-1 relative" style={{ minHeight: '200px' }}>
+      {/* Map - fixed height for reliable rendering on mobile */}
+      <div className="relative" style={{ height: '45vh', minHeight: '250px' }}>
         <LiveTrackingMap
           pickupLat={booking.pickup_lat}
           pickupLng={booking.pickup_lng}
@@ -205,7 +216,7 @@ export default function TrackRide() {
           showDriverMarker={!!hasDriver}
           showRoute={true}
           onEtaUpdate={setEta}
-          className="rounded-none h-full [&>div]:h-full"
+          className="rounded-none"
         />
 
         {/* ETA overlay on map */}
