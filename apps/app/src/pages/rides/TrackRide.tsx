@@ -8,7 +8,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import {
   ArrowLeft, Phone, X, Star, Clock, MapPin, Navigation,
-  Car, CheckCircle2, Loader2, Shield, Share2
+  Car, CheckCircle2, Loader2, Shield, Share2, MessageSquare,
 } from 'lucide-react';
 import { LiveTrackingMap } from '@/components/rides/LiveTrackingMap';
 import { RideMessaging, MessageButton } from '@/components/rides/RideMessaging';
@@ -49,48 +49,13 @@ interface Driver {
 }
 
 const statusConfig: Record<string, { label: string; color: string; icon: any; description: string }> = {
-  pending: {
-    label: 'Finding Driver',
-    color: 'bg-amber-500',
-    icon: Loader2,
-    description: 'Searching for available drivers nearby...'
-  },
-  accepted: {
-    label: 'Driver Assigned',
-    color: 'bg-blue-500',
-    icon: Car,
-    description: 'Your driver has accepted the ride'
-  },
-  arriving: {
-    label: 'Driver On The Way',
-    color: 'bg-blue-600',
-    icon: Navigation,
-    description: 'Your driver is heading to your pickup location'
-  },
-  arrived: {
-    label: 'Driver Arrived',
-    color: 'bg-green-500',
-    icon: MapPin,
-    description: 'Your driver is waiting at pickup point'
-  },
-  in_progress: {
-    label: 'On Trip',
-    color: 'bg-primary',
-    icon: Navigation,
-    description: 'Enjoy your ride!'
-  },
-  completed: {
-    label: 'Completed',
-    color: 'bg-gray-500',
-    icon: CheckCircle2,
-    description: 'Thanks for riding with VanuCar!'
-  },
-  cancelled: {
-    label: 'Cancelled',
-    color: 'bg-red-500',
-    icon: X,
-    description: 'This ride has been cancelled'
-  },
+  pending: { label: 'Finding Driver', color: 'bg-amber-500', icon: Loader2, description: 'Searching for available drivers nearby...' },
+  accepted: { label: 'Driver Assigned', color: 'bg-blue-500', icon: Car, description: 'Your driver has accepted the ride' },
+  arriving: { label: 'Driver On The Way', color: 'bg-blue-600', icon: Navigation, description: 'Your driver is heading to your pickup location' },
+  arrived: { label: 'Driver Arrived', color: 'bg-green-500', icon: MapPin, description: 'Your driver is waiting at pickup point' },
+  in_progress: { label: 'On Trip', color: 'bg-primary', icon: Navigation, description: 'Enjoy your ride!' },
+  completed: { label: 'Completed', color: 'bg-gray-500', icon: CheckCircle2, description: 'Thanks for riding with VanuCar!' },
+  cancelled: { label: 'Cancelled', color: 'bg-red-500', icon: X, description: 'This ride has been cancelled' },
 };
 
 export default function TrackRide() {
@@ -109,77 +74,46 @@ export default function TrackRide() {
 
   useEffect(() => {
     fetchBooking();
-
-    // Subscribe to booking updates
     const channel = supabase
       .channel(`ride-${bookingId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'ride_bookings',
-          filter: `id=eq.${bookingId}`,
-        },
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'ride_bookings', filter: `id=eq.${bookingId}` },
         (payload) => {
           const updated = payload.new as RideBooking;
           setBooking(updated);
-
-          // When driver accepts, fetch their info
           if (updated.status === 'accepted' && updated.driver_id) {
             toast.success('Driver found! They are on their way.');
             fetchDriverInfo(updated.driver_id);
           } else if (updated.status === 'arrived') {
             toast.success('Your driver has arrived!');
           } else if (updated.status === 'completed') {
-            toast.success('Ride completed! Thanks for riding with VanuCar.');
-            setRatingOpen(true);
+            toast.success('Ride completed!');
+            setTimeout(() => setRatingOpen(true), 500);
           }
         }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+      ).subscribe();
+    return () => { supabase.removeChannel(channel); };
   }, [bookingId]);
 
   const fetchDriverInfo = async (driverUserId: string) => {
-    // driver_id = auth.users.id (new pattern)
-    let { data: driverData } = await supabase
-      .from('drivers')
-      .select('id, user_id, vehicle_model, vehicle_type, vehicle_color, license_plate, rating, total_rides, current_lat, current_lng, first_name, last_name, vehicle_photo_url')
-      .eq('user_id', driverUserId)
-      .maybeSingle();
-
-    // Fallback: old pattern where driver_id = drivers.id
-    if (!driverData) {
-      const { data: fallbackDriver } = await supabase
-        .from('drivers')
-        .select('id, user_id, vehicle_model, vehicle_type, vehicle_color, license_plate, rating, total_rides, current_lat, current_lng, first_name, last_name, vehicle_photo_url')
-        .eq('id', driverUserId)
-        .maybeSingle();
-      driverData = fallbackDriver;
+    let { data } = await (supabase.from('drivers')
+      .select('id, user_id, vehicle_model, vehicle_type, vehicle_color, license_plate, rating, total_rides, current_lat, current_lng, first_name, last_name, vehicle_photo_url') as any)
+      .eq('user_id', driverUserId).maybeSingle();
+    if (!data) {
+      const res = await (supabase.from('drivers')
+        .select('id, user_id, vehicle_model, vehicle_type, vehicle_color, license_plate, rating, total_rides, current_lat, current_lng, first_name, last_name, vehicle_photo_url') as any)
+        .eq('id', driverUserId).maybeSingle();
+      data = res.data;
     }
-
-    if (driverData) setDriver(driverData);
+    if (data) setDriver(data);
   };
 
   const fetchBooking = async () => {
     try {
-      const { data, error } = await supabase
-        .from('ride_bookings')
-        .select('*')
-        .eq('id', bookingId)
-        .single();
-
+      const { data, error } = await supabase.from('ride_bookings').select('*').eq('id', bookingId).single();
       if (error) throw error;
       setBooking(data);
-
-      if (data.driver_id) {
-        await fetchDriverInfo(data.driver_id);
-      }
-    } catch (error) {
+      if (data.driver_id) await fetchDriverInfo(data.driver_id);
+    } catch {
       toast.error('Failed to load ride details');
       navigate('/bookings');
     } finally {
@@ -189,45 +123,25 @@ export default function TrackRide() {
 
   const handleCancelRide = async (reason: string) => {
     if (!booking) return;
-
     try {
-      const { error } = await supabase
-        .from('ride_bookings')
-        .update({
-          status: 'cancelled',
-          cancellation_reason: reason,
-          cancelled_by: 'passenger',
-        } as any)
+      const { error } = await supabase.from('ride_bookings')
+        .update({ status: 'cancelled', cancellation_reason: reason, cancelled_by: 'passenger' } as any)
         .eq('id', booking.id);
-
       if (error) throw error;
-
-      // Free up the driver if assigned
       if (booking.driver_id) {
-        supabase.from('drivers').update({
-          status: 'available', is_available: true, is_online: true, current_ride_id: null,
-        } as any).eq('user_id', booking.driver_id)
-          .then(({ error: e }) => { if (e) console.warn('Driver update:', e); });
-
-        supabase.from('notifications').insert({
-          user_id: booking.driver_id,
-          title: 'Ride Cancelled',
-          message: `Passenger cancelled: ${reason}`,
-          type: 'ride_cancelled',
-        }).then(({ error: e }) => { if (e) console.warn('Notification:', e); });
+        supabase.from('drivers').update({ status: 'available', is_available: true, is_online: true, current_ride_id: null } as any)
+          .eq('user_id', booking.driver_id).then(({ error: e }) => { if (e) console.warn(e); });
+        supabase.from('notifications').insert({ user_id: booking.driver_id, title: 'Ride Cancelled', message: `Passenger cancelled: ${reason}`, type: 'ride_cancelled' })
+          .then(({ error: e }) => { if (e) console.warn(e); });
       }
-
       toast.success('Ride cancelled');
       setCancelDialogOpen(false);
       navigate('/bookings');
-    } catch (error) {
-      toast.error('Failed to cancel ride');
-    }
+    } catch { toast.error('Failed to cancel ride'); }
   };
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('en-VU', { style: 'currency', currency: 'VUV', maximumFractionDigits: 0 }).format(price);
-  };
+  const formatPrice = (price: number) =>
+    new Intl.NumberFormat('en-VU', { style: 'currency', currency: 'VUV', maximumFractionDigits: 0 }).format(price);
 
   if (loading) {
     return (
@@ -244,248 +158,176 @@ export default function TrackRide() {
 
   const status = statusConfig[booking.status] || statusConfig.pending;
   const StatusIcon = status.icon;
+  const isActive = ['pending', 'accepted', 'arriving', 'arrived', 'in_progress'].includes(booking.status);
+  const hasDriver = ['accepted', 'arriving', 'arrived', 'in_progress'].includes(booking.status) && driver;
   const canCancel = ['pending', 'accepted', 'arriving'].includes(booking.status);
-  const showDriverInfo = ['accepted', 'arriving', 'arrived', 'in_progress'].includes(booking.status);
-  const showChat = ['accepted', 'arriving', 'arrived', 'in_progress'].includes(booking.status) && driver;
+  const isCompleted = booking.status === 'completed';
+  const isCancelled = booking.status === 'cancelled';
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-32">
-      {/* Header */}
-      <div className="bg-gradient-to-br from-primary via-primary to-primary-glow text-white">
-        <div className="px-4 pt-4 pb-6">
-          <div className="flex items-center justify-between mb-4">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="text-white hover:bg-white/20"
-              onClick={() => navigate('/bookings')}
-            >
-              <ArrowLeft className="h-6 w-6" />
-            </Button>
-            <h1 className="text-xl font-bold">Track Ride</h1>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="text-white hover:bg-white/20"
-            >
-              <Share2 className="h-5 w-5" />
-            </Button>
-          </div>
-
-          {/* Status Badge */}
-          <div className="text-center py-6">
-            <div className={`w-20 h-20 ${status.color} rounded-full flex items-center justify-center mx-auto mb-4 ${booking.status === 'pending' ? 'animate-pulse' : ''}`}>
-              <StatusIcon className={`h-10 w-10 text-white ${booking.status === 'pending' ? 'animate-spin' : ''}`} />
-            </div>
-            <h2 className="text-2xl font-bold">{status.label}</h2>
-            <p className="text-white/80 mt-1">{status.description}</p>
-          </div>
-
-          {/* Live Tracking Map */}
-          <div className="px-2 -mb-2">
-            <LiveTrackingMap
-              pickupLat={booking.pickup_lat}
-              pickupLng={booking.pickup_lng}
-              dropoffLat={booking.dropoff_lat}
-              dropoffLng={booking.dropoff_lng}
-              driverId={driver?.user_id}
-              driverInfo={driver ? {
-                id: driver.id,
-                user_id: driver.user_id,
-                vehicle_type: driver.vehicle_type,
-                vehicle_color: driver.vehicle_color,
-                vehicle_model: driver.vehicle_model,
-                license_plate: driver.license_plate,
-                current_lat: driver.current_lat,
-                current_lng: driver.current_lng,
-                vehicle_photo_url: driver.vehicle_photo_url,
-              } : undefined}
-              rideStatus={booking.status}
-              showDriverMarker={showDriverInfo}
-              showRoute={true}
-              onEtaUpdate={setEta}
-              className="rounded-2xl overflow-hidden"
-            />
-          </div>
+    <div className="min-h-screen bg-gray-50 flex flex-col">
+      {/* Compact Header */}
+      <div className="bg-white border-b px-4 py-3 flex items-center justify-between z-50">
+        <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => navigate('/bookings')}>
+          <ArrowLeft className="h-5 w-5" />
+        </Button>
+        <div className="text-center">
+          <p className="text-sm font-bold">{status.label}</p>
+          <p className="text-[10px] text-muted-foreground">{status.description}</p>
         </div>
+        <Badge className={`${status.color} text-white text-[10px]`}>
+          {booking.status === 'pending' ? <Loader2 className="h-3 w-3 animate-spin" /> : <StatusIcon className="h-3 w-3" />}
+        </Badge>
       </div>
 
-      {/* Driver Card */}
-      {showDriverInfo && driver && (
-        <div className="px-4 -mt-4">
-          <Card className="shadow-lg">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-4">
-                {driver.vehicle_photo_url ? (
-                  <div className="h-16 w-16 rounded-xl overflow-hidden border-2 flex-shrink-0" style={{ borderColor: getVehicleColor(driver.vehicle_color) }}>
-                    <img src={driver.vehicle_photo_url} alt="Vehicle" className="w-full h-full object-cover" />
-                  </div>
-                ) : (
-                  <div
-                    className="h-16 w-16 rounded-full border-2 flex items-center justify-center text-2xl flex-shrink-0"
-                    style={{
-                      borderColor: getVehicleColor(driver.vehicle_color),
-                      backgroundColor: getVehicleColor(driver.vehicle_color) + '15'
-                    }}
-                  >
-                    {getVehicleEmoji(driver.vehicle_type)}
-                  </div>
-                )}
-                <div className="flex-1">
-                  <h3 className="font-semibold text-lg">
-                    {driver.first_name ? `${driver.first_name} ${driver.last_name || ''}`.trim() : 'Your Driver'}
-                  </h3>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <span>{driver.vehicle_model || 'Vehicle'}</span>
-                    <span>·</span>
-                    <span className="capitalize">{driver.vehicle_color || driver.vehicle_type}</span>
-                  </div>
-                  <div className="flex items-center gap-2 mt-1">
-                    <Badge variant="secondary" className="font-mono">
-                      {driver.license_plate || 'N/A'}
-                    </Badge>
-                    <div className="flex items-center gap-1">
-                      <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
-                      <span className="font-medium">{driver.rating?.toFixed(1) || '5.0'}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
+      {/* Map - takes available space */}
+      <div className="flex-1 relative" style={{ minHeight: '200px' }}>
+        <LiveTrackingMap
+          pickupLat={booking.pickup_lat}
+          pickupLng={booking.pickup_lng}
+          dropoffLat={booking.dropoff_lat}
+          dropoffLng={booking.dropoff_lng}
+          driverId={driver?.user_id}
+          driverInfo={driver ? {
+            id: driver.id, user_id: driver.user_id,
+            vehicle_type: driver.vehicle_type, vehicle_color: driver.vehicle_color,
+            vehicle_model: driver.vehicle_model, license_plate: driver.license_plate,
+            current_lat: driver.current_lat, current_lng: driver.current_lng,
+            vehicle_photo_url: driver.vehicle_photo_url,
+          } : undefined}
+          rideStatus={booking.status}
+          showDriverMarker={!!hasDriver}
+          showRoute={true}
+          onEtaUpdate={setEta}
+          className="rounded-none h-full [&>div]:h-full"
+        />
 
-              {/* Action Buttons */}
-              <div className="flex gap-3 mt-4">
-                <Button variant="outline" className="flex-1 gap-2">
-                  <Phone className="h-4 w-4" />
-                  Call
-                </Button>
-                <MessageButton
-                  onClick={() => setChatOpen(!chatOpen)}
-                  unreadCount={unreadCount}
-                />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+        {/* ETA overlay on map */}
+        {hasDriver && eta !== null && (
+          <div className="absolute top-3 left-3 z-[1000]">
+            <Badge className="bg-white text-gray-900 shadow-lg px-3 py-1.5 text-sm font-bold">
+              <Clock className="h-4 w-4 mr-1.5 text-primary" />
+              {booking.status === 'arrived' ? 'Driver is here!' : eta <= 1 ? 'Arriving now' : `${eta} min`}
+            </Badge>
+          </div>
+        )}
+      </div>
 
-      {/* ETA Card (when driver assigned) */}
-      {showDriverInfo && (
-        <div className="px-4 mt-4">
-          <Card className="bg-gradient-to-r from-primary/10 to-primary-glow/10 border-primary/20">
-            <CardContent className="p-4 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Clock className="h-5 w-5 text-primary" />
-                <div>
-                  <p className="text-sm text-muted-foreground">Estimated arrival</p>
-                  <p className="font-bold text-lg">
-                    {booking.status === 'arrived'
-                      ? 'Driver is here!'
-                      : eta !== null
-                        ? eta <= 1 ? 'Arriving now' : `${eta} minutes`
-                        : '3-5 minutes'}
-                  </p>
+      {/* Bottom Sheet - ride details + actions */}
+      <div className="bg-white rounded-t-3xl -mt-4 relative z-10 shadow-[0_-4px_20px_rgba(0,0,0,0.08)]">
+        {/* Handle bar */}
+        <div className="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mt-3 mb-2" />
+
+        {/* Driver Card (compact) */}
+        {hasDriver && driver && (
+          <div className="px-4 pb-3 border-b">
+            <div className="flex items-center gap-3">
+              {driver.vehicle_photo_url ? (
+                <div className="h-12 w-12 rounded-xl overflow-hidden border flex-shrink-0">
+                  <img src={driver.vehicle_photo_url} alt="Vehicle" className="w-full h-full object-cover" />
                 </div>
-              </div>
-              {booking.status === 'in_progress' && (
-                <Badge className="bg-primary">In Transit</Badge>
+              ) : (
+                <div className="h-12 w-12 rounded-xl bg-gray-100 flex items-center justify-center text-xl flex-shrink-0">
+                  {getVehicleEmoji(driver.vehicle_type)}
+                </div>
               )}
-            </CardContent>
-          </Card>
+              <div className="flex-1 min-w-0">
+                <p className="font-bold text-sm truncate">
+                  {driver.first_name ? `${driver.first_name} ${driver.last_name || ''}`.trim() : 'Your Driver'}
+                </p>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <span>{driver.vehicle_model}</span>
+                  <span>·</span>
+                  <Badge variant="outline" className="font-mono text-[10px] h-4 px-1">{driver.license_plate}</Badge>
+                  <span>·</span>
+                  <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+                  <span>{Number(driver.rating).toFixed(1)}</span>
+                </div>
+              </div>
+              {/* Call & Message - ALWAYS VISIBLE */}
+              <div className="flex gap-2 flex-shrink-0">
+                <Button variant="outline" size="icon" className="h-10 w-10 rounded-full">
+                  <Phone className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant={unreadCount > 0 ? 'default' : 'outline'}
+                  size="icon"
+                  className={`h-10 w-10 rounded-full relative ${unreadCount > 0 ? 'bg-primary' : ''}`}
+                  onClick={() => setChatOpen(!chatOpen)}
+                >
+                  <MessageSquare className="h-4 w-4" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1 h-4 w-4 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center">
+                      {unreadCount}
+                    </span>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Route + Price */}
+        <div className="px-4 py-3">
+          <div className="flex items-start gap-3">
+            <div className="flex flex-col items-center gap-0.5 mt-1">
+              <div className="h-2.5 w-2.5 rounded-full bg-green-500" />
+              <div className="w-0.5 h-5 bg-gray-200" />
+              <div className="h-2.5 w-2.5 rounded-full bg-red-500" />
+            </div>
+            <div className="flex-1 min-w-0 space-y-1">
+              <p className="text-sm font-medium truncate">{booking.pickup_location}</p>
+              <p className="text-sm text-muted-foreground truncate">{booking.dropoff_location}</p>
+            </div>
+            <div className="text-right flex-shrink-0">
+              <p className="font-bold">{formatPrice(booking.price)}</p>
+              <p className="text-[10px] text-muted-foreground">{booking.passenger_count} passenger{booking.passenger_count > 1 ? 's' : ''}</p>
+            </div>
+          </div>
         </div>
-      )}
 
-      {/* Trip Details */}
-      <div className="px-4 mt-4">
-        <Card>
-          <CardContent className="p-4">
-            <h3 className="font-semibold mb-4">Trip Details</h3>
+        {/* Action Buttons */}
+        <div className="px-4 pb-6 pt-1">
+          {canCancel && (
+            <Button
+              variant="outline"
+              className="w-full h-12 border-red-200 text-red-600 hover:bg-red-50"
+              onClick={() => setCancelDialogOpen(true)}
+            >
+              <X className="h-4 w-4 mr-2" />
+              Cancel Ride
+            </Button>
+          )}
 
-            {/* Route */}
-            <div className="space-y-3 mb-4">
-              <div className="flex gap-3">
-                <div className="mt-1">
-                  <div className="w-3 h-3 rounded-full bg-green-500" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-xs text-muted-foreground">Pickup</p>
-                  <p className="font-medium">{booking.pickup_location}</p>
-                </div>
-              </div>
-              <div className="ml-1.5 h-6 w-0.5 bg-gray-200" />
-              <div className="flex gap-3">
-                <div className="mt-1">
-                  <div className="w-3 h-3 rounded-full bg-secondary" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-xs text-muted-foreground">Dropoff</p>
-                  <p className="font-medium">{booking.dropoff_location}</p>
-                </div>
-              </div>
+          {isCompleted && (
+            <div className="space-y-2">
+              <Button className="w-full h-12" onClick={() => setRatingOpen(true)}>
+                <Star className="h-4 w-4 mr-2" />
+                Rate Your Ride
+              </Button>
+              <Button variant="outline" className="w-full h-10" onClick={() => navigate('/')}>
+                Book Another Ride
+              </Button>
             </div>
+          )}
 
-            {/* Price */}
-            <div className="flex items-center justify-between pt-4 border-t">
-              <div>
-                <p className="text-sm text-muted-foreground">Total Fare</p>
-                <p className="text-2xl font-bold">{formatPrice(booking.price)}</p>
-              </div>
-              <div className="text-right">
-                <p className="text-sm text-muted-foreground">Passengers</p>
-                <p className="font-semibold">{booking.passenger_count}</p>
-              </div>
+          {isCancelled && (
+            <Button className="w-full h-12" onClick={() => navigate('/rides/request/vanucar')}>
+              Book a New Ride
+            </Button>
+          )}
+
+          {/* Safety badge */}
+          {isActive && (
+            <div className="flex items-center justify-center gap-2 mt-3 text-xs text-muted-foreground">
+              <Shield className="h-3.5 w-3.5 text-blue-500" />
+              <span>Trip monitored in real-time</span>
             </div>
-          </CardContent>
-        </Card>
+          )}
+        </div>
       </div>
 
-      {/* Safety Notice */}
-      <div className="px-4 mt-4">
-        <Card className="bg-blue-50 border-blue-200">
-          <CardContent className="p-4 flex items-center gap-3">
-            <Shield className="h-5 w-5 text-blue-600" />
-            <div>
-              <p className="font-medium text-blue-800 text-sm">Your safety is our priority</p>
-              <p className="text-xs text-blue-600">Trip is being monitored in real-time</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Cancel Button */}
-      {canCancel && (
-        <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t z-40">
-          <Button
-            variant="destructive"
-            className="w-full h-12"
-            onClick={() => setCancelDialogOpen(true)}
-          >
-            <X className="h-4 w-4 mr-2" />
-            Cancel Ride
-          </Button>
-        </div>
-      )}
-
-      {/* Completed State */}
-      {booking.status === 'completed' && (
-        <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t z-40 space-y-2">
-          <Button
-            className="w-full h-12 bg-primary"
-            onClick={() => setRatingOpen(true)}
-          >
-            <Star className="h-4 w-4 mr-2" />
-            Rate Your Ride
-          </Button>
-          <Button
-            variant="outline"
-            className="w-full h-10"
-            onClick={() => navigate('/')}
-          >
-            Book Another Ride
-          </Button>
-        </div>
-      )}
-
-      {/* Cancellation Dialog */}
+      {/* Dialogs */}
       <CancellationDialog
         open={cancelDialogOpen}
         onClose={() => setCancelDialogOpen(false)}
@@ -495,7 +337,6 @@ export default function TrackRide() {
         fareAmount={booking.price}
       />
 
-      {/* Rating Dialog */}
       <RideRating
         open={ratingOpen}
         onClose={() => setRatingOpen(false)}
@@ -506,8 +347,8 @@ export default function TrackRide() {
         fare={booking.price}
       />
 
-      {/* Real-time Chat (uses ride_messages table) */}
-      {showChat && user && (
+      {/* Chat Panel */}
+      {hasDriver && user && (
         <RideMessaging
           rideId={booking.id}
           userId={user.id}

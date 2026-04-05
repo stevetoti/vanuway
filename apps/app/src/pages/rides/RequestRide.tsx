@@ -35,12 +35,18 @@ interface RealDriver extends RideMapDriver {
 const popularLocations = [
   { id: 1, name: 'Bauerfield International Airport', address: 'Airport Road, Port Vila', lat: -17.6993, lng: 168.3199, icon: '✈️' },
   { id: 2, name: 'Port Vila Central Market', address: 'Rue Carnot, Port Vila', lat: -17.7416, lng: 168.3119, icon: '🏪' },
-  { id: 3, name: 'Au Bon Marche Nambatu', address: 'Lini Highway, Port Vila', lat: -17.7350, lng: 168.3150, icon: '🛒' },
-  { id: 4, name: 'Vila Central Hospital', address: 'Hospital Road, Port Vila', lat: -17.7380, lng: 168.3220, icon: '🏥' },
-  { id: 5, name: 'Grand Hotel Port Vila', address: 'Rue de Paris, Port Vila', lat: -17.7400, lng: 168.3160, icon: '🏨' },
-  { id: 6, name: 'Iririki Island Resort', address: 'Iririki Island', lat: -17.7450, lng: 168.3050, icon: '🏝️' },
-  { id: 7, name: 'Tassiriki Park', address: 'Independence Park, Port Vila', lat: -17.7360, lng: 168.3180, icon: '🌳' },
-  { id: 8, name: 'Le Meridien Resort', address: 'Devil\'s Point Road', lat: -17.7230, lng: 168.2950, icon: '🏨' },
+  { id: 3, name: 'Au Bon Marche Nambatu', address: 'Lini Highway, Nambatu', lat: -17.7350, lng: 168.3150, icon: '🛒' },
+  { id: 4, name: 'Au Bon Marche Town', address: 'Rue Carnot, Town', lat: -17.7410, lng: 168.3125, icon: '🛒' },
+  { id: 5, name: 'Vila Central Hospital', address: 'Hospital Road, Port Vila', lat: -17.7380, lng: 168.3220, icon: '🏥' },
+  { id: 6, name: 'Grand Hotel & Casino', address: 'Rue de Paris, Port Vila', lat: -17.7400, lng: 168.3160, icon: '🏨' },
+  { id: 7, name: 'Iririki Island Resort', address: 'Iririki Island', lat: -17.7450, lng: 168.3050, icon: '🏝️' },
+  { id: 8, name: 'Le Meridien Resort', address: "Devil's Point Road", lat: -17.7230, lng: 168.2950, icon: '🏨' },
+  { id: 9, name: 'Nambawan Cafe', address: 'Lini Highway, Port Vila', lat: -17.7355, lng: 168.3140, icon: '☕' },
+  { id: 10, name: 'Tassiriki Park', address: 'Independence Park', lat: -17.7360, lng: 168.3180, icon: '🌳' },
+  { id: 11, name: 'Cruise Ship Terminal', address: 'Main Wharf, Port Vila', lat: -17.7443, lng: 168.3110, icon: '🚢' },
+  { id: 12, name: 'University of South Pacific', address: 'USP Emalus Campus', lat: -17.7290, lng: 168.3070, icon: '🎓' },
+  { id: 13, name: 'Freshwota Market', address: 'Freshwota, Port Vila', lat: -17.7280, lng: 168.3240, icon: '🏪' },
+  { id: 14, name: 'Korman Stadium', address: 'Korman, Port Vila', lat: -17.7320, lng: 168.3260, icon: '🏟️' },
 ];
 
 const vehicleTypes = [
@@ -251,50 +257,60 @@ export default function RequestRide() {
 
   const getCurrentLocation = () => {
     if (!navigator.geolocation) return toast.error('Geolocation not supported');
+    toast.loading('Getting your location...', { id: 'gps' });
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
         const lat = pos.coords.latitude;
         const lng = pos.coords.longitude;
+        const accuracy = pos.coords.accuracy;
 
-        // Set immediately with temporary name while we reverse geocode
-        const tempLoc: Location = { name: 'Locating...', address: 'Getting address...', lat, lng };
-        setPickupLocation(tempLoc);
+        // Set immediately with temporary name
+        setPickupLocation({ name: 'Getting address...', address: `GPS accuracy: ${Math.round(accuracy)}m`, lat, lng });
         setMapCenter([lat, lng]);
-        setMapZoom(16);
+        setMapZoom(17);
         setLocationSheetOpen(false);
         setActiveField('dropoff');
         setStep('destination');
 
-        // Reverse geocode to get real address via Nominatim
+        // Reverse geocode with zoom=18 for maximum detail
         try {
           const res = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1`,
+            `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1&zoom=18`,
             { headers: { 'Accept-Language': 'en' } }
           );
           const data = await res.json();
-          if (data && data.display_name) {
-            const parts = data.display_name.split(',');
-            const name = parts[0]?.trim() || 'Your Location';
-            const address = parts.slice(1, 3).join(',').trim() || 'Port Vila, Vanuatu';
+          if (data?.address) {
+            const addr = data.address;
+            // Build a readable name from address components
+            const road = addr.road || addr.pedestrian || addr.footway || '';
+            const building = addr.building || addr.amenity || addr.shop || '';
+            const suburb = addr.suburb || addr.neighbourhood || addr.city_district || '';
+
+            let name = building || road || suburb || 'Your Location';
+            let address = [road, suburb, addr.city || 'Port Vila'].filter(Boolean).join(', ');
+            if (name === road) {
+              // If name is just the road, add suburb for context
+              name = suburb ? `${road}, ${suburb}` : road;
+            }
             setPickupLocation({ name, address, lat, lng });
           } else {
-            setPickupLocation({ name: 'Your Location', address: `${lat.toFixed(4)}, ${lng.toFixed(4)}`, lat, lng });
+            setPickupLocation({ name: 'Your Location', address: `${lat.toFixed(5)}, ${lng.toFixed(5)}`, lat, lng });
           }
         } catch {
-          setPickupLocation({ name: 'Your Location', address: `${lat.toFixed(4)}, ${lng.toFixed(4)}`, lat, lng });
+          setPickupLocation({ name: 'Your Location', address: `${lat.toFixed(5)}, ${lng.toFixed(5)}`, lat, lng });
         }
-        toast.success('Location detected');
+        toast.success('Location found', { id: 'gps' });
       },
-      () => {
-        // Fallback to Port Vila center
+      (err) => {
+        toast.error(err.code === 1 ? 'Location permission denied. Please enable GPS.' : 'Could not get location. Using default.', { id: 'gps' });
         const loc: Location = { name: 'Port Vila Centre', address: 'Town Area', lat: -17.7334, lng: 168.3273 };
         setPickupLocation(loc);
         setMapCenter([loc.lat, loc.lng]);
         setLocationSheetOpen(false);
         setActiveField('dropoff');
         setStep('destination');
-        toast.info('Using default location');
-      }
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
     );
   };
 
