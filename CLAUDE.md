@@ -148,23 +148,34 @@ Vercel token: use the Pacific Wave Digital token (scope: pacificwaveprojects).
 
 Edge functions are deployed via Supabase MCP tools (not CLI).
 
-## Current Production State (2026-04-04)
+## Current Production State (2026-04-05)
 
-### Working
-- Auth: signup, login, forgot/reset password (Resend SMTP)
-- Home page, services, all vendor partner pages
-- Driver onboarding (register → application → admin approval → email notification)
-- Admin dashboard with user management, driver applications review
-- Hotel, restaurant, tour browsing (with sample data when empty)
-- Ride request page loads with map (Leaflet v4)
-- All 7 vendor registration flows accessible
-- Pricing engine: Google Maps + Haversine fallback, 20% commission
+### Working (Ride System — FULLY OPERATIONAL)
+- Real ride booking: passenger creates ride → driver sees on Dashboard → accepts → tracking
+- Real-time GPS tracking with car on passenger's map (Leaflet + Supabase realtime)
+- Google Places Autocomplete for location search (API key: AIzaSyBl1DYyQLvc_kRcFSTIrvbNGm8UaCH7lOE)
+- Real-time chat between driver and passenger (ride_messages table)
+- Phone calling via tel: links
+- Navigate button opens Google Maps directions
+- Cancellation with reasons + fee structure
+- Post-ride star rating with compliments
+- Profile photo + vehicle photo upload
+- Driver auto-online on Dashboard open
+- Admin Rides Management page with messages/cancellations view
+- Cruise schedule page with seed data (7 cruise lines, 10 ships)
+- Tour packages page with 8 seeded packages
+- Learn Bislama embedded via learnbislama.com iframe
 
-### NOT Working Yet (Priority for next session)
-- **Ride booking does NOT create real bookings** — RequestRide.tsx "Find Driver" always shows "no drivers"
-- **Driver app does NOT receive ride requests** — no real-time ride matching
+### Auth & Profiles
+- Signup, login, forgot/reset password (Resend SMTP)
+- Role-aware Profile page (admin, driver, vendor auto-detected)
+- First name greeting on home page
+
+### NOT Working Yet
 - **Payment not wired** — Stripe checkout + COD not triggered from ride flow
 - **Stripe webhook endpoint not configured** in Stripe dashboard
+- **Push notifications** — no FCM setup yet
+- **GoVanuatu Phase 2-4** — driver profiles, advance booking, CRM, B2B (in progress)
 
 ### Accounts
 - `steve@pacificwavedigital.com` — super_admin
