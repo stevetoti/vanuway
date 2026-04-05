@@ -95,7 +95,7 @@ const EmergencyIndex = lazy(() => import("./pages/emergency/Index"));
 const EmergencyReport = lazy(() => import("./pages/emergency/Report"));
 const DriverIndex = lazy(() => import("./pages/driver/Index"));
 const DriverWelcome = lazy(() => import("./pages/driver/Welcome"));
-const BislamaHome = lazy(() => import("./pages/bislama/Index"));
+const BislamaHome = lazy(() => import("./pages/bislama/WebView"));
 const BislamaTopic = lazy(() => import("./pages/bislama/Topic"));
 const BislamaLesson = lazy(() => import("./pages/bislama/Lesson"));
 const BislamaProgress = lazy(() => import("./pages/bislama/Progress"));
