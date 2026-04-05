@@ -8,7 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import {
   Car, UtensilsCrossed, Hotel, TreePalm, MapPin, Clock,
   ChevronRight, Sparkles, Shield, Navigation, BookOpen,
-  AlertTriangle, Store, Ship, Calendar, Search, Package,
+  Store, Ship, Calendar, Search, Package,
   Stethoscope, Briefcase, ArrowRight, Zap,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -24,6 +24,7 @@ const primaryServices = [
 
 // All services grid
 const allServices = [
+  { id: 'cruise', icon: Ship, label: 'Cruise', path: '/cruise/schedule', color: 'text-blue-700', bg: 'bg-blue-50' },
   { id: 'tours', icon: TreePalm, label: 'Tours', path: '/tours', color: 'text-amber-600', bg: 'bg-amber-50' },
   { id: 'ferry', icon: Ship, label: 'Ferry', path: '/ferry', color: 'text-sky-600', bg: 'bg-sky-50' },
   { id: 'marketplace', icon: Store, label: 'Market', path: '/marketplace', color: 'text-teal-600', bg: 'bg-teal-50' },
@@ -31,7 +32,6 @@ const allServices = [
   { id: 'health', icon: Stethoscope, label: 'Health', path: '/health', color: 'text-red-600', bg: 'bg-red-50' },
   { id: 'jobs', icon: Briefcase, label: 'Jobs', path: '/jobs', color: 'text-indigo-600', bg: 'bg-indigo-50' },
   { id: 'bislama', icon: BookOpen, label: 'Bislama', path: '/bislama', color: 'text-violet-600', bg: 'bg-violet-50' },
-  { id: 'emergency', icon: AlertTriangle, label: 'SOS', path: '/emergency', color: 'text-red-700', bg: 'bg-red-100' },
 ];
 
 const Index = () => {
