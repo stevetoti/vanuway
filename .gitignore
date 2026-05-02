@@ -46,3 +46,4 @@ coverage
 # Cache
 .cache
 *.tsbuildinfo
+.superpowers/
