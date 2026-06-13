@@ -20,8 +20,11 @@ import {
   DollarSign,
   Check,
   X,
+  Sparkles,
 } from 'lucide-react';
 import type { Hotel, HotelRoom } from '@/types/hotels';
+import { BulkImportWizard, type ImportedItem } from '@/components/import/BulkImportWizard';
+import { LinkedStoreCard } from '@/components/import/LinkedStoreCard';
 import {
   Dialog,
   DialogContent,
@@ -68,7 +71,49 @@ const ManageRooms = () => {
   const [hotel, setHotel] = useState<Hotel | null>(null);
   const [rooms, setRooms] = useState<HotelRoom[]>([]);
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [editingRoom, setEditingRoom] = useState<HotelRoom | null>(null);
+
+  const importRooms = async (items: ImportedItem[], context?: { sourceUrl?: string; mode: 'ai' | 'csv' }) => {
+    if (!hotel) return;
+    let sourceId: string | null = null;
+    if (context?.sourceUrl) {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: src } = await (supabase as unknown)
+          .from('vendor_import_sources')
+          .upsert({
+            user_id: user.id,
+            vendor_kind: 'hotel',
+            source_url: context.sourceUrl,
+            is_active: true,
+            sync_frequency: 'weekly',
+          }, { onConflict: 'user_id,vendor_kind' })
+          .select('id')
+          .single();
+        sourceId = src?.id || null;
+      }
+    }
+    const now = new Date().toISOString();
+    const rows = items.map((it) => ({
+      hotel_id: hotel.id,
+      name: String(it.name || '').slice(0, 200),
+      description: String(it.description || ''),
+      room_type: 'double',
+      base_price: Number(it.price) || 0,
+      max_occupancy: Number(it.capacity) || 2,
+      total_rooms: 1,
+      image_url: String(it.image_url || ''),
+      is_active: false,
+      source_id: sourceId,
+      source_external_id: it.handle || it.slug || it.id || (it.name ? String(it.name).toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 80) : null),
+      last_seen_in_source_at: sourceId ? now : null,
+    }));
+    const { error } = await (supabase.from('hotel_rooms') as unknown).insert(rows);
+    if (error) throw error;
+    toast.success(`Imported ${rows.length} rooms — pending admin approval`);
+    loadHotelAndRooms();
+  };
   const [formData, setFormData] = useState<{
     name: string;
     description: string;
@@ -119,7 +164,7 @@ const ManageRooms = () => {
         return;
       }
 
-      setHotel(hotelData as any);
+      setHotel(hotelData as unknown);
 
       // Get rooms
       const { data: roomsData, error: roomsError } = await supabase
@@ -129,8 +174,8 @@ const ManageRooms = () => {
         .order('created_at', { ascending: true });
 
       if (roomsError) throw roomsError;
-      setRooms(roomsData as any || []);
-    } catch (error: any) {
+      setRooms(roomsData as unknown || []);
+    } catch (error: unknown) {
       console.error('Error loading hotel:', error);
       toast.error('Failed to load hotel data');
     } finally {
@@ -212,7 +257,7 @@ const ManageRooms = () => {
       setShowAddDialog(false);
       resetForm();
       loadHotelAndRooms();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error saving room:', error);
       toast.error('Failed to save room', {
         description: error.message,
@@ -234,7 +279,7 @@ const ManageRooms = () => {
       if (error) throw error;
       toast.success('Room deleted successfully');
       loadHotelAndRooms();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error deleting room:', error);
       toast.error('Failed to delete room');
     }
@@ -282,12 +327,20 @@ const ManageRooms = () => {
               <h1 className="text-3xl font-bold">Manage Rooms</h1>
               <p className="text-muted-foreground">{hotel.name}</p>
             </div>
-            <Button onClick={handleAddRoom}>
-              <Plus className="mr-2 h-4 w-4" />
-              Add Room
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setImportOpen(true)}>
+                <Sparkles className="mr-2 h-4 w-4 text-orange-500" />
+                Import from website
+              </Button>
+              <Button onClick={handleAddRoom}>
+                <Plus className="mr-2 h-4 w-4" />
+                Add Room
+              </Button>
+            </div>
           </div>
         </div>
+
+        <LinkedStoreCard vendorKind="hotel" label="your hotel" />
 
         {/* Rooms List */}
         <Card className="p-6">
@@ -429,7 +482,7 @@ const ManageRooms = () => {
                   onChange={(e) =>
                     setFormData({
                       ...formData,
-                      room_type: e.target.value as any,
+                      room_type: e.target.value as unknown,
                     })
                   }
                   className="w-full px-3 py-2 border rounded-md"
@@ -618,6 +671,20 @@ const ManageRooms = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        <BulkImportWizard
+          open={importOpen}
+          onOpenChange={setImportOpen}
+          vendorType="hotel"
+          itemLabel="rooms"
+          previewFields={[
+            { key: 'name', label: 'Room name', type: 'text' },
+            { key: 'price', label: 'Price/night (VUV)', type: 'number' },
+            { key: 'capacity', label: 'Max guests', type: 'number' },
+            { key: 'description', label: 'Description', type: 'text' },
+          ]}
+          onConfirm={importRooms}
+        />
       </div>
     </Layout>
   );

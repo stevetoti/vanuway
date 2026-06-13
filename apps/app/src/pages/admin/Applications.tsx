@@ -72,8 +72,8 @@ const AdminApplications = () => {
         driver: driversMap.get(app.driver_id) || null,
       }));
 
-      setApplications(applicationsWithDrivers as any);
-    } catch (error: any) {
+      setApplications(applicationsWithDrivers as unknown);
+    } catch (error: unknown) {
       console.error('Error loading applications:', error);
       toast.error('Failed to load applications');
     } finally {

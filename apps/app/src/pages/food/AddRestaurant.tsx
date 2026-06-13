@@ -51,7 +51,7 @@ const AddRestaurant = () => {
 
     setLoading(true);
     try {
-      const { error } = await (supabase as any)
+      const { error } = await (supabase as unknown)
         .from('restaurants')
         .insert({
           owner_id: user.id,
@@ -72,7 +72,7 @@ const AddRestaurant = () => {
 
       toast.success('Restaurant added successfully! It will be reviewed shortly.');
       navigate('/food/owner/dashboard');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error adding restaurant:', error);
       toast.error(error.message || 'Failed to add restaurant');
     } finally {

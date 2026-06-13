@@ -52,7 +52,7 @@ export interface ActivityLog {
   description: string;
   target_type?: string;
   target_id?: string;
-  changes_made?: any;
+  changes_made?: unknown;
   created_at: string;
 }
 
@@ -114,7 +114,7 @@ export const getDashboardStats = async (period: 'today' | 'week' | 'month' | 'ye
     }
 
     return { success: true, data: data[0] as DashboardStats };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error in getDashboardStats:', error);
     return { success: false, error: error.message, data: null };
   }
@@ -257,7 +257,7 @@ export const approveDriverApplication = async (params: {
       data,
       message: 'Driver application approved successfully',
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error in approveDriverApplication:', error);
     return { success: false, error: error.message };
   }
@@ -288,7 +288,7 @@ export const rejectDriverApplication = async (params: {
       data,
       message: 'Driver application rejected',
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error in rejectDriverApplication:', error);
     return { success: false, error: error.message };
   }
@@ -335,7 +335,7 @@ export const suspendDriver = async (params: {
       data,
       message: 'Driver account suspended',
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error in suspendDriver:', error);
     return { success: false, error: error.message };
   }
@@ -379,7 +379,7 @@ export const activateDriver = async (params: {
       data,
       message: 'Driver account activated',
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error in activateDriver:', error);
     return { success: false, error: error.message };
   }
@@ -488,7 +488,7 @@ export const approveRefund = async (params: {
       data,
       message: 'Refund approved successfully',
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error in approveRefund:', error);
     return { success: false, error: error.message };
   }
@@ -535,7 +535,7 @@ export const rejectRefund = async (params: {
       data,
       message: 'Refund rejected',
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error in rejectRefund:', error);
     return { success: false, error: error.message };
   }
@@ -609,7 +609,7 @@ export const acknowledgeSafetyAlert = async (params: {
       data,
       message: 'Safety alert acknowledged',
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error in acknowledgeSafetyAlert:', error);
     return { success: false, error: error.message };
   }
@@ -625,7 +625,7 @@ export const logAdminActivity = async (params: {
   description: string;
   targetType?: string;
   targetId?: string;
-  changesMade?: any;
+  changesMade?: unknown;
 }) => {
   try {
     const { data, error } = await supabase.rpc('log_admin_activity', {
@@ -644,7 +644,7 @@ export const logAdminActivity = async (params: {
     }
 
     return { success: true, data };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error in logAdminActivity:', error);
     return { success: false, error: error.message };
   }
@@ -727,7 +727,7 @@ export const getSystemSettings = async (category?: string) => {
  */
 export const updateSystemSetting = async (params: {
   settingKey: string;
-  settingValue: any;
+  settingValue: unknown;
   adminUserId: string;
 }) => {
   try {
@@ -761,7 +761,7 @@ export const updateSystemSetting = async (params: {
       data,
       message: 'System setting updated successfully',
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error in updateSystemSetting:', error);
     return { success: false, error: error.message };
   }

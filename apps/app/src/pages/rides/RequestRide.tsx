@@ -158,7 +158,7 @@ export default function RequestRide() {
 
     // Subscribe to ride updates — when status changes to 'accepted', driver was assigned
     // Note: payload.new from Supabase uses snake_case column names
-    const channel = subscribeToRideUpdates(createdRideId, (updatedRide: any) => {
+    const channel = subscribeToRideUpdates(createdRideId, (updatedRide: unknown) => {
       if (updatedRide.status === 'accepted' && updatedRide.driver_id) {
         clearTimeout(timeout);
         clearInterval(progressTimer);
@@ -364,7 +364,7 @@ export default function RequestRide() {
           { headers: { 'Accept-Language': 'en' } }
         );
         const data = await res.json();
-        const locations: Location[] = data.map((item: any) => {
+        const locations: Location[] = data.map((item: unknown) => {
           const parts = item.display_name.split(',');
           const addr = item.address || {};
           const placeName = parts[0]?.trim() || query;

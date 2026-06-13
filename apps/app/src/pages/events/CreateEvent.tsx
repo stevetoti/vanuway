@@ -116,14 +116,14 @@ export default function CreateEvent() {
         status: 'pending', // All events start as pending for admin approval
       };
 
-      const { error } = await (supabase as any)
+      const { error } = await (supabase as unknown)
         .from('community_events')
         .insert(eventData);
 
       if (error) throw error;
 
       setIsSubmitted(true);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error creating event:', error);
       toast({
         title: 'Error',

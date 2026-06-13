@@ -10,9 +10,12 @@ import { useToast } from '@/hooks/use-toast';
 import {
   Plus, MapPin, Clock, Users, Star, Calendar, DollarSign,
   Eye, Edit, Trash2, TrendingUp, Bookmark, CheckCircle, XCircle,
-  AlertCircle, BarChart3, Settings
+  AlertCircle, BarChart3, Settings, Sparkles
 } from 'lucide-react';
 import { TourOperator, Tour, OperatorDashboardStats } from '@/types/tourOperator';
+import { BulkImportWizard, type ImportedItem } from '@/components/import/BulkImportWizard';
+import { LinkedStoreCard } from '@/components/import/LinkedStoreCard';
+import { registerImportSource, makeExternalIdFromItem } from '@/lib/import/source-link';
 
 export default function OperatorDashboard() {
   const navigate = useNavigate();
@@ -32,6 +35,34 @@ export default function OperatorDashboard() {
     totalReviews: 0,
   });
   const [loading, setLoading] = useState(true);
+  const [importOpen, setImportOpen] = useState(false);
+
+  const importTours = async (items: ImportedItem[], context?: { sourceUrl?: string; mode: 'ai' | 'csv' }) => {
+    if (!operator) return;
+    const sourceId = user ? await registerImportSource(user.id, 'tour', context?.sourceUrl) : null;
+    const rows = items.map((it) => ({
+      operator_id: operator.id,
+      name: String(it.name || '').slice(0, 200) || 'Untitled tour',
+      description: String(it.description || it.name || 'No description'),
+      category: mapTourCategory(String(it.name || ''), String(it.description || '')),
+      price_adult: Number(it.price) || 0,
+      duration_hours: parseDurationHours(String(it.duration || '')),
+      max_group_size: 10,
+      location: 'Vanuatu',
+      image_url: String(it.image_url || ''),
+      is_active: false, // pending admin approval (approval_status defaults to 'pending')
+      source_id: sourceId,
+      source_external_id: makeExternalIdFromItem(it),
+      last_seen_in_source_at: sourceId ? new Date().toISOString() : null,
+    }));
+    const { error } = await (supabase as unknown).from('tours').insert(rows);
+    if (error) throw error;
+    toast({
+      title: `Imported ${rows.length} tours — pending admin approval`,
+      description: sourceId ? "Your website is now linked. We'll auto-sync new products weekly." : undefined,
+    });
+    loadOperatorData();
+  };
 
   useEffect(() => {
     if (user) {
@@ -44,7 +75,7 @@ export default function OperatorDashboard() {
 
     try {
       // Get operator profile
-      const { data: operatorData, error: operatorError } = await (supabase as any)
+      const { data: operatorData, error: operatorError } = await (supabase as unknown)
         .from('tour_operators')
         .select('*')
         .eq('user_id', user.id)
@@ -63,7 +94,7 @@ export default function OperatorDashboard() {
       setOperator(operatorData);
 
       // Get tours
-      const { data: toursData, error: toursError } = await (supabase as any)
+      const { data: toursData, error: toursError } = await (supabase as unknown)
         .from('tours')
         .select('*')
         .eq('operator_id', operatorData.id)
@@ -100,7 +131,7 @@ export default function OperatorDashboard() {
   };
 
   const toggleTourActive = async (tourId: string, currentStatus: boolean) => {
-    const { error } = await (supabase as any)
+    const { error } = await (supabase as unknown)
       .from('tours')
       .update({ is_active: !currentStatus })
       .eq('id', tourId);
@@ -116,7 +147,7 @@ export default function OperatorDashboard() {
   const deleteTour = async (tourId: string) => {
     if (!confirm('Are you sure you want to delete this tour?')) return;
 
-    const { error } = await (supabase as any)
+    const { error } = await (supabase as unknown)
       .from('tours')
       .delete()
       .eq('id', tourId);
@@ -231,14 +262,28 @@ export default function OperatorDashboard() {
 
       {/* Content */}
       <div className="px-4 py-6">
-        {/* Add Tour Button */}
-        <Button
-          className="w-full bg-emerald-600 hover:bg-emerald-700 mb-6 h-12"
-          onClick={() => navigate('/tours/operator/add')}
-        >
-          <Plus className="h-5 w-5 mr-2" />
-          Add New Tour
-        </Button>
+        <div className="mb-6">
+          <LinkedStoreCard vendorKind="tour" label="your tour business" />
+        </div>
+
+        {/* Add Tour Buttons */}
+        <div className="grid grid-cols-2 gap-2 mb-6">
+          <Button
+            variant="outline"
+            className="h-12"
+            onClick={() => setImportOpen(true)}
+          >
+            <Sparkles className="h-4 w-4 mr-2 text-orange-500" />
+            Import from website
+          </Button>
+          <Button
+            className="bg-emerald-600 hover:bg-emerald-700 h-12"
+            onClick={() => navigate('/tours/operator/add')}
+          >
+            <Plus className="h-5 w-5 mr-2" />
+            Add New Tour
+          </Button>
+        </div>
 
         {/* Tours List */}
         <Tabs defaultValue="all">
@@ -337,8 +382,43 @@ export default function OperatorDashboard() {
           <span className="text-xs mt-1">Settings</span>
         </Button>
       </div>
+
+      <BulkImportWizard
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        vendorType="tour"
+        itemLabel="tours"
+        previewFields={[
+          { key: 'name', label: 'Tour name', type: 'text' },
+          { key: 'price', label: 'Price/person (VUV)', type: 'number' },
+          { key: 'duration', label: 'Duration', type: 'text' },
+          { key: 'description', label: 'Description', type: 'text' },
+        ]}
+        onConfirm={importTours}
+      />
     </div>
   );
+}
+
+function parseDurationHours(text: string): number {
+  if (!text) return 4;
+  const m = text.toLowerCase();
+  if (m.includes('full') || m.includes('day')) return 8;
+  if (m.includes('half')) return 4;
+  const hours = parseFloat(m);
+  return isFinite(hours) && hours > 0 ? hours : 4;
+}
+
+function mapTourCategory(name: string, desc: string): 'adventure' | 'cultural' | 'nature' | 'historical' | 'water_sports' | 'island_hopping' | 'wildlife' | 'culinary' {
+  const t = `${name} ${desc}`.toLowerCase();
+  if (/dive|diving|snorkel|kayak|surf|swim|sail|water/.test(t)) return 'water_sports';
+  if (/hike|trek|adventure|zipline|climb|atv|quad/.test(t)) return 'adventure';
+  if (/island|hop|cruise|boat tour/.test(t)) return 'island_hopping';
+  if (/village|culture|kastom|tribal|local people/.test(t)) return 'cultural';
+  if (/history|war|wreck|museum|colonial/.test(t)) return 'historical';
+  if (/wildlife|dugong|turtle|bird|reef|fauna/.test(t)) return 'wildlife';
+  if (/food|cooking|culinary|kava|tasting|chef/.test(t)) return 'culinary';
+  return 'nature';
 }
 
 // Tour Card Component

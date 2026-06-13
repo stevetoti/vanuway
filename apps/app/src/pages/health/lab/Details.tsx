@@ -27,7 +27,11 @@ export default function LabDetails() {
   useEffect(() => {
     const saved = sessionStorage.getItem(`${LAB_CART_KEY}_${labId}`);
     if (saved) {
-      try { setCart(JSON.parse(saved)); } catch (e) {}
+      try {
+        setCart(JSON.parse(saved));
+      } catch (error) {
+        console.warn('Could not restore lab cart:', error);
+      }
     }
   }, [labId]);
 
@@ -38,7 +42,7 @@ export default function LabDetails() {
   const { data: lab, isLoading } = useQuery({
     queryKey: ['lab', labId],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await (supabase as unknown)
         .from('labs')
         .select('*')
         .eq('id', labId)
@@ -51,7 +55,7 @@ export default function LabDetails() {
   const { data: categories } = useQuery({
     queryKey: ['lab-test-categories'],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await (supabase as unknown)
         .from('lab_test_categories')
         .select('*')
         .order('sort_order');
@@ -63,7 +67,7 @@ export default function LabDetails() {
   const { data: tests } = useQuery({
     queryKey: ['lab-tests', labId, selectedCategory, searchQuery],
     queryFn: async () => {
-      let query = (supabase as any)
+      let query = (supabase as unknown)
         .from('lab_tests')
         .select('*, category:lab_test_categories(*)')
         .eq('lab_id', labId)

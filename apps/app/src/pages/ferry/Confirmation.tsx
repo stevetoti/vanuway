@@ -19,7 +19,7 @@ export default function BookingConfirmation() {
   const { data: booking, isLoading } = useQuery({
     queryKey: ['transport-booking', bookingId],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await (supabase as unknown)
         .from('transport_bookings')
         .select(`
           *,
@@ -169,7 +169,7 @@ export default function BookingConfirmation() {
           <CardContent className="p-4">
             <h3 className="font-semibold mb-3">Passengers</h3>
             <div className="space-y-2">
-              {booking.passengers?.map((passenger: any, index: number) => (
+              {booking.passengers?.map((passenger: unknown, index: number) => (
                 <div key={passenger.id} className="flex items-center justify-between">
                   <span>{passenger.first_name} {passenger.last_name}</span>
                   <Badge variant="outline" className="capitalize">{passenger.passenger_type}</Badge>

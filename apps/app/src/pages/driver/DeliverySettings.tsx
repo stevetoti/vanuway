@@ -17,7 +17,7 @@ const DeliverySettings = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [driver, setDriver] = useState<any>(null);
+  const [driver, setDriver] = useState<unknown>(null);
   const [acceptsDeliveries, setAcceptsDeliveries] = useState(false);
   const [handlingFee, setHandlingFee] = useState(200);
 
@@ -54,7 +54,7 @@ const DeliverySettings = () => {
       setDriver(data);
       setAcceptsDeliveries(data.accepts_deliveries || false);
       setHandlingFee(data.delivery_handling_fee || 200);
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast.error('Failed to load settings');
     } finally {
       setLoading(false);
@@ -69,7 +69,7 @@ const DeliverySettings = () => {
       await toggleDriverDeliveryAcceptance(driver.id, acceptsDeliveries);
       await updateDriverHandlingFee(driver.id, handlingFee);
       toast.success('Settings saved successfully');
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast.error(error.message || 'Failed to save settings');
     } finally {
       setSaving(false);

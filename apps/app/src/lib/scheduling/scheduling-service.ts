@@ -205,7 +205,7 @@ export const createScheduledRide = async (params: {
       data: data as ScheduledRide,
       message: `Ride scheduled for ${params.scheduledDate} at ${params.scheduledTime}`,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error in createScheduledRide:', error);
     return { success: false, error: error.message };
   }
@@ -301,7 +301,7 @@ export const createRecurringSchedule = async (params: {
       data: data as RecurringSchedule,
       message: `Recurring schedule "${params.scheduleName}" created successfully`,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error in createRecurringSchedule:', error);
     return { success: false, error: error.message };
   }
@@ -519,7 +519,7 @@ export const cancelScheduledRide = async (
           ? `Ride cancelled. Cancellation fee: VUV ${cancellationFee.toFixed(2)}`
           : 'Ride cancelled successfully',
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error in cancelScheduledRide:', error);
     return { success: false, error: error.message };
   }

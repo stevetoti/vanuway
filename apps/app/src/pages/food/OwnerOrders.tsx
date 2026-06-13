@@ -24,7 +24,7 @@ interface FoodOrder {
   id: string;
   user_id: string;
   restaurant_id: string;
-  items: any;
+  items: unknown;
   total_price: number;
   status: string;
   delivery_address: string;
@@ -86,7 +86,7 @@ const RestaurantOwnerOrders = () => {
 
       if (ordersError) throw ordersError;
       setOrders(ordersData || []);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error loading orders:', error);
       toast.error('Failed to load orders');
     } finally {
@@ -149,7 +149,7 @@ const RestaurantOwnerOrders = () => {
       ));
       
       toast.success(`Order status updated to ${statusConfig[newStatus]?.label || newStatus}`);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error updating order:', error);
       toast.error('Failed to update order status');
     } finally {
@@ -302,7 +302,7 @@ const RestaurantOwnerOrders = () => {
                           <div className="text-sm">
                             <p className="font-medium">{getRestaurantName(order.restaurant_id)}</p>
                             <div className="mt-2 space-y-1">
-                              {items.slice(0, 3).map((item: any, idx: number) => (
+                              {items.slice(0, 3).map((item: unknown, idx: number) => (
                                 <p key={idx} className="text-muted-foreground">
                                   {item.quantity}x {item.name}
                                 </p>

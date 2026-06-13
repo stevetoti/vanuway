@@ -8,6 +8,7 @@ interface PlacesAutocompleteInputProps {
   label: string;
   value: string;
   onPlaceSelected: (place: PlaceResult) => void;
+  onInputChange?: (value: string) => void;
   placeholder: string;
   isLoaded: boolean;
   showCurrentLocation?: boolean;
@@ -17,10 +18,15 @@ interface PlacesAutocompleteInputProps {
   onClear?: () => void;
 }
 
+type ProgrammaticPlacesInput = HTMLInputElement & {
+  _setProgrammaticValue?: (value: string) => void;
+};
+
 export const PlacesAutocompleteInput = forwardRef<HTMLInputElement, PlacesAutocompleteInputProps>(({
   label,
   value,
   onPlaceSelected,
+  onInputChange,
   placeholder,
   isLoaded,
   showCurrentLocation = false,
@@ -52,12 +58,12 @@ export const PlacesAutocompleteInput = forwardRef<HTMLInputElement, PlacesAutoco
   useEffect(() => {
     if (inputRef && 'current' in inputRef && inputRef.current && setProgrammaticValue) {
       // Attach immediately
-      (inputRef.current as any)._setProgrammaticValue = setProgrammaticValue;
+      (inputRef.current as ProgrammaticPlacesInput)._setProgrammaticValue = setProgrammaticValue;
       
       // Also re-attach after a delay in case of timing issues
       setTimeout(() => {
         if (inputRef.current) {
-          (inputRef.current as any)._setProgrammaticValue = setProgrammaticValue;
+          (inputRef.current as ProgrammaticPlacesInput)._setProgrammaticValue = setProgrammaticValue;
         }
       }, 100);
     }
@@ -105,9 +111,9 @@ export const PlacesAutocompleteInput = forwardRef<HTMLInputElement, PlacesAutoco
         <Input
           ref={inputRef}
           defaultValue={value}
-          placeholder={isInitialized ? placeholder : 'Loading autocomplete...'}
+          placeholder={isInitialized || !isLoaded ? placeholder : 'Loading autocomplete...'}
           className={`pl-10 ${hasValidCoordinates ? 'pr-20' : onClear ? 'pr-8' : ''}`}
-          disabled={!isLoaded}
+          onChange={(event) => onInputChange?.(event.target.value)}
         />
         {hasValidCoordinates && (
           <CheckCircle2 className="absolute right-10 top-3 h-4 w-4 text-green-500" />

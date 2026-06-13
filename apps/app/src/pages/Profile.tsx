@@ -12,13 +12,14 @@ import {
   FileText, Shield, Info, Edit, ChevronRight, Car, UtensilsCrossed,
   Star, Trash2, UserPlus, LayoutDashboard, Wallet, TrendingUp,
   Hotel, Utensils, Map, Wrench, Clock, Camera,
-  CheckCircle2, AlertCircle,
+  CheckCircle2, AlertCircle, ShieldCheck,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { usePWA } from '@/hooks/usePWA';
+import { BottomNav } from '@/components/layout/BottomNav';
 
 interface DriverInfo {
   id: string;
@@ -146,7 +147,7 @@ const Profile = () => {
         .eq('user_id', user.id)
         .maybeSingle();
 
-      if (driver) setDriverInfo(driver as any as DriverInfo);
+      if (driver) setDriverInfo(driver as unknown as DriverInfo);
 
       // Check hotel owner
       const { data: hotelOwner } = await supabase
@@ -159,7 +160,7 @@ const Profile = () => {
         vendors.push({
           type: 'hotel', label: 'Hotel Owner', icon: Hotel,
           dashboardPath: '/hotels/owner/dashboard',
-          businessName: (hotelOwner as any).business_name,
+          businessName: (hotelOwner as unknown).business_name,
         });
       }
 
@@ -174,7 +175,7 @@ const Profile = () => {
         vendors.push({
           type: 'restaurant', label: 'Restaurant Owner', icon: Utensils,
           dashboardPath: '/food/owner/dashboard',
-          businessName: (restaurantOwner as any).business_name,
+          businessName: (restaurantOwner as unknown).business_name,
         });
       }
 
@@ -189,16 +190,16 @@ const Profile = () => {
         vendors.push({
           type: 'tour', label: 'Tour Operator', icon: Map,
           dashboardPath: '/tours/provider/dashboard',
-          businessName: (tourOp as any).business_name,
-          status: (tourOp as any).application_status,
+          businessName: (tourOp as unknown).business_name,
+          status: (tourOp as unknown).application_status,
         });
       }
 
       // Check service provider (table may not be in generated types)
       try {
         const { data: serviceProvider } = await (supabase
-          .from('service_providers' as any)
-          .select('business_name') as any)
+          .from('service_providers' as unknown)
+          .select('business_name') as unknown)
           .eq('user_id', user.id)
           .maybeSingle();
 
@@ -247,9 +248,12 @@ const Profile = () => {
       const url = `${publicUrl}?t=${Date.now()}`;
 
       await supabase.from('profiles').update({ avatar_url: url }).eq('id', user.id);
+      // Mirror to drivers.profile_photo_url so driver listings, admin, and
+      // chat avatars see the new photo. Silently no-ops for non-drivers.
+      await supabase.from('drivers').update({ profile_photo_url: url } as unknown).eq('user_id', user.id);
       setAvatarUrl(url);
       toast.success('Profile photo updated!');
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast.error(error.message || 'Failed to upload photo');
     } finally {
       setIsUploadingAvatar(false);
@@ -282,10 +286,10 @@ const Profile = () => {
 
       const url = `${publicUrl}?t=${Date.now()}`;
 
-      await supabase.from('drivers').update({ vehicle_photo_url: url } as any).eq('user_id', user.id);
+      await supabase.from('drivers').update({ vehicle_photo_url: url } as unknown).eq('user_id', user.id);
       setDriverInfo({ ...driverInfo, vehicle_photo_url: url });
       toast.success('Vehicle photo updated!');
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast.error(error.message || 'Failed to upload vehicle photo');
     } finally {
       setIsUploadingVehicle(false);
@@ -311,7 +315,7 @@ const Profile = () => {
       toast.success('Profile updated successfully');
       setShowEditModal(false);
       fetchUserProfile();
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast.error(error.message || 'Failed to update profile');
     } finally {
       setIsSubmitting(false);
@@ -346,114 +350,90 @@ const Profile = () => {
   }
 
   return (
-    <Layout>
-      <div className="container py-6 space-y-6 max-w-4xl">
-        {/* Profile Header */}
-        <Card className="p-6">
-          <div className="flex items-start gap-4">
-            {/* Avatar with upload */}
-            <div className="relative group">
-              <Avatar className="h-20 w-20">
+    <div className="min-h-screen bg-gray-50 pb-20">
+      {/* Navy blue profile header */}
+      <div className="bg-gradient-to-br from-[#233C6F] via-[#1e3460] to-[#19294d] text-white">
+        <div className="container px-4 pt-4 pb-6">
+          {/* Edit button — icon only, top right */}
+          <div className="flex justify-end mb-2">
+            <button
+              className="h-8 w-8 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors"
+              onClick={() => setShowEditModal(true)}
+            >
+              <Edit className="h-4 w-4" />
+            </button>
+          </div>
+
+          {/* Avatar + Name */}
+          <div className="flex flex-col items-center text-center">
+            <div className="relative mb-3">
+              <Avatar className="h-20 w-20 ring-4 ring-white/20">
                 <AvatarImage src={avatarUrl || undefined} />
-                <AvatarFallback className="bg-gradient-to-br from-primary to-primary/70 text-primary-foreground text-2xl font-bold">
+                <AvatarFallback className="bg-primary text-white text-2xl font-bold">
                   {displayName.charAt(0).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
               <button
-                className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                className="absolute -bottom-1 -right-1 h-7 w-7 bg-primary rounded-full flex items-center justify-center border-2 border-[#233C6F]"
                 onClick={() => avatarInputRef.current?.click()}
                 disabled={isUploadingAvatar}
               >
                 {isUploadingAvatar ? (
-                  <div className="animate-spin rounded-full h-6 w-6 border-2 border-white border-t-transparent" />
+                  <div className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-white border-t-transparent" />
                 ) : (
-                  <Camera className="h-6 w-6 text-white" />
+                  <Camera className="h-3.5 w-3.5 text-white" />
                 )}
               </button>
-              <input
-                ref={avatarInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handleAvatarUpload}
-              />
-              {/* Small camera badge on mobile (always visible) */}
-              <div
-                className="absolute -bottom-1 -right-1 h-7 w-7 bg-primary rounded-full flex items-center justify-center border-2 border-white cursor-pointer sm:hidden"
-                onClick={() => avatarInputRef.current?.click()}
-              >
-                <Camera className="h-3.5 w-3.5 text-white" />
-              </div>
+              <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
             </div>
+            <h2 className="text-xl font-bold">{displayName}</h2>
+            <p className="text-xs text-white/50">{user?.email}</p>
+            {phone && <p className="text-xs text-white/50">{phone}</p>}
 
-            <div className="flex-1 min-w-0">
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <h2 className="text-2xl font-bold truncate">{displayName}</h2>
-                  <p className="text-muted-foreground text-sm truncate">{user?.email}</p>
-                  {phone && <p className="text-sm text-muted-foreground">{phone}</p>}
-                  <p className="text-xs text-muted-foreground mt-1">Member since {memberSince}</p>
-                  <div className="flex flex-wrap gap-1.5 mt-2">
-                    {isAdmin && (
-                      <Badge className="bg-red-600 text-white text-xs">
-                        <Shield className="h-3 w-3 mr-1" />Admin
-                      </Badge>
-                    )}
-                    {isApprovedDriver && (
-                      <Badge className="bg-blue-600 text-white text-xs">
-                        <Car className="h-3 w-3 mr-1" />Driver
-                      </Badge>
-                    )}
-                    {isPendingDriver && (
-                      <Badge variant="outline" className="text-amber-600 border-amber-300 text-xs">
-                        <Clock className="h-3 w-3 mr-1" />Driver (Pending)
-                      </Badge>
-                    )}
-                    {vendorRoles.map(v => (
-                      <Badge key={v.type} className="bg-orange-600 text-white text-xs">
-                        <v.icon className="h-3 w-3 mr-1" />{v.label}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex-shrink-0"
-                  onClick={() => setShowEditModal(true)}
-                >
-                  <Edit className="h-4 w-4 mr-1" />
-                  Edit
-                </Button>
-              </div>
+            {/* Role badges */}
+            <div className="flex flex-wrap gap-1.5 mt-2 justify-center">
+              {isAdmin && (
+                <Badge className="bg-red-500/20 text-red-200 border-red-500/30 text-[10px]">
+                  <Shield className="h-2.5 w-2.5 mr-1" />Admin
+                </Badge>
+              )}
+              {isApprovedDriver && (
+                <Badge className="bg-blue-500/20 text-blue-200 border-blue-500/30 text-[10px]">
+                  <Car className="h-2.5 w-2.5 mr-1" />Driver
+                </Badge>
+              )}
+              {isPendingDriver && (
+                <Badge className="bg-amber-500/20 text-amber-200 border-amber-500/30 text-[10px]">
+                  <Clock className="h-2.5 w-2.5 mr-1" />Pending
+                </Badge>
+              )}
+              {vendorRoles.map(v => (
+                <Badge key={v.type} className="bg-orange-500/20 text-orange-200 border-orange-500/30 text-[10px]">
+                  <v.icon className="h-2.5 w-2.5 mr-1" />{v.label}
+                </Badge>
+              ))}
             </div>
           </div>
-        </Card>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-3 gap-3">
-          <Card className="p-4 text-center">
-            <div className="h-10 w-10 mx-auto rounded-full bg-primary/10 flex items-center justify-center mb-2">
-              <Car className="h-5 w-5 text-primary" />
+          {/* Compact stats */}
+          <div className="grid grid-cols-3 gap-3 mt-4">
+            <div className="bg-white/10 rounded-xl p-2.5 text-center">
+              <p className="text-lg font-bold">{stats.rides}</p>
+              <p className="text-[10px] text-white/50">Rides</p>
             </div>
-            <p className="text-2xl font-bold text-primary">{stats.rides}</p>
-            <p className="text-xs text-muted-foreground">Rides Taken</p>
-          </Card>
-          <Card className="p-4 text-center">
-            <div className="h-10 w-10 mx-auto rounded-full bg-secondary/10 flex items-center justify-center mb-2">
-              <UtensilsCrossed className="h-5 w-5 text-secondary" />
+            <div className="bg-white/10 rounded-xl p-2.5 text-center">
+              <p className="text-lg font-bold">{stats.orders}</p>
+              <p className="text-[10px] text-white/50">Orders</p>
             </div>
-            <p className="text-2xl font-bold text-secondary">{stats.orders}</p>
-            <p className="text-xs text-muted-foreground">Orders Placed</p>
-          </Card>
-          <Card className="p-4 text-center">
-            <div className="h-10 w-10 mx-auto rounded-full bg-green-100 flex items-center justify-center mb-2">
-              <Star className="h-5 w-5 text-green-600" />
+            <div className="bg-white/10 rounded-xl p-2.5 text-center">
+              <p className="text-lg font-bold">{stats.totalSpent > 0 ? `${(stats.totalSpent / 1000).toFixed(1)}K` : '0'}</p>
+              <p className="text-[10px] text-white/50">VUV Spent</p>
             </div>
-            <p className="text-2xl font-bold text-green-600">{stats.totalSpent.toLocaleString()}</p>
-            <p className="text-xs text-muted-foreground">VUV Spent</p>
-          </Card>
+          </div>
         </div>
+      </div>
+
+      <div className="container px-4 -mt-3 space-y-4">
 
         {/* Admin Section */}
         {isAdmin && (
@@ -473,6 +453,11 @@ const Profile = () => {
               </div>
               <div className="divide-y">
                 <MenuItem icon={LayoutDashboard} label="Admin Dashboard" path="/admin/dashboard" color="text-red-600" />
+                <MenuItem icon={ShieldCheck} label="Vendor Approvals" path="/admin/approvals" color="text-orange-600" />
+                <MenuItem icon={CheckCircle2} label="All Messages (hub)" path="/admin/messages" color="text-blue-600" />
+                <MenuItem icon={CheckCircle2} label="Marketplace Chats" path="/admin/marketplace-chats" color="text-pink-600" />
+                <MenuItem icon={CheckCircle2} label="Support Chats (AI bot)" path="/admin/support-chats" color="text-fuchsia-600" />
+                <MenuItem icon={CheckCircle2} label="System Activity Log" path="/admin/audit-log" color="text-blue-700" />
                 <MenuItem icon={Car} label="Manage Rides" path="/admin/rides" color="text-purple-600" />
                 <MenuItem icon={UserPlus} label="Driver Applications" path="/admin/applications" color="text-amber-600" />
                 <MenuItem icon={Hotel} label="Manage Hotels" path="/admin/hotels" color="text-teal-600" />
@@ -729,7 +714,8 @@ const Profile = () => {
           </DialogContent>
         </Dialog>
       </div>
-    </Layout>
+      <BottomNav />
+    </div>
   );
 };
 

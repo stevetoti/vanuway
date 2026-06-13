@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import type { UserBislamaProgress, Achievement, UserAchievement } from '@/types/bislama';
 
-const achievementIcons: Record<string, any> = {
+const achievementIcons: Record<string, unknown> = {
   'footprints': Target,
   'rocket': Zap,
   'graduation-cap': Award,

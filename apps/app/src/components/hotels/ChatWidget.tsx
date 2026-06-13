@@ -37,9 +37,9 @@ export const ChatWidget = ({
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [sending, setSending] = useState(false);
-  const [otherParticipant, setOtherParticipant] = useState<any>(null);
+  const [otherParticipant, setOtherParticipant] = useState<unknown>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const subscriptionRef = useRef<any>(null);
+  const subscriptionRef = useRef<unknown>(null);
 
   useEffect(() => {
     if (open && user) {

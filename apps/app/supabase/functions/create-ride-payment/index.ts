@@ -38,11 +38,10 @@ serve(async (req) => {
     logStep("User authenticated", { userId: user.id, email: user.email });
 
     // Parse request body
-    const { bookingId, amount, currency = "VUV", returnUrl } = await req.json();
+    const { bookingId, returnUrl } = await req.json();
     
     if (!bookingId) throw new Error("Booking ID is required");
-    if (!amount || amount <= 0) throw new Error("Valid amount is required");
-    logStep("Request parsed", { bookingId, amount, currency });
+    logStep("Request parsed", { bookingId });
 
     // Verify booking exists and belongs to user
     const { data: booking, error: bookingError } = await supabaseClient
@@ -56,6 +55,12 @@ serve(async (req) => {
       throw new Error("Booking not found or access denied");
     }
     logStep("Booking verified", { bookingId: booking.id, status: booking.status });
+
+    const paymentAmount = Math.round(Number(booking.price) || 0);
+    const paymentCurrency = "vuv";
+    if (paymentAmount <= 0) {
+      throw new Error("Booking has no payable amount");
+    }
 
     // Initialize Stripe
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
@@ -79,13 +84,24 @@ serve(async (req) => {
     if (booking.metadata?.stripe_session_id) {
       try {
         const existingSession = await stripe.checkout.sessions.retrieve(booking.metadata.stripe_session_id);
-        if (existingSession.status === "open") {
+        if (
+          existingSession.status === "open" &&
+          existingSession.amount_total === paymentAmount &&
+          existingSession.currency === paymentCurrency
+        ) {
           logStep("Returning existing session", { sessionId: existingSession.id });
           return new Response(
             JSON.stringify({ url: existingSession.url, sessionId: existingSession.id }),
             { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
           );
         }
+        logStep("Existing session amount/currency mismatch or not open, creating new one", {
+          sessionId: existingSession.id,
+          sessionAmount: existingSession.amount_total,
+          sessionCurrency: existingSession.currency,
+          expectedAmount: paymentAmount,
+          expectedCurrency: paymentCurrency,
+        });
       } catch {
         // Session expired or invalid, create a new one
         logStep("Existing session invalid, creating new one");
@@ -99,7 +115,7 @@ serve(async (req) => {
       line_items: [
         {
           price_data: {
-            currency: currency.toLowerCase(),
+            currency: paymentCurrency,
             product_data: {
               name: booking.is_delivery ? "VanuRide Delivery" : `VanuCar Ride`,
               description: `${booking.pickup_location} → ${booking.dropoff_location}`,
@@ -108,7 +124,7 @@ serve(async (req) => {
                 is_delivery: String(booking.is_delivery || false),
               },
             },
-            unit_amount: Math.round(amount), // VUV doesn't use decimal places
+            unit_amount: paymentAmount, // VUV doesn't use decimal places
           },
           quantity: 1,
         },

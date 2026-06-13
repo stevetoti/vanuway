@@ -28,7 +28,7 @@ export default function BrowseHospitals() {
   const { data: hospitals, isLoading } = useQuery({
     queryKey: ['hospitals', island, type, searchQuery],
     queryFn: async () => {
-      let query = (supabase as any)
+      let query = (supabase as unknown)
         .from('hospitals')
         .select('*')
         .eq('status', 'approved')

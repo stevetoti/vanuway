@@ -1,0 +1,30 @@
+{
+  "campaignLine": "One app for everyday Vanuatu.",
+  "supportingLine": "Book rides, order food, find hotels and tours, shop local, list property, get alerts, learn Bislama, find jobs and more.",
+  "groups": [
+    {
+      "title": "Move and deliver",
+      "services": ["Ride-hailing", "Package delivery"]
+    },
+    {
+      "title": "Eat and shop",
+      "services": ["Food delivery", "Shop delivery", "Marketplace"]
+    },
+    {
+      "title": "Travel and stay",
+      "services": ["Hotels and accommodation", "Tours and attractions", "Ferry and flights"]
+    },
+    {
+      "title": "Community and safety",
+      "services": ["Learn Bislama", "Emergency alerts", "Community events", "Service providers"]
+    },
+    {
+      "title": "Property, health, and work",
+      "services": ["Real estate", "VanuHealth", "VanuJobs"]
+    },
+    {
+      "title": "Grow your business",
+      "services": ["Partner and vendor dashboards", "Marketplace seller tools", "Business promotion"]
+    }
+  ]
+}

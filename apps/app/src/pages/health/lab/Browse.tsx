@@ -26,7 +26,7 @@ export default function BrowseLabs() {
   const { data: labs, isLoading } = useQuery({
     queryKey: ['labs', island, searchQuery],
     queryFn: async () => {
-      let query = (supabase as any)
+      let query = (supabase as unknown)
         .from('labs')
         .select('*')
         .eq('status', 'approved')

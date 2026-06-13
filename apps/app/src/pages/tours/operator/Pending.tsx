@@ -9,7 +9,7 @@ import { Clock, CheckCircle, XCircle, ArrowLeft, Phone, Mail } from 'lucide-reac
 export default function OperatorPending() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [operator, setOperator] = useState<any>(null);
+  const [operator, setOperator] = useState<unknown>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -21,7 +21,7 @@ export default function OperatorPending() {
   const checkOperatorStatus = async () => {
     if (!user) return;
 
-    const { data, error } = await (supabase as any)
+    const { data, error } = await (supabase as unknown)
       .from('tour_operators')
       .select('*')
       .eq('user_id', user.id)

@@ -101,7 +101,7 @@ const AddHotel = () => {
       });
 
       navigate(`/hotels/owner/rooms/${hotel.id}`);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error adding hotel:', error);
       toast.error('Failed to add property', {
         description: error.message,

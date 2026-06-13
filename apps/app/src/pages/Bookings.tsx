@@ -2,13 +2,18 @@ import { Layout } from '@/components/layout/Layout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { OrderCard } from '@/components/food/OrderCard';
 import { RideCard } from '@/components/rides/RideCard';
+import { RideRating } from '@/components/rides/RideRating';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 const Bookings = () => {
   const { user } = useAuth();
+  // Which past ride is currently being rated. null = no dialog open. Lifting
+  // this to the page (rather than per-card) keeps only one dialog mounted and
+  // lets us optimistically patch the local list when a rating is submitted.
+  const [ratingRideId, setRatingRideId] = useState<string | null>(null);
 
   // Fetch food orders
   const { data: foodOrders, refetch: refetchFoodOrders } = useQuery({
@@ -95,6 +100,11 @@ const Bookings = () => {
     };
   }, [user, refetchRideBookings]);
 
+  const ratingRide = useMemo(
+    () => (rideBookings || []).find((r: unknown) => r.id === ratingRideId),
+    [rideBookings, ratingRideId]
+  );
+
   return (
     <Layout>
       <div className="container py-6">
@@ -117,7 +127,7 @@ const Bookings = () => {
               </div>
             ) : (
               <div className="space-y-4">
-                {rideBookings.map((ride: any) => (
+                {rideBookings.map((ride: unknown) => (
                   <RideCard
                     key={ride.id}
                     id={ride.id}
@@ -128,6 +138,8 @@ const Bookings = () => {
                     price={Number(ride.price)}
                     status={ride.status}
                     createdAt={ride.created_at}
+                    rating={ride.rating}
+                    onRate={(id) => setRatingRideId(id)}
                   />
                 ))}
               </div>
@@ -141,7 +153,7 @@ const Bookings = () => {
               </div>
             ) : (
               <div className="space-y-4">
-                {foodOrders.map((order: any) => (
+                {foodOrders.map((order: unknown) => (
                   <OrderCard
                     key={order.id}
                     id={order.id}
@@ -159,6 +171,18 @@ const Bookings = () => {
           </TabsContent>
         </Tabs>
       </div>
+
+      {ratingRide && (
+        <RideRating
+          open={!!ratingRideId}
+          onClose={() => setRatingRideId(null)}
+          rideId={ratingRide.id}
+          pickupLocation={ratingRide.pickup_location}
+          dropoffLocation={ratingRide.dropoff_location}
+          fare={Number(ratingRide.price)}
+          onSubmitted={() => refetchRideBookings()}
+        />
+      )}
     </Layout>
   );
 };

@@ -64,7 +64,7 @@ const AdminHotelsManagement = () => {
 
       if (error) throw error;
 
-      setHotels(hotelsData as any || []);
+      setHotels(hotelsData as unknown || []);
 
       // Calculate stats
       const total = hotelsData?.length || 0;
@@ -73,7 +73,7 @@ const AdminHotelsManagement = () => {
       const rejected = hotelsData?.filter((h) => h.status === 'rejected').length || 0;
 
       setStats({ total, pending, active, rejected });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error loading hotels:', error);
       toast.error('Failed to load hotels');
     } finally {
@@ -103,7 +103,7 @@ const AdminHotelsManagement = () => {
   };
 
   const getStatusBadge = (status: string) => {
-    const variants: Record<string, { className: string; icon: any }> = {
+    const variants: Record<string, { className: string; icon: unknown }> = {
       draft: { className: 'bg-gray-100 text-gray-800', icon: Clock },
       pending_review: { className: 'bg-yellow-100 text-yellow-800', icon: Clock },
       active: { className: 'bg-green-100 text-green-800', icon: CheckCircle },

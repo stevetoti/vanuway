@@ -112,7 +112,7 @@ const Availability = () => {
       }
 
       toast.success('Availability saved successfully!');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error saving availability:', error);
       toast.error('Failed to save availability', {
         description: error.message,

@@ -80,11 +80,11 @@ export interface TourOperatorApplication {
   total_steps: number;
   status: 'in_progress' | 'submitted' | 'under_review' | 'approved' | 'rejected' | 'withdrawn';
 
-  step_1_data: Record<string, any>; // Basic Info
-  step_2_data: Record<string, any>; // Business Details
-  step_3_data: Record<string, any>; // Documents
-  step_4_data: Record<string, any>; // Bank Details
-  step_5_data: Record<string, any>; // Review
+  step_1_data: Record<string, unknown>; // Basic Info
+  step_2_data: Record<string, unknown>; // Business Details
+  step_3_data: Record<string, unknown>; // Documents
+  step_4_data: Record<string, unknown>; // Bank Details
+  step_5_data: Record<string, unknown>; // Review
 
   submitted_at?: string;
   reviewed_at?: string;

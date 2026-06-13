@@ -53,7 +53,7 @@ export default function CreateRequest() {
   const { data: categories } = useQuery({
     queryKey: ['service-categories'],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await (supabase as unknown)
         .from('service_categories')
         .select('*')
         .eq('is_active', true)
@@ -74,7 +74,7 @@ export default function CreateRequest() {
       if (!contactName) throw new Error('Please enter your name');
       if (!contactPhone) throw new Error('Please enter your phone number');
 
-      const { data, error } = await (supabase as any)
+      const { data, error } = await (supabase as unknown)
         .from('service_requests')
         .insert({
           user_id: user.id,
@@ -110,7 +110,7 @@ export default function CreateRequest() {
       });
       navigate('/providers/my-requests');
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
         title: 'Error',
         description: error.message || 'Failed to create request',
@@ -242,7 +242,7 @@ export default function CreateRequest() {
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label>Urgency</Label>
-              <RadioGroup value={urgency} onValueChange={(v) => setUrgency(v as any)}>
+              <RadioGroup value={urgency} onValueChange={(v) => setUrgency(v as unknown)}>
                 {Object.entries(URGENCY_LEVELS).map(([key, value]) => (
                   <div key={key} className="flex items-center space-x-2">
                     <RadioGroupItem value={key} id={key} />

@@ -23,7 +23,7 @@ export default function MyRequests() {
     queryFn: async () => {
       if (!user) return [];
 
-      const { data, error } = await (supabase as any)
+      const { data, error } = await (supabase as unknown)
         .from('service_requests')
         .select('*')
         .eq('user_id', user.id)
@@ -43,7 +43,7 @@ export default function MyRequests() {
       const requestIds = requests.map(r => r.id);
       if (requestIds.length === 0) return {};
 
-      const { data, error } = await (supabase as any)
+      const { data, error } = await (supabase as unknown)
         .from('service_quotes')
         .select('*')
         .in('request_id', requestIds);

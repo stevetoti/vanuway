@@ -123,7 +123,7 @@ export const createDriverProfile = async (params: {
         province: params.address?.province,
         application_status: 'draft',
         verification_status: 'unverified',
-      } as any)
+      } as unknown)
       .select()
       .single();
 
@@ -155,7 +155,7 @@ export const createDriverProfile = async (params: {
       data: { driver, application },
       message: 'Driver profile created successfully',
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error in createDriverProfile:', error);
     return { success: false, error: error.message };
   }
@@ -248,7 +248,7 @@ export const addDriverVehicle = async (params: {
       data: data as DriverVehicle,
       message: 'Vehicle added successfully',
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error in addDriverVehicle:', error);
     return { success: false, error: error.message };
   }
@@ -327,7 +327,7 @@ export const uploadDriverDocument = async (params: {
       data: document as DriverDocument,
       message: 'Document uploaded successfully',
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error in uploadDriverDocument:', error);
     return { success: false, error: error.message };
   }
@@ -438,7 +438,7 @@ export const submitDriverApplication = async (driverId: string) => {
       message:
         'Application submitted successfully! We will review it within 24-48 hours.',
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error in submitDriverApplication:', error);
     return { success: false, error: error.message };
   }
@@ -452,7 +452,7 @@ export const updateDriverStatus = async (params: {
   isOnline?: boolean;
   isAvailable?: boolean;
 }) => {
-  const updates: any = {};
+  const updates: unknown = {};
   if (params.isOnline !== undefined) updates.is_online = params.isOnline;
   if (params.isAvailable !== undefined) updates.is_available = params.isAvailable;
   updates.last_active_at = new Date().toISOString();
@@ -501,7 +501,7 @@ export const updateDriverLocation = async (params: {
     }
 
     return { success: true, data };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error in updateDriverLocation:', error);
     return { success: false, error: error.message };
   }
@@ -580,7 +580,7 @@ export const findNearbyDrivers = async (params: {
     }
 
     return { success: true, data };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error in findNearbyDrivers:', error);
     return { success: false, error: error.message, data: [] };
   }

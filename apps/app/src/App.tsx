@@ -2,7 +2,9 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import React, { Suspense, lazy } from "react";
+import React, { Suspense } from "react";
+import { SupportChatWidget } from "./components/support/SupportChatWidget";
+import { lazyWithRetry as lazy } from "@/lib/lazyWithRetry";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { CartProvider } from "@/contexts/CartContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
@@ -28,6 +30,7 @@ const Wallet = lazy(() => import("./pages/Wallet"));
 const Profile = lazy(() => import("./pages/Profile"));
 const Notifications = lazy(() => import("./pages/Notifications"));
 const RidesIndex = lazy(() => import("./pages/rides/Index"));
+const RideHub = lazy(() => import("./pages/rides/Hub"));
 const RequestRide = lazy(() => import("./pages/rides/RequestRide"));
 const TrackRide = lazy(() => import("./pages/rides/TrackRide"));
 const Restaurants = lazy(() => import("./pages/food/Restaurants"));
@@ -55,6 +58,7 @@ const About = lazy(() => import("./pages/About"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const AdminDashboard = lazy(() => import("./pages/admin/Dashboard"));
 const AdminApplications = lazy(() => import("./pages/admin/Applications"));
+const AdminApprovals = lazy(() => import("./pages/admin/Approvals"));
 const ApplicationReview = lazy(() => import("./pages/admin/ApplicationReview"));
 const AdminHotelsManagement = lazy(() => import("./pages/admin/HotelsManagement"));
 const AdminHotelReview = lazy(() => import("./pages/admin/HotelReview"));
@@ -64,6 +68,7 @@ const AdminAnalytics = lazy(() => import("./pages/admin/Analytics"));
 const AdminUsers = lazy(() => import("./pages/admin/Users"));
 const AdminOrders = lazy(() => import("./pages/admin/Orders"));
 const AdminRides = lazy(() => import("./pages/admin/Rides"));
+const AdminDailyData = lazy(() => import("./pages/admin/DailyData"));
 const CruiseSchedule = lazy(() => import("./pages/cruise/Schedule"));
 const HotelOwnerRegister = lazy(() => import("./pages/hotels/OwnerRegister"));
 const HotelOwnerDashboard = lazy(() => import("./pages/hotels/OwnerDashboard"));
@@ -116,10 +121,27 @@ const ShopIndex = lazy(() => import("./pages/shop/Index"));
 const ShopDetails = lazy(() => import("./pages/shop/ShopDetails"));
 const ShopCheckout = lazy(() => import("./pages/shop/Checkout"));
 const ShopMyOrders = lazy(() => import("./pages/shop/MyOrders"));
+const ShopOrderDetails = lazy(() => import("./pages/shop/OrderDetails"));
 const MarketplaceIndex = lazy(() => import("./pages/marketplace/Index"));
 const MarketplaceListingDetails = lazy(() => import("./pages/marketplace/ListingDetails"));
 const MarketplaceCreateListing = lazy(() => import("./pages/marketplace/CreateListing"));
 const MarketplaceMyListings = lazy(() => import("./pages/marketplace/MyListings"));
+const MarketplaceSellerRegister = lazy(() => import("./pages/marketplace/SellerRegister"));
+const MarketplaceChat = lazy(() => import("./pages/marketplace/Chat"));
+const MarketplaceCart = lazy(() => import("./pages/marketplace/Cart"));
+const MarketplaceMyOrders = lazy(() => import("./pages/marketplace/MyOrders"));
+const MarketplaceOrderDetails = lazy(() => import("./pages/marketplace/OrderDetails"));
+const MarketplaceSellerOrders = lazy(() => import("./pages/marketplace/SellerOrders"));
+const MarketplaceSellerMessages = lazy(() => import("./pages/marketplace/SellerMessages"));
+const FlightBook = lazy(() => import("./pages/flights/Book"));
+const FlightOrderDetails = lazy(() => import("./pages/flights/OrderDetails"));
+const AdminMarketplaceChats = lazy(() => import("./pages/admin/MarketplaceChats"));
+const AdminSupportChats = lazy(() => import("./pages/admin/SupportChats"));
+const AdminAuditLog = lazy(() => import("./pages/admin/AuditLog"));
+const AdminMessages = lazy(() => import("./pages/admin/Messages"));
+const Messages = lazy(() => import("./pages/Messages"));
+const PromoteYourBusiness = lazy(() => import("./pages/PromoteYourBusiness"));
+const MyAdSubscriptions = lazy(() => import("./pages/MyAdSubscriptions"));
 const RealEstateIndex = lazy(() => import("./pages/realestate/Index"));
 const PropertyDetails = lazy(() => import("./pages/realestate/PropertyDetails"));
 const CreateProperty = lazy(() => import("./pages/realestate/CreateProperty"));
@@ -147,6 +169,23 @@ const FerryOperatorRegister = lazy(() => import("./pages/ferry/operator/Register
 const FerryOperatorDashboard = lazy(() => import("./pages/ferry/operator/Dashboard"));
 const FerryOperatorAddRoute = lazy(() => import("./pages/ferry/operator/AddRoute"));
 const FerryOperatorAddSchedule = lazy(() => import("./pages/ferry/operator/AddSchedule"));
+// Phase 2: Driver Profiles & Advance Booking
+const BrowseDrivers = lazy(() => import("./pages/drivers/Browse"));
+const DriverProfilePublic = lazy(() => import("./pages/drivers/DriverProfile"));
+const BookDriver = lazy(() => import("./pages/drivers/BookDriver"));
+const PostDriverJob = lazy(() => import("./pages/drivers/PostJob"));
+const DriverMyServices = lazy(() => import("./pages/driver/MyServices"));
+// Phase 3: Driver CRM + Communication
+const FlightSchedule = lazy(() => import("./pages/flights/Schedule"));
+const DriverAnalytics = lazy(() => import("./pages/driver/Analytics"));
+const DriverBookings = lazy(() => import("./pages/driver/Bookings"));
+// Phase 4: B2B & Growth
+const CruiseDirectory = lazy(() => import("./pages/cruise/Directory"));
+const DriverInbox = lazy(() => import("./pages/driver/Inbox"));
+const DriverArrivals = lazy(() => import("./pages/driver/Arrivals"));
+const DailyHub = lazy(() => import("./pages/daily/Index"));
+const UtilityRegister = lazy(() => import("./pages/utility/Register"));
+const UtilityDashboard = lazy(() => import("./pages/utility/Dashboard"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -180,22 +219,31 @@ const AppContent = () => {
 
                 <Route path="/onboarding" element={<ProtectedRoute><OnboardingIndex /></ProtectedRoute>} />
                 <Route path="/onboarding/welcome" element={<ProtectedRoute><OnboardingWelcome /></ProtectedRoute>} />
-                <Route path="/partners" element={<ProtectedRoute><Partners /></ProtectedRoute>} />
+                <Route path="/partners" element={<Partners />} />
 
-                <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
-                <Route path="/services" element={<ProtectedRoute><Services /></ProtectedRoute>} />
+                {/* Public pages — no login required to browse */}
+                <Route path="/" element={<Index />} />
+                <Route path="/services" element={<Services />} />
+                <Route path="/rides" element={<RideHub />} />
+                <Route path="/food" element={<Restaurants />} />
+                <Route path="/food/restaurant/:id" element={<RestaurantDetail />} />
+                <Route path="/drivers" element={<BrowseDrivers />} />
+                <Route path="/drivers/post-job" element={<ProtectedRoute><PostDriverJob /></ProtectedRoute>} />
+                <Route path="/drivers/:driverId" element={<DriverProfilePublic />} />
+                <Route path="/delivery" element={<DeliveryIndex />} />
+
+                {/* Protected — requires login for actions */}
                 <Route path="/bookings" element={<ProtectedRoute><Bookings /></ProtectedRoute>} />
                 <Route path="/wallet" element={<ProtectedRoute><Wallet /></ProtectedRoute>} />
                 <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
                 <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
+                <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
 
-                <Route path="/rides" element={<ProtectedRoute><RidesIndex /></ProtectedRoute>} />
+                <Route path="/rides/map" element={<ProtectedRoute><RidesIndex /></ProtectedRoute>} />
                 <Route path="/rides/request" element={<ProtectedRoute><RequestRide /></ProtectedRoute>} />
                 <Route path="/rides/request/:serviceType" element={<ProtectedRoute><RequestRide /></ProtectedRoute>} />
                 <Route path="/rides/track/:bookingId" element={<ProtectedRoute><TrackRide /></ProtectedRoute>} />
 
-                <Route path="/food" element={<ProtectedRoute><Restaurants /></ProtectedRoute>} />
-                <Route path="/food/restaurant/:id" element={<ProtectedRoute><RestaurantDetail /></ProtectedRoute>} />
                 <Route path="/food/checkout" element={<ProtectedRoute><Checkout /></ProtectedRoute>} />
                 <Route path="/food/order/:orderId" element={<ProtectedRoute><OrderTracking /></ProtectedRoute>} />
                 <Route path="/food/owner/register" element={<ProtectedRoute><RestaurantOwnerRegister /></ProtectedRoute>} />
@@ -214,12 +262,18 @@ const AppContent = () => {
                 <Route path="/driver/availability" element={<ProtectedRoute><Availability /></ProtectedRoute>} />
                 <Route path="/driver/delivery-settings" element={<ProtectedRoute><DeliverySettings /></ProtectedRoute>} />
                 <Route path="/driver/delivery/:orderId" element={<ProtectedRoute><ActiveDelivery /></ProtectedRoute>} />
-                <Route path="/delivery" element={<ProtectedRoute><DeliveryIndex /></ProtectedRoute>} />
+                <Route path="/driver/services" element={<ProtectedRoute><DriverMyServices /></ProtectedRoute>} />
+                <Route path="/driver/analytics" element={<ProtectedRoute><DriverAnalytics /></ProtectedRoute>} />
+                <Route path="/driver/bookings" element={<ProtectedRoute><DriverBookings /></ProtectedRoute>} />
+                <Route path="/driver/inbox" element={<ProtectedRoute><DriverInbox /></ProtectedRoute>} />
+                <Route path="/driver/arrivals" element={<ProtectedRoute><DriverArrivals /></ProtectedRoute>} />
+                <Route path="/drivers/:driverId/book" element={<ProtectedRoute><BookDriver /></ProtectedRoute>} />
                 <Route path="/delivery/request" element={<ProtectedRoute><DeliveryRequest /></ProtectedRoute>} />
 
                 <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
                 <Route path="/admin/dashboard" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
                 <Route path="/admin/applications" element={<AdminRoute><AdminApplications /></AdminRoute>} />
+                <Route path="/admin/approvals" element={<AdminRoute><AdminApprovals /></AdminRoute>} />
                 <Route path="/admin/applications/:id" element={<AdminRoute><ApplicationReview /></AdminRoute>} />
                 <Route path="/admin/documents" element={<AdminRoute><AdminDocuments /></AdminRoute>} />
                 <Route path="/admin/drivers" element={<AdminRoute><AdminDrivers /></AdminRoute>} />
@@ -231,10 +285,48 @@ const AppContent = () => {
                 <Route path="/admin/users" element={<AdminRoute><AdminUsers /></AdminRoute>} />
                 <Route path="/admin/orders" element={<AdminRoute><AdminOrders /></AdminRoute>} />
                 <Route path="/admin/rides" element={<AdminRoute><AdminRides /></AdminRoute>} />
+                <Route path="/admin/daily-data" element={<AdminRoute><AdminDailyData /></AdminRoute>} />
 
-                <Route path="/hotels" element={<ProtectedRoute><BrowseHotels /></ProtectedRoute>} />
+                {/* Public browsing — hotels, tours, travel, daily, etc. */}
+                <Route path="/hotels" element={<BrowseHotels />} />
+                <Route path="/hotels/:hotelId" element={<HotelDetails />} />
+                <Route path="/tours" element={<BrowseTours />} />
+                <Route path="/tours/:tourId" element={<TourDetails />} />
+                <Route path="/cruise/schedule" element={<CruiseSchedule />} />
+                <Route path="/cruise/lines" element={<CruiseDirectory />} />
+                <Route path="/flights" element={<FlightBook />} />
+                <Route path="/flights/arrivals" element={<FlightSchedule />} />
+                <Route path="/daily" element={<DailyHub />} />
+                <Route path="/emergency" element={<EmergencyIndex />} />
+                <Route path="/bislama" element={<BislamaHome />} />
+                <Route path="/bislama/topic/:id" element={<BislamaTopic />} />
+                <Route path="/bislama/lesson/:id" element={<BislamaLesson />} />
+                <Route path="/bislama/progress" element={<BislamaProgress />} />
+                <Route path="/events" element={<EventsIndex />} />
+                <Route path="/events/:eventId" element={<EventDetails />} />
+                <Route path="/ferry" element={<FerryIndex />} />
+                <Route path="/providers" element={<ProvidersIndex />} />
+                <Route path="/providers/:providerId" element={<ProviderDetails />} />
+                <Route path="/shop" element={<ShopIndex />} />
+                <Route path="/shop/:shopId" element={<ShopDetails />} />
+                <Route path="/marketplace" element={<MarketplaceIndex />} />
+                <Route path="/marketplace/:listingId" element={<MarketplaceListingDetails />} />
+                <Route path="/realestate" element={<RealEstateIndex />} />
+                <Route path="/realestate/:propertyId" element={<PropertyDetails />} />
+                <Route path="/health" element={<HealthIndex />} />
+                <Route path="/health/pharmacies" element={<PharmacyBrowse />} />
+                <Route path="/health/pharmacy/:pharmacyId" element={<PharmacyDetails />} />
+                <Route path="/health/hospitals" element={<HospitalBrowse />} />
+                <Route path="/health/hospital/:hospitalId" element={<HospitalDetails />} />
+                <Route path="/health/labs" element={<LabBrowse />} />
+                <Route path="/health/lab/:labId" element={<LabDetails />} />
+                <Route path="/jobs" element={<JobsIndex />} />
+                <Route path="/jobs/freelancers" element={<Freelancers />} />
+                <Route path="/jobs/freelancer/:freelancerId" element={<FreelancerProfile />} />
+                <Route path="/jobs/:jobId" element={<JobDetails />} />
+
+                {/* Protected — actions that require login */}
                 <Route path="/hotels/messages" element={<ProtectedRoute><HotelMessages /></ProtectedRoute>} />
-                <Route path="/hotels/:hotelId" element={<ProtectedRoute><HotelDetails /></ProtectedRoute>} />
                 <Route path="/hotels/owner/register" element={<ProtectedRoute><HotelOwnerRegister /></ProtectedRoute>} />
                 <Route path="/hotels/owner/dashboard" element={<ProtectedRoute><HotelOwnerDashboard /></ProtectedRoute>} />
                 <Route path="/hotels/owner/welcome" element={<ProtectedRoute><HotelOwnerWelcome /></ProtectedRoute>} />
@@ -242,10 +334,7 @@ const AppContent = () => {
                 <Route path="/hotels/owner/rooms/:hotelId" element={<ProtectedRoute><ManageRooms /></ProtectedRoute>} />
                 <Route path="/hotels/owner/bookings" element={<ProtectedRoute><HotelOwnerBookings /></ProtectedRoute>} />
                 <Route path="/hotels/owner/edit/:hotelId" element={<ProtectedRoute><EditHotel /></ProtectedRoute>} />
-                <Route path="/tours" element={<ProtectedRoute><BrowseTours /></ProtectedRoute>} />
-                <Route path="/cruise/schedule" element={<ProtectedRoute><CruiseSchedule /></ProtectedRoute>} />
-                <Route path="/tours/:tourId" element={<ProtectedRoute><TourDetails /></ProtectedRoute>} />
-<Route path="/tours/operator/register" element={<ProtectedRoute><TourOperatorRegister /></ProtectedRoute>} />
+                <Route path="/tours/operator/register" element={<ProtectedRoute><TourOperatorRegister /></ProtectedRoute>} />
                 <Route path="/tours/operator/dashboard" element={<ProtectedRoute><TourOperatorDashboard /></ProtectedRoute>} />
                 <Route path="/tours/operator/pending" element={<ProtectedRoute><TourOperatorPending /></ProtectedRoute>} />
                 <Route path="/tours/operator/add" element={<ProtectedRoute><TourOperatorAddTour /></ProtectedRoute>} />
@@ -253,20 +342,11 @@ const AppContent = () => {
                 <Route path="/tours/provider/welcome" element={<ProtectedRoute><TourProviderWelcome /></ProtectedRoute>} />
                 <Route path="/tours/provider/dashboard" element={<ProtectedRoute><TourProviderDashboard /></ProtectedRoute>} />
 
-                <Route path="/emergency" element={<ProtectedRoute><EmergencyIndex /></ProtectedRoute>} />
                 <Route path="/emergency/report" element={<ProtectedRoute><EmergencyReport /></ProtectedRoute>} />
 
-                <Route path="/bislama" element={<ProtectedRoute><BislamaHome /></ProtectedRoute>} />
-                <Route path="/bislama/topic/:id" element={<ProtectedRoute><BislamaTopic /></ProtectedRoute>} />
-                <Route path="/bislama/lesson/:id" element={<ProtectedRoute><BislamaLesson /></ProtectedRoute>} />
-                <Route path="/bislama/progress" element={<ProtectedRoute><BislamaProgress /></ProtectedRoute>} />
-
-                <Route path="/events" element={<ProtectedRoute><EventsIndex /></ProtectedRoute>} />
                 <Route path="/events/create" element={<ProtectedRoute><CreateEvent /></ProtectedRoute>} />
                 <Route path="/events/my-events" element={<ProtectedRoute><MyEvents /></ProtectedRoute>} />
-                <Route path="/events/:eventId" element={<ProtectedRoute><EventDetails /></ProtectedRoute>} />
 
-                <Route path="/ferry" element={<ProtectedRoute><FerryIndex /></ProtectedRoute>} />
                 <Route path="/ferry/book/:tripId" element={<ProtectedRoute><FerryBook /></ProtectedRoute>} />
                 <Route path="/ferry/confirmation/:bookingId" element={<ProtectedRoute><FerryConfirmation /></ProtectedRoute>} />
                 <Route path="/ferry/bookings" element={<ProtectedRoute><FerryMyBookings /></ProtectedRoute>} />
@@ -275,50 +355,50 @@ const AppContent = () => {
                 <Route path="/ferry/operator/add-route" element={<ProtectedRoute><FerryOperatorAddRoute /></ProtectedRoute>} />
                 <Route path="/ferry/operator/add-schedule" element={<ProtectedRoute><FerryOperatorAddSchedule /></ProtectedRoute>} />
 
-                <Route path="/providers" element={<ProtectedRoute><ProvidersIndex /></ProtectedRoute>} />
-                <Route path="/providers/:providerId" element={<ProtectedRoute><ProviderDetails /></ProtectedRoute>} />
                 <Route path="/providers/request" element={<ProtectedRoute><CreateServiceRequest /></ProtectedRoute>} />
                 <Route path="/providers/my-requests" element={<ProtectedRoute><MyServiceRequests /></ProtectedRoute>} />
 
-                <Route path="/shop" element={<ProtectedRoute><ShopIndex /></ProtectedRoute>} />
-                <Route path="/shop/:shopId" element={<ProtectedRoute><ShopDetails /></ProtectedRoute>} />
                 <Route path="/shop/checkout/:shopId" element={<ProtectedRoute><ShopCheckout /></ProtectedRoute>} />
                 <Route path="/shop/orders" element={<ProtectedRoute><ShopMyOrders /></ProtectedRoute>} />
+                <Route path="/shop/order/:orderId" element={<ProtectedRoute><ShopOrderDetails /></ProtectedRoute>} />
 
-                <Route path="/marketplace" element={<ProtectedRoute><MarketplaceIndex /></ProtectedRoute>} />
+                <Route path="/marketplace/seller/register" element={<ProtectedRoute><MarketplaceSellerRegister /></ProtectedRoute>} />
+                <Route path="/marketplace/chat/:listingId" element={<ProtectedRoute><MarketplaceChat /></ProtectedRoute>} />
+                <Route path="/marketplace/cart" element={<MarketplaceCart />} />
+                <Route path="/marketplace/orders" element={<ProtectedRoute><MarketplaceMyOrders /></ProtectedRoute>} />
+                <Route path="/marketplace/orders/:orderId" element={<ProtectedRoute><MarketplaceOrderDetails /></ProtectedRoute>} />
+                <Route path="/marketplace/seller/orders" element={<ProtectedRoute><MarketplaceSellerOrders /></ProtectedRoute>} />
+                <Route path="/marketplace/seller/messages" element={<ProtectedRoute><MarketplaceSellerMessages /></ProtectedRoute>} />
+                <Route path="/flights/book" element={<FlightBook />} />
+                <Route path="/flights/orders/:orderId" element={<ProtectedRoute><FlightOrderDetails /></ProtectedRoute>} />
+                <Route path="/admin/marketplace-chats" element={<AdminRoute><AdminMarketplaceChats /></AdminRoute>} />
+                <Route path="/admin/support-chats" element={<AdminRoute><AdminSupportChats /></AdminRoute>} />
+                <Route path="/admin/audit-log" element={<AdminRoute><AdminAuditLog /></AdminRoute>} />
+                <Route path="/admin/messages" element={<AdminRoute><AdminMessages /></AdminRoute>} />
+                <Route path="/promote-your-business" element={<PromoteYourBusiness />} />
+                <Route path="/promote/my-subscriptions" element={<ProtectedRoute><MyAdSubscriptions /></ProtectedRoute>} />
                 <Route path="/marketplace/create" element={<ProtectedRoute><MarketplaceCreateListing /></ProtectedRoute>} />
                 <Route path="/marketplace/my-listings" element={<ProtectedRoute><MarketplaceMyListings /></ProtectedRoute>} />
-                <Route path="/marketplace/:listingId" element={<ProtectedRoute><MarketplaceListingDetails /></ProtectedRoute>} />
 
-                <Route path="/realestate" element={<ProtectedRoute><RealEstateIndex /></ProtectedRoute>} />
                 <Route path="/realestate/create" element={<ProtectedRoute><CreateProperty /></ProtectedRoute>} />
                 <Route path="/realestate/my-properties" element={<ProtectedRoute><MyProperties /></ProtectedRoute>} />
-                <Route path="/realestate/:propertyId" element={<ProtectedRoute><PropertyDetails /></ProtectedRoute>} />
 
-                <Route path="/health" element={<ProtectedRoute><HealthIndex /></ProtectedRoute>} />
-                <Route path="/health/pharmacies" element={<ProtectedRoute><PharmacyBrowse /></ProtectedRoute>} />
                 <Route path="/health/pharmacy/register" element={<ProtectedRoute><PharmacyRegister /></ProtectedRoute>} />
-                <Route path="/health/pharmacy/checkout/:pharmacyId" element={<ProtectedRoute><PharmacyCheckout /></ProtectedRoute>} />
-                <Route path="/health/pharmacy/:pharmacyId" element={<ProtectedRoute><PharmacyDetails /></ProtectedRoute>} />
-                <Route path="/health/hospitals" element={<ProtectedRoute><HospitalBrowse /></ProtectedRoute>} />
-                <Route path="/health/hospital/:hospitalId" element={<ProtectedRoute><HospitalDetails /></ProtectedRoute>} />
-                <Route path="/health/labs" element={<ProtectedRoute><LabBrowse /></ProtectedRoute>} />
-                <Route path="/health/lab/:labId" element={<ProtectedRoute><LabDetails /></ProtectedRoute>} />
 
-                <Route path="/jobs" element={<ProtectedRoute><JobsIndex /></ProtectedRoute>} />
+                <Route path="/utility/register" element={<ProtectedRoute><UtilityRegister /></ProtectedRoute>} />
+                <Route path="/utility/dashboard" element={<ProtectedRoute><UtilityDashboard /></ProtectedRoute>} />
+                <Route path="/health/pharmacy/checkout/:pharmacyId" element={<ProtectedRoute><PharmacyCheckout /></ProtectedRoute>} />
+
                 <Route path="/jobs/post" element={<ProtectedRoute><PostJob /></ProtectedRoute>} />
                 <Route path="/jobs/my-applications" element={<ProtectedRoute><MyApplications /></ProtectedRoute>} />
-                <Route path="/jobs/freelancers" element={<ProtectedRoute><Freelancers /></ProtectedRoute>} />
-                <Route path="/jobs/freelancer/:freelancerId" element={<ProtectedRoute><FreelancerProfile /></ProtectedRoute>} />
                 <Route path="/jobs/become-freelancer" element={<ProtectedRoute><BecomeFreelancer /></ProtectedRoute>} />
-                <Route path="/jobs/:jobId" element={<ProtectedRoute><JobDetails /></ProtectedRoute>} />
 
                 <Route path="/profile/addresses" element={<ProtectedRoute><SavedAddresses /></ProtectedRoute>} />
                 <Route path="/profile/payments" element={<ProtectedRoute><PaymentMethods /></ProtectedRoute>} />
                 <Route path="/profile/notifications" element={<ProtectedRoute><NotificationPreferences /></ProtectedRoute>} />
                 <Route path="/profile/language" element={<ProtectedRoute><LanguageSelector /></ProtectedRoute>} />
 
-                <Route path="/support" element={<ProtectedRoute><Support /></ProtectedRoute>} />
+                <Route path="/support" element={<Support />} />
                 <Route path="/terms" element={<Terms />} />
                 <Route path="/privacy" element={<Privacy />} />
                 <Route path="/about" element={<About />} />
@@ -327,6 +407,7 @@ const AppContent = () => {
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </Suspense>
+            <SupportChatWidget />
           </ErrorBoundary>
         </CartProvider>
       </AuthProvider>

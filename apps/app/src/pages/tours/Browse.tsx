@@ -27,8 +27,8 @@ export default function ToursBrowse() {
     queryKey: ['tour-packages'],
     queryFn: async () => {
       const { data, error } = await (supabase
-        .from('tour_packages' as any)
-        .select('*') as any)
+        .from('tour_packages' as unknown)
+        .select('*') as unknown)
         .eq('is_active', true)
         .order('is_featured', { ascending: false })
         .order('price_from', { ascending: true });
@@ -38,7 +38,7 @@ export default function ToursBrowse() {
     },
   });
 
-  const categories = [...new Set((packages || []).map((p: any) => p.category).filter(Boolean))];
+  const categories = [...new Set((packages || []).map((p: unknown) => p.category).filter(Boolean))];
 
   return (
     <Layout>
@@ -95,7 +95,7 @@ export default function ToursBrowse() {
           </Card>
         ) : (
           <div className="grid sm:grid-cols-2 gap-4">
-            {packages.map((pkg: any) => {
+            {packages.map((pkg: unknown) => {
               const config = categoryIcons[pkg.category] || categoryIcons['City Tours'];
               const Icon = config.icon;
 
@@ -138,8 +138,8 @@ export default function ToursBrowse() {
                         <span className="text-xs text-muted-foreground">From</span>
                         <span className="text-lg font-bold ml-1">VUV {Number(pkg.price_from).toLocaleString()}</span>
                       </div>
-                      <Button size="sm" onClick={() => navigate('/rides/request/vanucar')}>
-                        Book Now
+                      <Button size="sm" onClick={() => navigate('/drivers?category=tour')}>
+                        Find a Driver
                       </Button>
                     </div>
                   </div>

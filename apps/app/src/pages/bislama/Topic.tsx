@@ -52,7 +52,7 @@ const BislamaTopic = () => {
       if (lessonsError) throw lessonsError;
 
       // Load user progress for lessons
-      let progressMap: Record<string, any> = {};
+      const progressMap: Record<string, unknown> = {};
       if (user) {
         const lessonIds = lessonsData?.map(l => l.id) || [];
         const { data: progressData } = await supabase

@@ -41,7 +41,7 @@ export default function AddRoute() {
     queryKey: ['operator', operatorId],
     queryFn: async () => {
       if (!operatorId) return null;
-      const { data, error } = await (supabase as any)
+      const { data, error } = await (supabase as unknown)
         .from('transport_operators')
         .select('*')
         .eq('id', operatorId)
@@ -95,14 +95,14 @@ export default function AddRoute() {
         is_active: formData.is_active,
       };
 
-      const { error } = await (supabase as any)
+      const { error } = await (supabase as unknown)
         .from('transport_routes')
         .insert(routeData);
 
       if (error) throw error;
 
       setIsSubmitted(true);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error adding route:', error);
       toast({ title: 'Error', description: error.message || 'Failed to add route', variant: 'destructive' });
     } finally {

@@ -193,7 +193,7 @@ const sampleHotels = [
 const BrowseHotels = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const [hotels, setHotels] = useState<any[]>([]);
+  const [hotels, setHotels] = useState<unknown[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedType, setSelectedType] = useState('all');
   const [minStars, setMinStars] = useState([0]);
@@ -227,7 +227,7 @@ const BrowseHotels = () => {
       } else {
         setHotels(data);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error loading hotels:', error);
       // Fallback to sample data on error
       setHotels(sampleHotels);

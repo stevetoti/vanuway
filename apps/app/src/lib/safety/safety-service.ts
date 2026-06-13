@@ -45,7 +45,7 @@ export interface SafetyAlert {
   location_address?: string;
   title: string;
   message?: string;
-  metadata?: any;
+  metadata?: unknown;
   status: 'active' | 'acknowledged' | 'resolved' | 'dismissed';
   emergency_services_notified: boolean;
   contacts_notified: boolean;
@@ -233,7 +233,7 @@ export const triggerEmergencySOS = async (params: {
       data: alert as SafetyAlert,
       message: 'Emergency SOS activated. Emergency contacts and authorities have been notified.',
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error triggering emergency SOS:', error);
     return { success: false, error: error.message };
   }
@@ -298,7 +298,7 @@ export const shareTripWithContacts = async (params: {
       shareUrl,
       shareToken,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error sharing trip:', error);
     return { success: false, error: error.message };
   }

@@ -17,6 +17,9 @@ import {
   UtensilsCrossed,
   ShoppingCart,
   UserCog,
+  Zap,
+  MessageCircle,
+  Activity,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -51,11 +54,48 @@ const AdminDashboard = () => {
         .from('drivers')
         .select('*', { count: 'exact', head: true });
 
-      // Get pending applications
-      const { count: pendingApps } = await supabase
-        .from('driver_applications')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'submitted');
+      // Total pending = driver applications + pending vendors + draft/pending listings.
+      // Counts every queue the Approvals page handles so the badge matches reality.
+      const [
+        { count: q_driverApps },
+        { count: q_hotelOwners },
+        { count: q_restaurants },
+        { count: q_tourOps },
+        { count: q_services },
+        { count: q_sellers },
+        { count: q_marketplace },
+        { count: q_properties },
+        { count: q_tourPkgs },
+        { count: q_events },
+        { count: q_adSubs },
+      ] = await Promise.all([
+        supabase.from('driver_applications').select('*', { count: 'exact', head: true }).eq('status', 'submitted'),
+        supabase.from('hotel_owners').select('*', { count: 'exact', head: true }).eq('verification_status', 'pending'),
+        supabase.from('restaurant_owners').select('*', { count: 'exact', head: true }).eq('verification_status', 'pending'),
+        supabase.from('tour_operators').select('*', { count: 'exact', head: true }).eq('application_status', 'pending'),
+        supabase.from('service_providers').select('*', { count: 'exact', head: true }).eq('verification_status', 'pending'),
+        (supabase as unknown).from('marketplace_sellers').select('*', { count: 'exact', head: true }).eq('verification_status', 'pending'),
+        (supabase as unknown).from('marketplace_listings').select('*', { count: 'exact', head: true }).eq('status', 'draft'),
+        (supabase as unknown).from('properties').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
+        (supabase as unknown).from('tours').select('*', { count: 'exact', head: true }).eq('approval_status', 'pending'),
+        (supabase as unknown).from('community_events').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
+        // Ad subs that need admin review = paid (status='active') AND
+        // admin_review_status='pending'. Stripe webhook flips status to 'active'
+        // on payment; admin then approves/rejects to gate visibility in featured rails.
+        (supabase as unknown).from('advertising_subscriptions').select('*', { count: 'exact', head: true }).eq('status', 'active').eq('admin_review_status', 'pending'),
+      ]);
+      const pendingApps =
+        (q_driverApps || 0) +
+        (q_hotelOwners || 0) +
+        (q_restaurants || 0) +
+        (q_tourOps || 0) +
+        (q_services || 0) +
+        (q_sellers || 0) +
+        (q_marketplace || 0) +
+        (q_properties || 0) +
+        (q_tourPkgs || 0) +
+        (q_events || 0) +
+        (q_adSubs || 0);
 
       // Get active drivers
       const { count: activeDrivers } = await supabase
@@ -148,7 +188,7 @@ const AdminDashboard = () => {
       icon: Clock,
       color: 'text-yellow-600',
       bgColor: 'bg-yellow-100',
-      onClick: () => navigate('/admin/applications'),
+      onClick: () => navigate('/admin/approvals'),
     },
     {
       title: 'Active Drivers',
@@ -260,10 +300,26 @@ const AdminDashboard = () => {
             <Button
               variant="outline"
               className="h-auto py-4 flex flex-col gap-2"
-              onClick={() => navigate('/admin/applications')}
+              onClick={() => navigate('/admin/approvals')}
             >
               <Clock className="h-6 w-6" />
               <span>Review Applications</span>
+            </Button>
+            <Button
+              variant="outline"
+              className="h-auto py-4 flex flex-col gap-2 border-blue-300 bg-blue-50 hover:bg-blue-100"
+              onClick={() => navigate('/admin/messages')}
+            >
+              <MessageCircle className="h-6 w-6 text-[#1e3a8a]" />
+              <span>All Messages</span>
+            </Button>
+            <Button
+              variant="outline"
+              className="h-auto py-4 flex flex-col gap-2"
+              onClick={() => navigate('/admin/audit-log')}
+            >
+              <Activity className="h-6 w-6" />
+              <span>Activity Log</span>
             </Button>
             <Button
               variant="outline"
@@ -329,6 +385,14 @@ const AdminDashboard = () => {
               <ShoppingCart className="h-6 w-6" />
               <span>View Orders</span>
             </Button>
+            <Button
+              variant="outline"
+              className="h-auto py-4 flex flex-col gap-2"
+              onClick={() => navigate('/admin/daily-data')}
+            >
+              <Zap className="h-6 w-6" />
+              <span>Daily Data</span>
+            </Button>
           </div>
         </Card>
 
@@ -350,7 +414,7 @@ const AdminDashboard = () => {
                   variant="outline"
                   size="sm"
                   className="mt-3"
-                  onClick={() => navigate('/admin/applications')}
+                  onClick={() => navigate('/admin/approvals')}
                 >
                   Review Applications
                 </Button>

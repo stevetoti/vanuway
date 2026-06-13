@@ -144,7 +144,7 @@ export default function DriverIndex() {
       </div>
 
       {/* Already a Driver */}
-      <div className="px-4 py-4">
+      <div className="px-4 py-4 space-y-3">
         <Card className="bg-gray-100 p-4">
           <div className="flex items-center justify-between">
             <div>
@@ -153,6 +153,17 @@ export default function DriverIndex() {
             </div>
             <Button variant="outline" onClick={() => navigate('/driver/dashboard')}>
               Dashboard
+            </Button>
+          </div>
+        </Card>
+        <Card className="bg-gray-100 p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h4 className="font-semibold">Manage your services</h4>
+              <p className="text-sm text-muted-foreground">Set up tours, transfers, and pricing</p>
+            </div>
+            <Button variant="outline" onClick={() => navigate('/driver/services')}>
+              My Services
             </Button>
           </div>
         </Card>

@@ -12,7 +12,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { supabase } from '@/integrations/supabase/client';
@@ -30,9 +29,10 @@ interface TripWithDetails extends TransportTrip {
   fares: TransportFare[];
 }
 
-export default function FerryFlightsIndex() {
+export default function FerryIndex() {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'all' | 'ferry' | 'flight'>('all');
+  // Ferry-only page. Flights moved to /flights (Duffel-powered, worldwide).
+  const activeTab = 'ferry' as const;
   const [origin, setOrigin] = useState('Efate');
   const [destination, setDestination] = useState('');
   const [departureDate, setDepartureDate] = useState<Date>(addDays(new Date(), 1));
@@ -45,7 +45,7 @@ export default function FerryFlightsIndex() {
     queryFn: async () => {
       if (!destination || !departureDate) return [];
 
-      let query = (supabase as any)
+      let query = (supabase as unknown)
         .from('transport_trips')
         .select(`
           *,
@@ -73,10 +73,10 @@ export default function FerryFlightsIndex() {
       if (tripsError) throw tripsError;
 
       // Fetch fares for each trip's route
-      const routeIds = [...new Set((tripsData || []).map((t: any) => t.route_id))];
+      const routeIds = [...new Set((tripsData || []).map((t: unknown) => t.route_id))];
       if (routeIds.length === 0) return [];
 
-      const { data: faresData, error: faresError } = await (supabase as any)
+      const { data: faresData, error: faresError } = await (supabase as unknown)
         .from('transport_fares')
         .select('*')
         .in('route_id', routeIds)
@@ -85,7 +85,7 @@ export default function FerryFlightsIndex() {
       if (faresError) throw faresError;
 
       // Attach fares to trips
-      return (tripsData || []).map((trip: any) => ({
+      return (tripsData || []).map((trip: unknown) => ({
         ...trip,
         fares: (faresData || []).filter((f: TransportFare) => f.route_id === trip.route_id),
       })) as TripWithDetails[];
@@ -140,26 +140,18 @@ export default function FerryFlightsIndex() {
             >
               <ArrowLeft className="h-6 w-6" />
             </Button>
-            <h1 className="text-xl font-bold">Ferry & Flights</h1>
+            <h1 className="text-xl font-bold">Ferry</h1>
             <div className="w-10" />
           </div>
 
-          {/* Transport Type Tabs */}
-          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="mb-4">
-            <TabsList className="grid w-full grid-cols-3 bg-white/20">
-              <TabsTrigger value="all" className="text-white data-[state=active]:bg-white data-[state=active]:text-blue-600">
-                All
-              </TabsTrigger>
-              <TabsTrigger value="ferry" className="text-white data-[state=active]:bg-white data-[state=active]:text-blue-600">
-                <Ship className="h-4 w-4 mr-1" />
-                Ferry
-              </TabsTrigger>
-              <TabsTrigger value="flight" className="text-white data-[state=active]:bg-white data-[state=active]:text-blue-600">
-                <Plane className="h-4 w-4 mr-1" />
-                Flight
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
+          {/* Looking for flights nudge */}
+          <button
+            onClick={() => navigate('/flights')}
+            className="w-full mb-4 p-2.5 bg-white/15 hover:bg-white/25 rounded-lg flex items-center gap-2 text-left transition-colors"
+          >
+            <Plane className="h-4 w-4 flex-shrink-0" />
+            <span className="text-sm flex-1">Looking for flights? Search 300+ airlines →</span>
+          </button>
 
           {/* Search Form */}
           <Card className="bg-white/10 backdrop-blur border-white/20">
@@ -286,7 +278,7 @@ export default function FerryFlightsIndex() {
                 disabled={!destination}
               >
                 <Search className="h-4 w-4 mr-2" />
-                Search {activeTab === 'all' ? 'Trips' : activeTab === 'ferry' ? 'Ferries' : 'Flights'}
+                Search ferries
               </Button>
             </CardContent>
           </Card>
@@ -298,9 +290,9 @@ export default function FerryFlightsIndex() {
         {!hasSearched ? (
           <Card className="p-8 text-center">
             <Ship className="h-12 w-12 text-blue-500 mx-auto mb-3" />
-            <h3 className="font-semibold text-lg mb-2">Search for Trips</h3>
+            <h3 className="font-semibold text-lg mb-2">Search for ferries</h3>
             <p className="text-muted-foreground text-sm">
-              Select your destination and travel date to find available ferries and flights.
+              Select your destination and travel date to find available ferries between Vanuatu islands.
             </p>
           </Card>
         ) : isLoading ? (
@@ -319,7 +311,7 @@ export default function FerryFlightsIndex() {
             <Search className="h-12 w-12 text-gray-400 mx-auto mb-3" />
             <h3 className="font-semibold text-lg mb-2">No trips found</h3>
             <p className="text-muted-foreground text-sm">
-              No {activeTab === 'all' ? 'trips' : activeTab === 'ferry' ? 'ferries' : 'flights'} available for {format(departureDate, 'MMM d, yyyy')}.
+              No ferries available for {format(departureDate, 'MMM d, yyyy')}.
               Try a different date.
             </p>
           </Card>

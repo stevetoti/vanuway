@@ -152,8 +152,8 @@ const ApplicationReview = () => {
         .eq('driver_id', driverId);
 
       setDriver({ ...driverData, vehicles: vehiclesData || [] });
-      setDocuments(docsData as any || []);
-    } catch (error: any) {
+      setDocuments(docsData as unknown || []);
+    } catch (error: unknown) {
       console.error('Error loading application:', error);
       toast.error('Failed to load application details');
     } finally {
@@ -209,7 +209,7 @@ const ApplicationReview = () => {
         toast.success('Application approved! (Email notification could not be sent)');
       }
       navigate('/admin/applications');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error approving application:', error);
       toast.error('Failed to approve application');
     } finally {
@@ -266,7 +266,7 @@ const ApplicationReview = () => {
         toast.success('Application rejected. (Email notification could not be sent)');
       }
       navigate('/admin/applications');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error rejecting application:', error);
       toast.error('Failed to reject application');
     } finally {

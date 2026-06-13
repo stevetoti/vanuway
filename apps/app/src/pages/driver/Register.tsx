@@ -24,7 +24,7 @@ const DriverRegister = () => {
       });
 
       navigate('/driver/dashboard');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Registration error:', error);
       toast.error('Failed to submit application', {
         description: error.message || 'Please try again later',

@@ -7,20 +7,61 @@ import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
 import {
-  ArrowLeft, Calendar, Clock, MapPin, Plus, AlertCircle, CheckCircle2, XCircle, FileEdit
+  ArrowLeft, Calendar, Clock, MapPin, Plus, AlertCircle, CheckCircle2, XCircle, FileEdit, Sparkles
 } from 'lucide-react';
+import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { useToast } from '@/hooks/use-toast';
+import { BulkImportWizard, type ImportedItem } from '@/components/import/BulkImportWizard';
+import { LinkedStoreCard } from '@/components/import/LinkedStoreCard';
+import { registerImportSource, makeExternalIdFromItem } from '@/lib/import/source-link';
 import { CommunityEvent } from '@/types/events';
 import { format, parseISO } from 'date-fns';
 
 export default function MyEvents() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [importOpen, setImportOpen] = useState(false);
+
+  const importEvents = async (items: ImportedItem[], context?: { sourceUrl?: string; mode: 'ai' | 'csv' }) => {
+    if (!user) return;
+    const sourceId = await registerImportSource(user.id, 'event', context?.sourceUrl);
+    const { data: prof } = await (supabase as unknown)
+      .from('profiles').select('full_name').eq('id', user.id).maybeSingle();
+    const organizerName = prof?.full_name || user.email?.split('@')[0] || 'Event Organiser';
+    const rows = items.map((it) => ({
+      organizer_id: user.id,
+      organizer_name: organizerName,
+      title: String(it.name || '').slice(0, 200) || 'Untitled event',
+      description: String(it.description || it.name || 'No description'),
+      category: 'community',
+      start_date: parseEventDate(String(it.date || '')),
+      venue_name: String(it.location || 'TBA'),
+      island: 'Efate',
+      is_free: !it.price || Number(it.price) === 0,
+      price_adult: Number(it.price) || 0,
+      image_url: String(it.image_url || ''),
+      status: 'pending',
+      source_id: sourceId,
+      source_external_id: makeExternalIdFromItem(it),
+      last_seen_in_source_at: sourceId ? new Date().toISOString() : null,
+    }));
+    const { error } = await (supabase as unknown).from('community_events').insert(rows);
+    if (error) throw error;
+    toast({
+      title: `Imported ${rows.length} events`,
+      description: sourceId ? "Your website is now linked. We'll auto-sync new products weekly." : undefined,
+    });
+    queryClient.invalidateQueries({ queryKey: ['my-events'] });
+  };
 
   const { data: events, isLoading } = useQuery({
     queryKey: ['my-events', user?.id],
     queryFn: async () => {
       if (!user) return [];
-      const { data, error } = await (supabase as any)
+      const { data, error } = await (supabase as unknown)
         .from('community_events')
         .select('*')
         .eq('organizer_id', user.id)
@@ -96,20 +137,34 @@ export default function MyEvents() {
             <ArrowLeft className="h-6 w-6" />
           </Button>
           <h1 className="text-xl font-bold">My Events</h1>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="text-white hover:bg-white/20"
-            onClick={() => navigate('/events/create')}
-          >
-            <Plus className="h-5 w-5" />
-          </Button>
+          <div className="flex gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-white hover:bg-white/20"
+              onClick={() => setImportOpen(true)}
+              title="Import from website"
+            >
+              <Sparkles className="h-5 w-5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-white hover:bg-white/20"
+              onClick={() => navigate('/events/create')}
+            >
+              <Plus className="h-5 w-5" />
+            </Button>
+          </div>
         </div>
         <p className="text-white/80 text-sm text-center">Manage your submitted events</p>
       </div>
 
       {/* Content */}
       <div className="px-4 py-6">
+        <div className="mb-4">
+          <LinkedStoreCard vendorKind="event" label="your events" />
+        </div>
         {isLoading ? (
           <div className="space-y-4">
             {[1, 2, 3].map(i => (
@@ -175,8 +230,29 @@ export default function MyEvents() {
           </Tabs>
         )}
       </div>
+
+      <BulkImportWizard
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        vendorType="event"
+        itemLabel="events"
+        previewFields={[
+          { key: 'name', label: 'Event name', type: 'text' },
+          { key: 'date', label: 'Date', type: 'text' },
+          { key: 'location', label: 'Location', type: 'text' },
+          { key: 'price', label: 'Price (VUV)', type: 'number' },
+        ]}
+        onConfirm={importEvents}
+      />
     </div>
   );
+}
+
+function parseEventDate(text: string): string {
+  if (!text) return new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString();
+  const d = new Date(text);
+  if (!isNaN(d.getTime())) return d.toISOString();
+  return new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString();
 }
 
 function EventCard({ event, getStatusBadge, navigate }: { event: CommunityEvent; getStatusBadge: (status: string) => JSX.Element; navigate: (path: string) => void }) {

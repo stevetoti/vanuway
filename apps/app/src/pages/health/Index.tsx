@@ -20,7 +20,7 @@ export default function HealthIndex() {
   const { data: pharmacies } = useQuery({
     queryKey: ['featured-pharmacies'],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await (supabase as unknown)
         .from('pharmacies')
         .select('*')
         .eq('status', 'approved')
@@ -36,7 +36,7 @@ export default function HealthIndex() {
   const { data: hospitals } = useQuery({
     queryKey: ['featured-hospitals'],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await (supabase as unknown)
         .from('hospitals')
         .select('*')
         .eq('status', 'approved')
@@ -52,7 +52,7 @@ export default function HealthIndex() {
   const { data: labs } = useQuery({
     queryKey: ['featured-labs'],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await (supabase as unknown)
         .from('labs')
         .select('*')
         .eq('status', 'approved')

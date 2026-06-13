@@ -10,11 +10,12 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import {
   ArrowLeft, Share2, Heart, MapPin, Clock, Eye, MessageCircle,
-  Phone, ChevronLeft, ChevronRight, Flag, CheckCircle
+  Phone, ChevronLeft, ChevronRight, Flag, CheckCircle, ShoppingCart
 } from 'lucide-react';
 import { formatDistanceToNow, parseISO, format } from 'date-fns';
 import { MarketplaceListing, CONDITIONS, LISTING_TYPES } from '@/types/marketplace';
 import { cn } from '@/lib/utils';
+import { useCart } from '@/lib/marketplace/cart';
 
 export default function ListingDetails() {
   const navigate = useNavigate();
@@ -23,11 +24,12 @@ export default function ListingDetails() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const { add: addToCart, items: cartItems } = useCart();
 
   const { data: listing, isLoading } = useQuery({
     queryKey: ['marketplace-listing', listingId],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await (supabase as unknown)
         .from('marketplace_listings')
         .select('*')
         .eq('id', listingId)
@@ -36,7 +38,7 @@ export default function ListingDetails() {
       if (error) throw error;
 
       // Increment view count
-      await (supabase as any).rpc('increment_listing_views', { listing_id: listingId });
+      await (supabase as unknown).rpc('increment_listing_views', { listing_id: listingId });
 
       return data as MarketplaceListing;
     },
@@ -47,7 +49,7 @@ export default function ListingDetails() {
     queryKey: ['marketplace-saved', listingId, user?.id],
     queryFn: async () => {
       if (!user) return false;
-      const { data } = await (supabase as any)
+      const { data } = await (supabase as unknown)
         .from('marketplace_saves')
         .select('id')
         .eq('listing_id', listingId)
@@ -64,14 +66,14 @@ export default function ListingDetails() {
       if (!user) throw new Error('Login required');
 
       if (isSaved) {
-        const { error } = await (supabase as any)
+        const { error } = await (supabase as unknown)
           .from('marketplace_saves')
           .delete()
           .eq('listing_id', listingId)
           .eq('user_id', user.id);
         if (error) throw error;
       } else {
-        const { error } = await (supabase as any)
+        const { error } = await (supabase as unknown)
           .from('marketplace_saves')
           .insert({ listing_id: listingId, user_id: user.id });
         if (error) throw error;
@@ -301,14 +303,11 @@ export default function ListingDetails() {
         {/* Seller Info */}
         <Card>
           <CardContent className="p-4">
-            <h3 className="font-semibold mb-3">Contact Seller</h3>
-            {listing.show_phone && listing.contact_phone && (
-              <p className="text-muted-foreground mb-3">
-                <Phone className="h-4 w-4 inline mr-2" />
-                {listing.contact_phone}
-              </p>
-            )}
+            <h3 className="font-semibold mb-2">About the seller</h3>
             <p className="text-xs text-muted-foreground">
+              All purchases and conversations happen on VanuWay. We don't share seller phone numbers or emails — message them in-app to ask questions.
+            </p>
+            <p className="text-xs text-muted-foreground mt-2">
               Posted {format(parseISO(listing.created_at), 'MMMM d, yyyy')}
             </p>
           </CardContent>
@@ -344,24 +343,52 @@ export default function ListingDetails() {
             </Button>
           </div>
         ) : (
-          <div className="flex gap-3">
+          <div className="space-y-2">
             <Button
               variant="outline"
-              className="flex-1"
-              onClick={handleCall}
-              disabled={!listing.contact_phone}
-            >
-              <Phone className="h-4 w-4 mr-2" />
-              Call
-            </Button>
-            <Button
-              className="flex-1 bg-green-600 hover:bg-green-700"
-              onClick={handleWhatsApp}
-              disabled={!listing.contact_whatsapp}
+              className="w-full"
+              onClick={() => navigate(`/marketplace/chat/${listing.id}?seller=${listing.user_id}`)}
             >
               <MessageCircle className="h-4 w-4 mr-2" />
-              WhatsApp
+              Chat with seller
             </Button>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => {
+                  addToCart({
+                    listingId: listing.id,
+                    title: listing.title,
+                    image: Array.isArray(listing.images) ? listing.images[0] : undefined,
+                    price: Number(listing.price) || 0,
+                    sellerId: listing.user_id,
+                  });
+                  toast({ title: 'Added to cart', description: listing.title });
+                }}
+                disabled={cartItems.some(i => i.listingId === listing.id)}
+              >
+                <ShoppingCart className="h-4 w-4 mr-2" />
+                {cartItems.some(i => i.listingId === listing.id) ? 'In cart' : 'Add to cart'}
+              </Button>
+              <Button
+                className="flex-1 bg-purple-600 hover:bg-purple-700"
+                onClick={() => {
+                  if (!cartItems.some(i => i.listingId === listing.id)) {
+                    addToCart({
+                      listingId: listing.id,
+                      title: listing.title,
+                      image: Array.isArray(listing.images) ? listing.images[0] : undefined,
+                      price: Number(listing.price) || 0,
+                      sellerId: listing.user_id,
+                    });
+                  }
+                  navigate('/marketplace/cart');
+                }}
+              >
+                Buy now
+              </Button>
+            </div>
           </div>
         )}
       </div>

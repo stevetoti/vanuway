@@ -79,9 +79,9 @@ const AdminHotelReview = () => {
 
       setHotel({
         ...hotelData,
-        rooms: roomsData as any || [],
-      } as any);
-    } catch (error: any) {
+        rooms: roomsData as unknown || [],
+      } as unknown);
+    } catch (error: unknown) {
       console.error('Error loading hotel:', error);
       toast.error('Failed to load hotel details');
       navigate('/admin/hotels');
@@ -113,7 +113,7 @@ const AdminHotelReview = () => {
 
       setShowApproveDialog(false);
       navigate('/admin/hotels');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error approving hotel:', error);
       toast.error('Failed to approve hotel', {
         description: error.message,
@@ -150,7 +150,7 @@ const AdminHotelReview = () => {
 
       setShowRejectDialog(false);
       navigate('/admin/hotels');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error rejecting hotel:', error);
       toast.error('Failed to reject hotel', {
         description: error.message,
@@ -179,7 +179,7 @@ const AdminHotelReview = () => {
 
       toast.success('Hotel suspended');
       loadHotelDetails();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error suspending hotel:', error);
       toast.error('Failed to suspend hotel');
     }
@@ -202,14 +202,14 @@ const AdminHotelReview = () => {
 
       toast.success('Hotel reactivated');
       loadHotelDetails();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error reactivating hotel:', error);
       toast.error('Failed to reactivate hotel');
     }
   };
 
   const getStatusBadge = (status: string) => {
-    const variants: Record<string, { className: string; icon: any }> = {
+    const variants: Record<string, { className: string; icon: unknown }> = {
       draft: { className: 'bg-gray-100 text-gray-800', icon: Clock },
       pending_review: { className: 'bg-yellow-100 text-yellow-800', icon: Clock },
       active: { className: 'bg-green-100 text-green-800', icon: CheckCircle },
@@ -506,7 +506,7 @@ const AdminHotelReview = () => {
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Phone</p>
-                    <p className="font-medium">{(hotel.owner as any).phone || 'N/A'}</p>
+                    <p className="font-medium">{(hotel.owner as unknown).phone || 'N/A'}</p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Verification Status</p>
@@ -523,21 +523,21 @@ const AdminHotelReview = () => {
             )}
 
             {/* Admin Notes */}
-            {(hotel as any).admin_notes && (
+            {(hotel as unknown).admin_notes && (
               <Card className="p-6">
                 <h3 className="font-semibold mb-2">Admin Notes</h3>
                 <p className="text-sm text-muted-foreground whitespace-pre-line">
-                  {(hotel as any).admin_notes}
+                  {(hotel as unknown).admin_notes}
                 </p>
               </Card>
             )}
 
             {/* Rejection Reason */}
-            {(hotel as any).rejection_reason && (
+            {(hotel as unknown).rejection_reason && (
               <Card className="p-6 bg-red-50 border-red-200">
                 <h3 className="font-semibold mb-2 text-red-900">Rejection Reason</h3>
                 <p className="text-sm text-red-800 whitespace-pre-line">
-                  {(hotel as any).rejection_reason}
+                  {(hotel as unknown).rejection_reason}
                 </p>
               </Card>
             )}

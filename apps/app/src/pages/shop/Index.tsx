@@ -21,7 +21,7 @@ import {
 import { Shop, ShopCategory, VANUATU_ISLANDS, SHOP_ICONS } from '@/types/shop';
 import { cn } from '@/lib/utils';
 
-const iconMap: Record<string, any> = {
+const iconMap: Record<string, unknown> = {
   ShoppingCart, Store, Leaf, Pill, Hammer, Smartphone, Baby, Dog,
   Briefcase, Croissant, GlassWater, Beef, Package
 };
@@ -35,7 +35,7 @@ export default function ShopIndex() {
   const { data: categories } = useQuery({
     queryKey: ['shop-categories'],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await (supabase as unknown)
         .from('shop_categories')
         .select('*')
         .eq('is_active', true)
@@ -49,7 +49,7 @@ export default function ShopIndex() {
   const { data: shops, isLoading } = useQuery({
     queryKey: ['shops', selectedCategory, selectedIsland, searchQuery],
     queryFn: async () => {
-      let query = (supabase as any)
+      let query = (supabase as unknown)
         .from('shops')
         .select('*')
         .eq('is_active', true)
@@ -72,12 +72,12 @@ export default function ShopIndex() {
       if (data && data.length > 0) return data as Shop[];
       // Fallback seed data for when Supabase is empty
       return [
-        { id: 'seed-1', name: 'Vila Fresh Market', description: 'Fresh local produce, fruits, vegetables and island foods. The best of Vanuatu\'s agriculture delivered to your door.', category: 'grocery', island: 'Efate', area: 'Port Vila Town', logo_url: '', average_rating: 4.7, total_reviews: 89, is_active: true, offers_delivery: true, delivery_fee: 300, free_delivery_minimum: 5000, estimated_delivery_time: 30, opening_time: '06:00', closing_time: '18:00', open_days: ['monday','tuesday','wednesday','thursday','friday','saturday'], phone: '+678 22345' } as any,
-        { id: 'seed-2', name: 'Nambawan Electronics', description: 'Electronics, phones, laptops, and accessories. Official dealer for Samsung, Apple, and more.', category: 'electronics', island: 'Efate', area: 'Lini Highway', logo_url: '', average_rating: 4.5, total_reviews: 56, is_active: true, offers_delivery: true, delivery_fee: 500, free_delivery_minimum: 20000, estimated_delivery_time: 60, opening_time: '08:00', closing_time: '17:00', open_days: ['monday','tuesday','wednesday','thursday','friday','saturday'], phone: '+678 23456' } as any,
-        { id: 'seed-3', name: 'Island Style Clothing', description: 'Trendy island fashion, custom-made dresses, shirts, and traditional Vanuatu wear.', category: 'fashion', island: 'Efate', area: 'Rue Carnot', logo_url: '', average_rating: 4.6, total_reviews: 42, is_active: true, offers_delivery: true, delivery_fee: 200, free_delivery_minimum: 8000, estimated_delivery_time: 45, opening_time: '09:00', closing_time: '17:00', open_days: ['monday','tuesday','wednesday','thursday','friday','saturday'], phone: '+678 24567' } as any,
-        { id: 'seed-4', name: 'Vanuatu Handcraft Shop', description: 'Authentic handcrafted souvenirs, wood carvings, woven baskets, and traditional Ni-Vanuatu art.', category: 'handicraft', island: 'Efate', area: 'Seafront', logo_url: '', average_rating: 4.8, total_reviews: 73, is_active: true, offers_delivery: true, delivery_fee: 400, free_delivery_minimum: 10000, estimated_delivery_time: 45, opening_time: '08:00', closing_time: '17:00', open_days: ['monday','tuesday','wednesday','thursday','friday','saturday'], phone: '+678 25678' } as any,
-        { id: 'seed-5', name: 'Pacific Hardware', description: 'Building materials, tools, paints, and home improvement supplies for all your projects.', category: 'hardware', island: 'Efate', area: 'Nambatu', logo_url: '', average_rating: 4.3, total_reviews: 31, is_active: true, offers_delivery: true, delivery_fee: 1000, free_delivery_minimum: 30000, estimated_delivery_time: 120, opening_time: '07:00', closing_time: '17:00', open_days: ['monday','tuesday','wednesday','thursday','friday','saturday'], phone: '+678 26789' } as any,
-        { id: 'seed-6', name: 'Digicel Store', description: 'Mobile phones, SIM cards, data plans, and Digicel services. Stay connected across Vanuatu.', category: 'electronics', island: 'Efate', area: 'Port Vila Town', logo_url: '', average_rating: 4.2, total_reviews: 67, is_active: true, offers_delivery: false, delivery_fee: 0, free_delivery_minimum: 0, estimated_delivery_time: 0, opening_time: '08:00', closing_time: '17:00', open_days: ['monday','tuesday','wednesday','thursday','friday','saturday'], phone: '+678 27890' } as any,
+        { id: 'seed-1', name: 'Vila Fresh Market', description: 'Fresh local produce, fruits, vegetables and island foods. The best of Vanuatu\'s agriculture delivered to your door.', category: 'grocery', island: 'Efate', area: 'Port Vila Town', logo_url: '', average_rating: 4.7, total_reviews: 89, is_active: true, offers_delivery: true, delivery_fee: 300, free_delivery_minimum: 5000, estimated_delivery_time: 30, opening_time: '06:00', closing_time: '18:00', open_days: ['monday','tuesday','wednesday','thursday','friday','saturday'], phone: '+678 22345' } as unknown,
+        { id: 'seed-2', name: 'Nambawan Electronics', description: 'Electronics, phones, laptops, and accessories. Official dealer for Samsung, Apple, and more.', category: 'electronics', island: 'Efate', area: 'Lini Highway', logo_url: '', average_rating: 4.5, total_reviews: 56, is_active: true, offers_delivery: true, delivery_fee: 500, free_delivery_minimum: 20000, estimated_delivery_time: 60, opening_time: '08:00', closing_time: '17:00', open_days: ['monday','tuesday','wednesday','thursday','friday','saturday'], phone: '+678 23456' } as unknown,
+        { id: 'seed-3', name: 'Island Style Clothing', description: 'Trendy island fashion, custom-made dresses, shirts, and traditional Vanuatu wear.', category: 'fashion', island: 'Efate', area: 'Rue Carnot', logo_url: '', average_rating: 4.6, total_reviews: 42, is_active: true, offers_delivery: true, delivery_fee: 200, free_delivery_minimum: 8000, estimated_delivery_time: 45, opening_time: '09:00', closing_time: '17:00', open_days: ['monday','tuesday','wednesday','thursday','friday','saturday'], phone: '+678 24567' } as unknown,
+        { id: 'seed-4', name: 'Vanuatu Handcraft Shop', description: 'Authentic handcrafted souvenirs, wood carvings, woven baskets, and traditional Ni-Vanuatu art.', category: 'handicraft', island: 'Efate', area: 'Seafront', logo_url: '', average_rating: 4.8, total_reviews: 73, is_active: true, offers_delivery: true, delivery_fee: 400, free_delivery_minimum: 10000, estimated_delivery_time: 45, opening_time: '08:00', closing_time: '17:00', open_days: ['monday','tuesday','wednesday','thursday','friday','saturday'], phone: '+678 25678' } as unknown,
+        { id: 'seed-5', name: 'Pacific Hardware', description: 'Building materials, tools, paints, and home improvement supplies for all your projects.', category: 'hardware', island: 'Efate', area: 'Nambatu', logo_url: '', average_rating: 4.3, total_reviews: 31, is_active: true, offers_delivery: true, delivery_fee: 1000, free_delivery_minimum: 30000, estimated_delivery_time: 120, opening_time: '07:00', closing_time: '17:00', open_days: ['monday','tuesday','wednesday','thursday','friday','saturday'], phone: '+678 26789' } as unknown,
+        { id: 'seed-6', name: 'Digicel Store', description: 'Mobile phones, SIM cards, data plans, and Digicel services. Stay connected across Vanuatu.', category: 'electronics', island: 'Efate', area: 'Port Vila Town', logo_url: '', average_rating: 4.2, total_reviews: 67, is_active: true, offers_delivery: false, delivery_fee: 0, free_delivery_minimum: 0, estimated_delivery_time: 0, opening_time: '08:00', closing_time: '17:00', open_days: ['monday','tuesday','wednesday','thursday','friday','saturday'], phone: '+678 27890' } as unknown,
       ] as Shop[];
     },
   });

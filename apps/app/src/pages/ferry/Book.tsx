@@ -60,7 +60,7 @@ export default function BookTrip() {
   const { data: trip, isLoading: loadingTrip } = useQuery({
     queryKey: ['transport-trip', tripId],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await (supabase as unknown)
         .from('transport_trips')
         .select(`
           *,
@@ -81,7 +81,7 @@ export default function BookTrip() {
   const { data: fares, isLoading: loadingFares } = useQuery({
     queryKey: ['transport-fares', trip?.route_id],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await (supabase as unknown)
         .from('transport_fares')
         .select('*')
         .eq('route_id', trip?.route_id)
@@ -122,7 +122,7 @@ export default function BookTrip() {
       const totalPrice = calculateTotalPrice();
 
       // Create booking
-      const { data: booking, error: bookingError } = await (supabase as any)
+      const { data: booking, error: bookingError } = await (supabase as unknown)
         .from('transport_bookings')
         .insert({
           user_id: user.id,
@@ -153,7 +153,7 @@ export default function BookTrip() {
         last_name: p.last_name,
       }));
 
-      const { error: passengersError } = await (supabase as any)
+      const { error: passengersError } = await (supabase as unknown)
         .from('transport_passengers')
         .insert(passengerRecords);
 
@@ -168,7 +168,7 @@ export default function BookTrip() {
       });
       navigate(`/ferry/confirmation/${booking.id}`);
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
         title: 'Booking Failed',
         description: error.message || 'Something went wrong',

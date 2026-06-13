@@ -74,7 +74,7 @@ export default function LanguageSelector() {
 
       toast.success('Language preference updated');
       navigate('/profile');
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast.error(error.message || 'Failed to update language');
     } finally {
       setIsSubmitting(false);

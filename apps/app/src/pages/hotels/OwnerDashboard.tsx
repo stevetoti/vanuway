@@ -70,7 +70,7 @@ const HotelOwnerDashboard = () => {
         throw ownerError;
       }
 
-      setOwnerProfile(owner as any);
+      setOwnerProfile(owner as unknown);
 
       // Get hotels
       const { data: hotelsData, error: hotelsError } = await supabase
@@ -80,7 +80,7 @@ const HotelOwnerDashboard = () => {
         .order('created_at', { ascending: false });
 
       if (hotelsError) throw hotelsError;
-      setHotels(hotelsData as any || []);
+      setHotels(hotelsData as unknown || []);
 
       // Get recent bookings
       if (hotelsData && hotelsData.length > 0) {
@@ -93,7 +93,7 @@ const HotelOwnerDashboard = () => {
           .limit(5);
 
         if (bookingsError) throw bookingsError;
-        setRecentBookings(bookingsData as any || []);
+        setRecentBookings(bookingsData as unknown || []);
 
         // Calculate stats
         const { count: activeCount } = await supabase
@@ -126,7 +126,7 @@ const HotelOwnerDashboard = () => {
           unreadMessages: 0,
         });
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error loading dashboard:', error);
       toast.error('Failed to load dashboard data');
     } finally {

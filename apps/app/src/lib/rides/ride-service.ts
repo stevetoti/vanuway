@@ -31,6 +31,8 @@ export interface CreateRideRequest {
   paymentMethodId?: string;
   paymentMethodType?: string;
   category?: 'regular' | 'airport' | 'scheduled';
+  passengerPhone?: string;
+  passengerName?: string;
 }
 
 export interface RideDetails {
@@ -52,7 +54,7 @@ export interface RideDetails {
   updatedAt: string;
 }
 
-export interface RideServiceResult<T = any> {
+export interface RideServiceResult<T = unknown> {
   success: boolean;
   data?: T;
   error?: string;
@@ -74,6 +76,20 @@ export const createRideRequest = async (
       };
     }
 
+    // Snapshot passenger phone from profiles if not provided. This mirrors
+    // the advance_bookings.contact_phone pattern so drivers can always call.
+    let passengerPhone = request.passengerPhone;
+    let passengerName = request.passengerName;
+    if (!passengerPhone || !passengerName) {
+      const { data: prof } = await supabase
+        .from('profiles')
+        .select('phone, full_name')
+        .eq('id', request.userId)
+        .maybeSingle();
+      passengerPhone = passengerPhone || (prof as unknown)?.phone || null;
+      passengerName = passengerName || (prof as unknown)?.full_name || 'A passenger';
+    }
+
     // Create the ride booking
     const { data: ride, error } = await supabase
       .from('ride_bookings')
@@ -93,7 +109,8 @@ export const createRideRequest = async (
         payment_method_id: request.paymentMethodId,
         payment_method_type: request.paymentMethodType,
         category: request.category || 'regular',
-      })
+        passenger_phone: passengerPhone,
+      } as unknown)
       .select()
       .single();
 
@@ -105,7 +122,7 @@ export const createRideRequest = async (
     // Edge Function or DB trigger is set up for auto-assignment in the future,
     // it would run with service_role privileges and bypass RLS.
 
-    // Create notification for user
+    // Create notification for passenger
     await supabase.from('notifications').insert({
       user_id: request.userId,
       title: 'Ride Requested',
@@ -113,11 +130,53 @@ export const createRideRequest = async (
       type: 'ride_request',
     });
 
+    // Broadcast to eligible drivers: approved, online, matching vehicle type.
+    // In-app notification for all; email for those with an address on file.
+    try {
+      const { data: eligibleDrivers } = await supabase
+        .from('drivers')
+        .select('user_id, email, first_name')
+        .eq('status', 'available')
+        .eq('is_available', true)
+        .eq('vehicle_type', request.vehicleType)
+        .eq('application_status', 'approved');
+
+      if (eligibleDrivers && eligibleDrivers.length > 0) {
+        const rows = eligibleDrivers.map((d: unknown) => ({
+          user_id: d.user_id,
+          title: 'New Ride Request',
+          message: `${passengerName} needs a ride from ${request.pickupLocation} to ${request.dropoffLocation}. VUV ${request.priceEstimate.totalPrice.toLocaleString()}`,
+          type: 'ride_request',
+          is_read: false,
+        }));
+        await supabase.from('notifications').insert(rows);
+
+        // Fire-and-forget emails
+        eligibleDrivers.forEach((d: unknown) => {
+          if (!d.email) return;
+          supabase.functions.invoke('send-booking-notification', {
+            body: {
+              type: 'new_booking',
+              recipientEmail: d.email,
+              recipientName: d.first_name || 'Driver',
+              bookingDate: 'Now',
+              bookingTime: request.pickupLocation,
+              serviceCategory: 'ride',
+              passengers: request.passengerCount,
+              otherPartyName: passengerName,
+            },
+          }).catch(() => {});
+        });
+      }
+    } catch (notifyErr) {
+      console.error('Driver broadcast failed:', notifyErr);
+    }
+
     return {
       success: true,
       data: ride as unknown as RideDetails,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error creating ride request:', error);
     return {
       success: false,
@@ -156,7 +215,7 @@ export const getRideDetails = async (
       success: true,
       data: data as unknown as RideDetails,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     return {
       success: false,
       error: error.message || 'Failed to fetch ride details',
@@ -185,7 +244,7 @@ export const updateRideStatus = async (
     if (error) throw error;
 
     return { success: true };
-  } catch (error: any) {
+  } catch (error: unknown) {
     return {
       success: false,
       error: error.message || 'Failed to update ride status',
@@ -260,7 +319,7 @@ export const cancelRide = async (
     }
 
     return { success: true };
-  } catch (error: any) {
+  } catch (error: unknown) {
     return {
       success: false,
       error: error.message || 'Failed to cancel ride',
@@ -340,7 +399,7 @@ export const rateRide = async (
     }
 
     return { success: true };
-  } catch (error: any) {
+  } catch (error: unknown) {
     return {
       success: false,
       error: error.message || 'Failed to rate ride',
@@ -369,7 +428,7 @@ export const getUserRideHistory = async (
       success: true,
       data: data as unknown as RideDetails[],
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     return {
       success: false,
       error: error.message || 'Failed to fetch ride history',
@@ -394,7 +453,7 @@ export const subscribeToRideUpdates = (
         table: 'ride_bookings',
         filter: `id=eq.${rideId}`,
       },
-      (payload: any) => {
+      (payload: unknown) => {
         callback(payload.new as RideDetails);
       }
     )
@@ -426,7 +485,7 @@ export const checkDriverAvailability = async (
         count: drivers.length,
       },
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     return {
       success: false,
       error: error.message || 'Failed to check driver availability',

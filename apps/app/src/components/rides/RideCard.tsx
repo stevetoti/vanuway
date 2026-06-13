@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { MapPin, User, Banknote, Calendar } from 'lucide-react';
+import { MapPin, User, Banknote, Star } from 'lucide-react';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
@@ -22,6 +22,8 @@ interface RideCardProps {
   price: number;
   status: string;
   createdAt: string;
+  rating?: number | null;
+  onRate?: (rideId: string) => void;
 }
 
 const statusColors = {
@@ -41,8 +43,13 @@ export const RideCard = ({
   price,
   status,
   createdAt,
+  rating,
+  onRate,
 }: RideCardProps) => {
   const navigate = useNavigate();
+
+  const isCompleted = status === 'completed';
+  const isUnrated = isCompleted && !rating;
 
   return (
     <Card>
@@ -90,12 +97,34 @@ export const RideCard = ({
             </div>
           </div>
 
-          {status !== 'completed' && status !== 'cancelled' && (
+          {!isCompleted && status !== 'cancelled' && (
             <Button size="sm" variant="outline" onClick={() => navigate(`/rides/track/${id}`)}>
               Track
             </Button>
           )}
+
+          {isCompleted && rating ? (
+            <div className="flex items-center gap-0.5" aria-label={`Rated ${rating} of 5`}>
+              {[1, 2, 3, 4, 5].map((s) => (
+                <Star
+                  key={s}
+                  className={`h-4 w-4 ${s <= rating ? 'fill-amber-400 text-amber-400' : 'text-gray-200'}`}
+                />
+              ))}
+            </div>
+          ) : null}
         </div>
+
+        {/* Prominent Rate Driver CTA for completed but unrated rides — easy to spot when scrolling past rides. */}
+        {isUnrated && (
+          <Button
+            className="w-full h-11 bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-white font-semibold shadow-md shadow-amber-500/20"
+            onClick={() => (onRate ? onRate(id) : navigate(`/rides/track/${id}?rate=1`))}
+          >
+            <Star className="h-4 w-4 mr-2 fill-white text-white" />
+            Rate Driver
+          </Button>
+        )}
       </CardContent>
     </Card>
   );

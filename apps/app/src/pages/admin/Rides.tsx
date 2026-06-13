@@ -15,9 +15,10 @@ import { useNavigate } from 'react-router-dom';
 import {
   Car, Search, MapPin, Clock, DollarSign, User, Star,
   MessageSquare, XCircle, CheckCircle2, AlertTriangle,
-  ArrowLeft, Navigation, Loader2, Filter,
+  ArrowLeft, Navigation, Loader2, Filter, Shuffle,
 } from 'lucide-react';
 import { format } from 'date-fns';
+import { ReassignDriverDialog } from '@/components/admin/ReassignDriverDialog';
 
 interface RideBooking {
   id: string;
@@ -67,6 +68,7 @@ const AdminRides = () => {
   const [driverName, setDriverName] = useState('');
   const [passengerName, setPassengerName] = useState('');
   const [loadingDetail, setLoadingDetail] = useState(false);
+  const [reassignOpen, setReassignOpen] = useState(false);
 
   // Stats
   const [stats, setStats] = useState({
@@ -377,6 +379,17 @@ const AdminRides = () => {
                             <Car className="h-4 w-4 text-green-600" />
                             <span className="font-medium text-sm">{driverName || 'Not assigned'}</span>
                           </div>
+                          {['pending','accepted','arriving','arrived'].includes(selectedRide.status) && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="mt-2 h-7 text-xs w-full"
+                              onClick={() => setReassignOpen(true)}
+                            >
+                              <Shuffle className="h-3 w-3 mr-1.5" />
+                              {selectedRide.driver_id ? 'Reassign driver' : 'Assign driver'}
+                            </Button>
+                          )}
                         </Card>
                       </div>
 
@@ -491,6 +504,22 @@ const AdminRides = () => {
             )}
           </DialogContent>
         </Dialog>
+
+        {selectedRide && (
+          <ReassignDriverDialog
+            open={reassignOpen}
+            onOpenChange={setReassignOpen}
+            rideId={selectedRide.id}
+            rideVehicleType={selectedRide.vehicle_type}
+            currentDriverUserId={selectedRide.driver_id}
+            actor="admin"
+            onReassigned={() => {
+              setReassignOpen(false);
+              setSelectedRide(null);
+              fetchRides();
+            }}
+          />
+        )}
       </div>
     </Layout>
   );

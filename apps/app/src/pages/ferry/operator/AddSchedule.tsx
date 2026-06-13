@@ -34,7 +34,7 @@ export default function AddSchedule() {
     queryKey: ['operator-routes-for-schedule', operatorId],
     queryFn: async () => {
       if (!operatorId) return [];
-      const { data, error } = await (supabase as any)
+      const { data, error } = await (supabase as unknown)
         .from('transport_routes')
         .select('*')
         .eq('operator_id', operatorId)
@@ -90,14 +90,14 @@ export default function AddSchedule() {
         is_active: formData.is_active,
       };
 
-      const { error } = await (supabase as any)
+      const { error } = await (supabase as unknown)
         .from('transport_schedules')
         .insert(scheduleData);
 
       if (error) throw error;
 
       setIsSubmitted(true);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error adding schedule:', error);
       toast({ title: 'Error', description: error.message || 'Failed to add schedule', variant: 'destructive' });
     } finally {
@@ -199,7 +199,7 @@ export default function AddSchedule() {
                   <SelectValue placeholder="Choose a route" />
                 </SelectTrigger>
                 <SelectContent>
-                  {routes?.map((route: any) => (
+                  {routes?.map((route: unknown) => (
                     <SelectItem key={route.id} value={route.id}>
                       {route.origin_island} → {route.destination_island} ({route.type})
                     </SelectItem>

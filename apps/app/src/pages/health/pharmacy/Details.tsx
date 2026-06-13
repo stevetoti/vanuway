@@ -33,7 +33,9 @@ export default function PharmacyDetails() {
     if (savedCart) {
       try {
         setCart(JSON.parse(savedCart));
-      } catch (e) {}
+      } catch (error) {
+        console.warn('Could not restore pharmacy cart:', error);
+      }
     }
   }, [pharmacyId]);
 
@@ -45,7 +47,7 @@ export default function PharmacyDetails() {
   const { data: pharmacy, isLoading: loadingPharmacy } = useQuery({
     queryKey: ['pharmacy', pharmacyId],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await (supabase as unknown)
         .from('pharmacies')
         .select('*')
         .eq('id', pharmacyId)
@@ -59,7 +61,7 @@ export default function PharmacyDetails() {
   const { data: categories } = useQuery({
     queryKey: ['medicine-categories'],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await (supabase as unknown)
         .from('medicine_categories')
         .select('*')
         .order('sort_order');
@@ -72,7 +74,7 @@ export default function PharmacyDetails() {
   const { data: products } = useQuery({
     queryKey: ['pharmacy-products', pharmacyId, selectedCategory, searchQuery],
     queryFn: async () => {
-      let query = (supabase as any)
+      let query = (supabase as unknown)
         .from('pharmacy_products')
         .select('*, category:medicine_categories(*)')
         .eq('pharmacy_id', pharmacyId)

@@ -5,9 +5,11 @@ import { Card } from '@/components/ui/card';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from '@/components/ui/dialog';
-import { Star, ThumbsUp } from 'lucide-react';
+import { Star, ThumbsUp, Clock, Car, MessageCircle, DollarSign } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
+import { notify } from '@/lib/notifications/notification-service';
 
 const RATING_LABELS = ['', 'Terrible', 'Poor', 'Okay', 'Good', 'Excellent'];
 
@@ -20,6 +22,13 @@ const COMPLIMENTS = [
   { id: 'on_time', label: 'On time', icon: '⏰' },
 ];
 
+const SUB_RATINGS = [
+  { key: 'punctuality', label: 'Punctuality', icon: Clock, desc: 'Was the driver on time?' },
+  { key: 'vehicle', label: 'Vehicle', icon: Car, desc: 'Clean and comfortable?' },
+  { key: 'communication', label: 'Communication', icon: MessageCircle, desc: 'Friendly and helpful?' },
+  { key: 'value', label: 'Value', icon: DollarSign, desc: 'Fair for the price?' },
+];
+
 interface RideRatingProps {
   open: boolean;
   onClose: () => void;
@@ -28,15 +37,18 @@ interface RideRatingProps {
   pickupLocation: string;
   dropoffLocation: string;
   fare: number;
+  onSubmitted?: (rating: number) => void;
 }
 
 export const RideRating = ({
-  open, onClose, rideId, driverName, pickupLocation, dropoffLocation, fare,
+  open, onClose, rideId, driverName, pickupLocation, dropoffLocation, fare, onSubmitted,
 }: RideRatingProps) => {
+  const { user } = useAuth();
   const [rating, setRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
   const [comment, setComment] = useState('');
   const [selectedCompliments, setSelectedCompliments] = useState<string[]>([]);
+  const [subRatings, setSubRatings] = useState<Record<string, number>>({});
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
@@ -44,6 +56,10 @@ export const RideRating = ({
     setSelectedCompliments(prev =>
       prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id]
     );
+  };
+
+  const setSubRating = (key: string, value: number) => {
+    setSubRatings(prev => ({ ...prev, [key]: value }));
   };
 
   const handleSubmit = async () => {
@@ -55,6 +71,7 @@ export const RideRating = ({
         comment,
       ].filter(Boolean).join('. ');
 
+      // Update ride_bookings rating (backward compatible)
       const { error } = await supabase
         .from('ride_bookings')
         .update({
@@ -65,7 +82,7 @@ export const RideRating = ({
 
       if (error) throw error;
 
-      // Update driver's average rating
+      // Get driver_id from ride
       const { data: ride } = await supabase
         .from('ride_bookings')
         .select('driver_id')
@@ -73,6 +90,38 @@ export const RideRating = ({
         .single();
 
       if (ride?.driver_id) {
+        // Notify driver about new rating
+        const passengerName = user?.email?.split('@')[0] || 'A passenger';
+        notify.ratingReceived(ride.driver_id, rating, passengerName).catch(() => {});
+
+        // Get the actual drivers table id from user_id
+        const { data: driverRow } = await supabase
+          .from('drivers')
+          .select('id')
+          .eq('user_id', ride.driver_id)
+          .single();
+
+        if (driverRow && user) {
+          // Insert into driver_reviews with sub-ratings
+          await (supabase.from('driver_reviews' as unknown).insert({
+            driver_id: driverRow.id,
+            user_id: user.id,
+            ride_booking_id: rideId,
+            overall_rating: rating,
+            punctuality_rating: subRatings.punctuality || null,
+            vehicle_rating: subRatings.vehicle || null,
+            communication_rating: subRatings.communication || null,
+            value_rating: subRatings.value || null,
+            comment: fullComment || null,
+            compliments: selectedCompliments.length > 0
+              ? selectedCompliments.map(id => COMPLIMENTS.find(c => c.id === id)?.label).filter(Boolean)
+              : null,
+            service_type: 'ride',
+            is_verified: true,
+          }) as unknown);
+        }
+
+        // Update driver's average rating from ride_bookings (backward compatible)
         const { data: driverRides } = await supabase
           .from('ride_bookings')
           .select('rating')
@@ -83,15 +132,20 @@ export const RideRating = ({
           const avg = driverRides.reduce((sum, r) => sum + (r.rating || 0), 0) / driverRides.length;
           await supabase
             .from('drivers')
-            .update({ rating: parseFloat(avg.toFixed(2)) })
+            .update({
+              rating: parseFloat(avg.toFixed(2)),
+              average_rating: parseFloat(avg.toFixed(2)),
+              total_reviews: driverRides.length,
+            })
             .eq('user_id', ride.driver_id);
         }
       }
 
       setSubmitted(true);
       toast.success('Thanks for your feedback!');
+      onSubmitted?.(rating);
       setTimeout(onClose, 1500);
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast.error('Failed to submit rating');
     } finally {
       setSubmitting(false);
@@ -167,6 +221,38 @@ export const RideRating = ({
             </p>
           )}
         </div>
+
+        {/* Sub-ratings (shown after main rating selected) */}
+        {rating > 0 && (
+          <div className="space-y-3">
+            <p className="text-sm font-medium">Rate specific areas (optional)</p>
+            {SUB_RATINGS.map(({ key, label, icon: Icon, desc }) => (
+              <div key={key} className="flex items-center gap-3">
+                <div className="flex items-center gap-2 min-w-[110px]">
+                  <Icon className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm">{label}</span>
+                </div>
+                <div className="flex gap-1">
+                  {[1, 2, 3, 4, 5].map((s) => (
+                    <button
+                      key={s}
+                      onClick={() => setSubRating(key, s)}
+                      className="transition-transform hover:scale-110"
+                    >
+                      <Star
+                        className={`h-5 w-5 ${
+                          s <= (subRatings[key] || 0)
+                            ? 'fill-amber-400 text-amber-400'
+                            : 'text-gray-200'
+                        }`}
+                      />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Compliments (only for 4-5 stars) */}
         {rating >= 4 && (

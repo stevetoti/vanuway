@@ -40,7 +40,7 @@ export const updateDriverLocation = async (
     if (error) throw error;
 
     return { success: true };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error updating driver location:', error);
     return { success: false, error: error.message };
   }
@@ -149,7 +149,7 @@ export const subscribeToDriverLocation = (
         table: 'drivers',
         filter: `user_id=eq.${driverId}`,
       },
-      (payload: any) => {
+      (payload: unknown) => {
         if (payload.new.current_lat && payload.new.current_lng) {
           callback({
             lat: payload.new.current_lat,

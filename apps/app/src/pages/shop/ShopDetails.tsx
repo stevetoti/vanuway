@@ -34,7 +34,7 @@ export default function ShopDetails() {
   const { data: shop, isLoading: loadingShop } = useQuery({
     queryKey: ['shop', shopId],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await (supabase as unknown)
         .from('shops')
         .select('*')
         .eq('id', shopId)
@@ -49,7 +49,7 @@ export default function ShopDetails() {
   const { data: products, isLoading: loadingProducts } = useQuery({
     queryKey: ['shop-products', shopId],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await (supabase as unknown)
         .from('shop_products')
         .select('*')
         .eq('shop_id', shopId)
@@ -65,7 +65,7 @@ export default function ShopDetails() {
   const { data: reviews } = useQuery({
     queryKey: ['shop-reviews', shopId],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await (supabase as unknown)
         .from('shop_reviews')
         .select('*')
         .eq('shop_id', shopId)

@@ -3,7 +3,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
-import { ArrowLeft, MapPin, Banknote, CreditCard, CheckCircle2, ShoppingBag, Loader2, Phone } from 'lucide-react';
+import { ArrowLeft, MapPin, Banknote, CreditCard, CheckCircle2, ShoppingBag, Loader2, Phone, Truck, Store } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '@/contexts/CartContext';
 import { useState } from 'react';
@@ -31,14 +31,15 @@ export default function Checkout() {
   const { user } = useAuth();
   const [address, setAddress] = useState('');
   const [phone, setPhone] = useState('');
+  const [fulfilmentMethod, setFulfilmentMethod] = useState<'delivery' | 'pickup'>('delivery');
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const deliveryFee = 200; // VUV
+  const deliveryFee = fulfilmentMethod === 'delivery' ? 200 : 0; // VUV
   const grandTotal = total + deliveryFee;
 
   const handlePlaceOrder = async () => {
-    if (!address) {
+    if (fulfilmentMethod === 'delivery' && !address) {
       toast.error('Please enter a delivery address');
       return;
     }
@@ -72,7 +73,9 @@ export default function Checkout() {
           quantity: item.quantity,
         })),
         total_price: grandTotal,
-        delivery_address: `${address}\nPhone: ${phone}`,
+        delivery_address: fulfilmentMethod === 'delivery'
+          ? `${address}\nPhone: ${phone}`
+          : `Pickup from restaurant\nPhone: ${phone}`,
         delivery_lat: null,
         delivery_lng: null,
         payment_method: paymentMethod,
@@ -84,7 +87,7 @@ export default function Checkout() {
       toast.success('Order placed successfully!');
       clearCart();
       navigate(`/food/order/${data.id}`);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Order error:', error);
       toast.error(error.message || 'Failed to place order');
     } finally {
@@ -116,21 +119,50 @@ export default function Checkout() {
       </div>
 
       <div className="p-4 space-y-4">
-        {/* Delivery Info */}
+        {/* Fulfilment Info */}
         <Card>
           <CardContent className="p-4 space-y-4">
             <div>
+              <Label className="font-semibold">Fulfilment Method</Label>
+              <div className="grid grid-cols-2 gap-2 mt-2">
+                <button
+                  type="button"
+                  onClick={() => setFulfilmentMethod('delivery')}
+                  className={`rounded-xl border-2 p-3 text-left transition ${fulfilmentMethod === 'delivery' ? 'border-primary bg-primary/5' : 'border-gray-200'}`}
+                >
+                  <Truck className="h-5 w-5 text-primary mb-2" />
+                  <p className="font-medium text-sm">Delivery</p>
+                  <p className="text-xs text-muted-foreground">Send to my address</p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFulfilmentMethod('pickup')}
+                  className={`rounded-xl border-2 p-3 text-left transition ${fulfilmentMethod === 'pickup' ? 'border-primary bg-primary/5' : 'border-gray-200'}`}
+                >
+                  <Store className="h-5 w-5 text-primary mb-2" />
+                  <p className="font-medium text-sm">Pickup</p>
+                  <p className="text-xs text-muted-foreground">Collect from restaurant</p>
+                </button>
+              </div>
+            </div>
+            <div>
               <div className="flex items-center gap-2 mb-2">
                 <MapPin className="h-5 w-5 text-primary" />
-                <Label className="font-semibold">Delivery Address</Label>
+                <Label className="font-semibold">{fulfilmentMethod === 'delivery' ? 'Delivery Address' : 'Pickup Note'}</Label>
               </div>
-              <Textarea
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-                placeholder="Enter your full delivery address..."
-                rows={2}
-                className="resize-none"
-              />
+              {fulfilmentMethod === 'delivery' ? (
+                <Textarea
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  placeholder="Enter your full delivery address..."
+                  rows={2}
+                  className="resize-none"
+                />
+              ) : (
+                <p className="text-sm text-muted-foreground rounded-md border bg-muted/30 px-3 py-2">
+                  The restaurant will prepare this order for pickup.
+                </p>
+              )}
             </div>
             <div>
               <div className="flex items-center gap-2 mb-2">
@@ -170,7 +202,7 @@ export default function Checkout() {
                 <span>{formatVUV(total)}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Delivery Fee</span>
+                <span className="text-muted-foreground">{fulfilmentMethod === 'delivery' ? 'Delivery Fee' : 'Pickup Fee'}</span>
                 <span>{formatVUV(deliveryFee)}</span>
               </div>
               <div className="flex justify-between text-lg font-bold pt-2 border-t">
@@ -231,7 +263,7 @@ export default function Checkout() {
         <Button
           className="w-full h-14 text-lg font-semibold"
           onClick={handlePlaceOrder}
-          disabled={isSubmitting || !address || !phone}
+          disabled={isSubmitting || (fulfilmentMethod === 'delivery' && !address) || !phone}
         >
           {isSubmitting ? (
             <>

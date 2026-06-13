@@ -23,7 +23,7 @@ export default function MyShopOrders() {
     queryFn: async () => {
       if (!user) return [];
 
-      const { data, error } = await (supabase as any)
+      const { data, error } = await (supabase as unknown)
         .from('shop_orders')
         .select(`
           *,
@@ -34,7 +34,7 @@ export default function MyShopOrders() {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return data as (ShopOrder & { shop: { id: string; name: string; logo_url: string | null }; items: any[] })[];
+      return data as (ShopOrder & { shop: { id: string; name: string; logo_url: string | null }; items: unknown[] })[];
     },
     enabled: !!user,
   });
@@ -103,7 +103,7 @@ export default function MyShopOrders() {
 
         <div className="text-sm text-muted-foreground mb-3">
           {order.items?.length || 0} item{order.items?.length !== 1 ? 's' : ''}
-          {order.items?.slice(0, 2).map((item: any, i: number) => (
+          {order.items?.slice(0, 2).map((item: unknown, i: number) => (
             <span key={i}> • {item.product_name}</span>
           ))}
           {(order.items?.length || 0) > 2 && <span> +{order.items.length - 2} more</span>}

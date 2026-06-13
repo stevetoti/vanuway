@@ -77,7 +77,7 @@ export default function NotificationPreferences() {
       if (error) throw error;
 
       toast.success('Notification preferences updated');
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast.error(error.message || 'Failed to update preferences');
     } finally {
       setIsSubmitting(false);

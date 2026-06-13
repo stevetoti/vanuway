@@ -33,7 +33,7 @@ export default function BecomeFreelancer() {
     queryKey: ['my-freelancer-profile', user?.id],
     queryFn: async () => {
       if (!user) return null;
-      const { data, error } = await (supabase as any)
+      const { data, error } = await (supabase as unknown)
         .from('freelancer_profiles')
         .select('*')
         .eq('user_id', user.id)
@@ -128,11 +128,11 @@ export default function BecomeFreelancer() {
         status: 'pending',
       };
 
-      const { error } = await (supabase as any).from('freelancer_profiles').insert(profileData);
+      const { error } = await (supabase as unknown).from('freelancer_profiles').insert(profileData);
       if (error) throw error;
 
       setIsSubmitted(true);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error creating profile:', error);
       toast({ title: 'Error', description: error.message || 'Failed to create profile', variant: 'destructive' });
     } finally {

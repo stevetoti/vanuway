@@ -91,8 +91,8 @@ const HotelOwnerBookings = () => {
         hotel: hotelsData.find(h => h.id === booking.hotel_id),
       }));
 
-      setBookings(bookingsWithHotels as any);
-    } catch (error: any) {
+      setBookings(bookingsWithHotels as unknown);
+    } catch (error: unknown) {
       console.error('Error loading bookings:', error);
       toast.error('Failed to load bookings');
     } finally {
@@ -107,7 +107,7 @@ const HotelOwnerBookings = () => {
   const updateBookingStatus = async (bookingId: string, newStatus: string, cancellationReason?: string) => {
     setUpdating(bookingId);
     try {
-      const updateData: any = { 
+      const updateData: unknown = { 
         booking_status: newStatus, 
         updated_at: new Date().toISOString() 
       };
@@ -125,11 +125,11 @@ const HotelOwnerBookings = () => {
       if (error) throw error;
 
       setBookings(prev => prev.map(b => 
-        b.id === bookingId ? { ...b, booking_status: newStatus as any } : b
+        b.id === bookingId ? { ...b, booking_status: newStatus as unknown } : b
       ));
       
       toast.success(`Booking ${statusConfig[newStatus]?.label.toLowerCase() || 'updated'}`);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error updating booking:', error);
       toast.error('Failed to update booking');
     } finally {

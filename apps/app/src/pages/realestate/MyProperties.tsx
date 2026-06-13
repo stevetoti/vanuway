@@ -9,8 +9,12 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import {
   ArrowLeft, Plus, Eye, Heart, MapPin, Bed, Bath,
-  Home, MoreVertical, Edit, Trash2, Check, RefreshCw, Mail
+  Home, MoreVertical, Edit, Trash2, Check, RefreshCw, Mail, Sparkles
 } from 'lucide-react';
+import { useState } from 'react';
+import { BulkImportWizard, type ImportedItem } from '@/components/import/BulkImportWizard';
+import { LinkedStoreCard } from '@/components/import/LinkedStoreCard';
+import { registerImportSource, makeExternalIdFromItem } from '@/lib/import/source-link';
 import { formatDistanceToNow, parseISO } from 'date-fns';
 import { Property, LISTING_TYPES, PROPERTY_STATUSES, PRICE_PERIODS } from '@/types/property';
 import { cn } from '@/lib/utils';
@@ -26,13 +30,42 @@ export default function MyProperties() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [importOpen, setImportOpen] = useState(false);
+
+  const importProperties = async (items: ImportedItem[], context?: { sourceUrl?: string; mode: 'ai' | 'csv' }) => {
+    if (!user) return;
+    const sourceId = await registerImportSource(user.id, 'property', context?.sourceUrl);
+    const rows = items.map((it) => ({
+      user_id: user.id,
+      title: String(it.title || it.name || '').slice(0, 200),
+      description: String(it.description || ''),
+      property_type: 'house',
+      listing_type: String(it.listing_type || 'sale').toLowerCase().includes('rent') ? 'rent' : 'sale',
+      price: Number(it.price) || 0,
+      bedrooms: Number(it.bedrooms) || 0,
+      bathrooms: Number(it.bathrooms) || 0,
+      island: String(it.location || 'Efate'),
+      images: it.image_url ? [String(it.image_url)] : [],
+      status: 'pending', // pending admin approval
+      source_id: sourceId,
+      source_external_id: makeExternalIdFromItem(it),
+      last_seen_in_source_at: sourceId ? new Date().toISOString() : null,
+    }));
+    const { error } = await (supabase as unknown).from('properties').insert(rows);
+    if (error) throw error;
+    toast({
+      title: `Imported ${rows.length} properties — pending admin approval`,
+      description: sourceId ? "Your website is now linked. We'll auto-sync new products weekly." : undefined,
+    });
+    queryClient.invalidateQueries({ queryKey: ['my-properties'] });
+  };
 
   const { data: properties, isLoading } = useQuery({
     queryKey: ['my-properties', user?.id],
     queryFn: async () => {
       if (!user) return [];
 
-      const { data, error } = await (supabase as any)
+      const { data, error } = await (supabase as unknown)
         .from('properties')
         .select('*')
         .eq('user_id', user.id)
@@ -52,7 +85,7 @@ export default function MyProperties() {
       const counts: Record<string, number> = {};
 
       for (const property of properties) {
-        const { count } = await (supabase as any)
+        const { count } = await (supabase as unknown)
           .from('property_inquiries')
           .select('*', { count: 'exact', head: true })
           .eq('property_id', property.id)
@@ -68,7 +101,7 @@ export default function MyProperties() {
 
   const updateStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      const { error } = await (supabase as any)
+      const { error } = await (supabase as unknown)
         .from('properties')
         .update({ status, updated_at: new Date().toISOString() })
         .eq('id', id)
@@ -87,7 +120,7 @@ export default function MyProperties() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await (supabase as any)
+      const { error } = await (supabase as unknown)
         .from('properties')
         .delete()
         .eq('id', id)
@@ -300,6 +333,9 @@ export default function MyProperties() {
 
       {/* Content */}
       <div className="p-4">
+        <div className="mb-4">
+          <LinkedStoreCard vendorKind="property" label="your real estate listings" />
+        </div>
         <Tabs defaultValue="active" className="space-y-4">
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="active">
@@ -391,16 +427,39 @@ export default function MyProperties() {
         </Tabs>
       </div>
 
-      {/* New Listing Button */}
-      <div className="fixed bottom-20 left-0 right-0 px-4">
+      {/* New Listing Buttons */}
+      <div className="fixed bottom-20 left-0 right-0 px-4 grid grid-cols-2 gap-2">
         <Button
-          className="w-full h-12 shadow-lg bg-emerald-600 hover:bg-emerald-700"
+          variant="outline"
+          className="h-12 shadow-lg bg-white"
+          onClick={() => setImportOpen(true)}
+        >
+          <Sparkles className="h-4 w-4 mr-2 text-orange-500" />
+          Import from website
+        </Button>
+        <Button
+          className="h-12 shadow-lg bg-emerald-600 hover:bg-emerald-700"
           onClick={() => navigate('/realestate/create')}
         >
           <Plus className="h-5 w-5 mr-2" />
-          List New Property
+          List New
         </Button>
       </div>
+
+      <BulkImportWizard
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        vendorType="property"
+        itemLabel="properties"
+        previewFields={[
+          { key: 'title', label: 'Title', type: 'text' },
+          { key: 'price', label: 'Price (VUV)', type: 'number' },
+          { key: 'bedrooms', label: 'Bedrooms', type: 'number' },
+          { key: 'bathrooms', label: 'Bathrooms', type: 'number' },
+          { key: 'location', label: 'Location', type: 'text' },
+        ]}
+        onConfirm={importProperties}
+      />
     </div>
   );
 }

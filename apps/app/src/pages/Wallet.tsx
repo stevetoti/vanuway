@@ -112,7 +112,7 @@ const Wallet = () => {
       if (!transactionsError && transactionsData) {
         setTransactions(transactionsData as Transaction[]);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error fetching wallet data:', error);
       toast.error('Failed to load wallet data');
     } finally {
@@ -132,7 +132,7 @@ const Wallet = () => {
           filter: `user_id=eq.${user!.id}`,
         },
         (payload) => {
-          const newData = payload.new as any;
+          const newData = payload.new as unknown;
           if (newData) {
             setBalance(
               selectedCurrency === 'VUV'
@@ -253,7 +253,7 @@ const Wallet = () => {
         toast.success('Payment completed! Your wallet has been credited');
         fetchWalletData();
       }, 3000);
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast.error(error.message || 'Failed to process payment');
     } finally {
       setIsSubmitting(false);
@@ -410,7 +410,7 @@ const Wallet = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label className="text-sm mb-2">Transaction Type</Label>
-                    <Tabs value={filterType} onValueChange={(v) => setFilterType(v as any)}>
+                    <Tabs value={filterType} onValueChange={(v) => setFilterType(v as unknown)}>
                       <TabsList className="grid grid-cols-3">
                         <TabsTrigger value="all">All</TabsTrigger>
                         <TabsTrigger value="credit">Credit</TabsTrigger>
@@ -420,7 +420,7 @@ const Wallet = () => {
                   </div>
                   <div>
                     <Label className="text-sm mb-2">Category</Label>
-                    <Select value={filterCategory} onValueChange={(v) => setFilterCategory(v as any)}>
+                    <Select value={filterCategory} onValueChange={(v) => setFilterCategory(v as unknown)}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>

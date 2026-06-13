@@ -32,9 +32,9 @@ export const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [pendingDrivers, setPendingDrivers] = useState<any[]>([]);
-  const [pendingRefunds, setPendingRefunds] = useState<any[]>([]);
-  const [safetyAlerts, setSafetyAlerts] = useState<any[]>([]);
+  const [pendingDrivers, setPendingDrivers] = useState<unknown[]>([]);
+  const [pendingRefunds, setPendingRefunds] = useState<unknown[]>([]);
+  const [safetyAlerts, setSafetyAlerts] = useState<unknown[]>([]);
   const [selectedPeriod, setSelectedPeriod] = useState<
     'today' | 'week' | 'month' | 'year'
   >('today');
@@ -197,7 +197,7 @@ export const AdminDashboard = () => {
                 VUV {stats?.total_revenue?.toFixed(2) || '0.00'}
               </p>
               <p className="text-xs text-muted-foreground mt-2">
-                Commission: VUV {(stats as any)?.platform_commission?.toFixed(2) || '0.00'}
+                Commission: VUV {(stats as unknown)?.platform_commission?.toFixed(2) || '0.00'}
               </p>
             </div>
           </Card>
@@ -213,7 +213,7 @@ export const AdminDashboard = () => {
               <p className="text-sm text-muted-foreground mb-1">Total Users</p>
               <p className="text-3xl font-bold">{stats?.total_users || 0}</p>
               <p className="text-xs text-muted-foreground mt-2">
-                Active: {(stats as any)?.active_users || 0}
+                Active: {(stats as unknown)?.active_users || 0}
               </p>
             </div>
           </Card>

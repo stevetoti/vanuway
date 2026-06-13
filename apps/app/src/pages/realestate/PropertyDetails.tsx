@@ -45,7 +45,7 @@ export default function PropertyDetails() {
   const { data: property, isLoading } = useQuery({
     queryKey: ['property', propertyId],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await (supabase as unknown)
         .from('properties')
         .select('*')
         .eq('id', propertyId)
@@ -61,7 +61,7 @@ export default function PropertyDetails() {
     queryFn: async () => {
       if (!user) return false;
 
-      const { data } = await (supabase as any)
+      const { data } = await (supabase as unknown)
         .from('property_saves')
         .select('id')
         .eq('property_id', propertyId)
@@ -76,7 +76,7 @@ export default function PropertyDetails() {
   // Record view
   useEffect(() => {
     if (propertyId) {
-      (supabase as any)
+      (supabase as unknown)
         .from('property_views')
         .insert({
           property_id: propertyId,
@@ -91,14 +91,14 @@ export default function PropertyDetails() {
       if (!user) throw new Error('Login required');
 
       if (isSaved) {
-        const { error } = await (supabase as any)
+        const { error } = await (supabase as unknown)
           .from('property_saves')
           .delete()
           .eq('property_id', propertyId)
           .eq('user_id', user.id);
         if (error) throw error;
       } else {
-        const { error } = await (supabase as any)
+        const { error } = await (supabase as unknown)
           .from('property_saves')
           .insert({ property_id: propertyId, user_id: user.id });
         if (error) throw error;
@@ -111,7 +111,7 @@ export default function PropertyDetails() {
         title: isSaved ? 'Removed from saved' : 'Property saved!',
       });
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
         title: 'Error',
         description: error.message || 'Failed to save property',
@@ -124,7 +124,7 @@ export default function PropertyDetails() {
     mutationFn: async () => {
       if (!user) throw new Error('Login required');
 
-      const { error } = await (supabase as any)
+      const { error } = await (supabase as unknown)
         .from('property_inquiries')
         .insert({
           property_id: propertyId,
@@ -145,7 +145,7 @@ export default function PropertyDetails() {
       setShowInquiryDialog(false);
       setInquiryForm({ name: '', email: '', phone: '', message: '' });
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
         title: 'Error',
         description: error.message || 'Failed to send inquiry',

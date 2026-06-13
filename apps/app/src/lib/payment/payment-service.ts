@@ -36,7 +36,7 @@ export interface Payment {
   cod_collected_at?: string;
   cod_collector_id?: string;
   description?: string;
-  metadata?: any;
+  metadata?: unknown;
   failure_reason?: string;
   created_at: string;
   completed_at?: string;
@@ -51,7 +51,7 @@ export interface CreatePaymentParams {
   paymentMethod: PaymentMethodType;
   paymentMethodId?: string;
   description?: string;
-  metadata?: any;
+  metadata?: unknown;
 }
 
 export interface PaymentProviderConfig {
@@ -223,7 +223,7 @@ export const createPayment = async (params: CreatePaymentParams) => {
     success: processingResult.success,
     data: data as Payment,
     requiresAction: processingResult.requiresAction,
-    actionUrl: processingResult.requiresAction ? (processingResult as any).actionUrl : undefined,
+    actionUrl: processingResult.requiresAction ? (processingResult as unknown).actionUrl : undefined,
     message: processingResult.message,
   };
 };

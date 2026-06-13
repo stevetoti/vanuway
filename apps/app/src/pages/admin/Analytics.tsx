@@ -60,7 +60,7 @@ export default function AdminAnalytics() {
 
       // Get date range based on period
       const now = new Date();
-      let startDate = new Date();
+      const startDate = new Date();
       switch (period) {
         case "24h":
           startDate.setHours(now.getHours() - 24);

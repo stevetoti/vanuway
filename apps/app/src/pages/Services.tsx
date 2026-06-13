@@ -21,6 +21,8 @@ import {
   Sparkles,
   TrendingUp,
   Package,
+  Anchor,
+  Cloud,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
@@ -28,7 +30,20 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 
 // Service categories with their services
-const serviceCategories = [
+interface ServiceItem {
+  id: string;
+  icon: typeof Car;
+  title: string;
+  description: string;
+  path: string;
+  gradient: string;
+  popular?: boolean;
+  isNew?: boolean;
+  providerLabel?: string;
+  providerPath?: string;
+}
+
+const serviceCategories: { id: string; name: string; color: string; services: ServiceItem[] }[] = [
   {
     id: 'transport',
     name: 'Transport & Delivery',
@@ -42,6 +57,8 @@ const serviceCategories = [
         path: '/rides/request',
         gradient: 'from-primary to-orange-500',
         popular: true,
+        providerLabel: 'Become a Driver',
+        providerPath: '/driver/register',
       },
       {
         id: 'delivery',
@@ -50,6 +67,8 @@ const serviceCategories = [
         description: 'Send packages with VanuRide couriers',
         path: '/delivery/request',
         gradient: 'from-purple-500 to-pink-500',
+        providerLabel: 'Deliver with Us',
+        providerPath: '/driver/register',
       },
     ],
   },
@@ -66,6 +85,8 @@ const serviceCategories = [
         path: '/food',
         gradient: 'from-green-500 to-emerald-600',
         popular: true,
+        providerLabel: 'List Your Restaurant',
+        providerPath: '/food/owner/register',
       },
       {
         id: 'shop',
@@ -82,6 +103,8 @@ const serviceCategories = [
         description: 'Buy and sell locally',
         path: '/marketplace',
         gradient: 'from-teal-500 to-cyan-600',
+        providerLabel: 'Sell Something',
+        providerPath: '/marketplace/create',
       },
     ],
   },
@@ -98,6 +121,8 @@ const serviceCategories = [
         path: '/hotels',
         gradient: 'from-blue-500 to-cyan-500',
         popular: true,
+        providerLabel: 'List Your Hotel',
+        providerPath: '/hotels/owner/register',
       },
       {
         id: 'tours',
@@ -107,6 +132,8 @@ const serviceCategories = [
         path: '/tours',
         gradient: 'from-amber-500 to-yellow-500',
         popular: true,
+        providerLabel: 'Offer Tours',
+        providerPath: '/tours/provider/register',
       },
       {
         id: 'ferry',
@@ -115,6 +142,16 @@ const serviceCategories = [
         description: 'Book inter-island travel',
         path: '/ferry',
         gradient: 'from-sky-500 to-blue-600',
+        providerLabel: 'Register Operator',
+        providerPath: '/ferry/operator/register',
+      },
+      {
+        id: 'water-taxi',
+        icon: Anchor,
+        title: 'Water Taxi',
+        description: 'Iririki, Hideaway & Ifira island transfers',
+        path: '/daily#section-taxi',
+        gradient: 'from-indigo-500 to-blue-600',
       },
     ],
   },
@@ -124,13 +161,31 @@ const serviceCategories = [
     color: 'from-indigo-500 to-violet-500',
     services: [
       {
+        id: 'events',
+        icon: Calendar,
+        title: 'Community Events',
+        description: 'Discover local events and activities',
+        path: '/events',
+        gradient: 'from-pink-500 to-rose-500',
+        providerLabel: 'Post an Event',
+        providerPath: '/events/create',
+      },
+      {
+        id: 'daily',
+        icon: Cloud,
+        title: 'VanuWay Daily',
+        description: 'Weather, earthquakes, currency, kava prices & more',
+        path: '/daily',
+        gradient: 'from-blue-500 to-cyan-600',
+        isNew: true,
+      },
+      {
         id: 'bislama',
         icon: BookOpen,
         title: 'Learn Bislama',
         description: 'Interactive language learning platform',
         path: '/bislama',
         gradient: 'from-indigo-500 to-violet-500',
-        isNew: true,
       },
       {
         id: 'emergency',
@@ -141,20 +196,14 @@ const serviceCategories = [
         gradient: 'from-red-500 to-rose-600',
       },
       {
-        id: 'events',
-        icon: Calendar,
-        title: 'Community Events',
-        description: 'Discover local events and activities',
-        path: '/events',
-        gradient: 'from-pink-500 to-rose-500',
-      },
-      {
         id: 'providers',
         icon: Wrench,
         title: 'Service Providers',
-        description: 'Connect with local service professionals',
+        description: 'Plumbing, electrical, cleaning & more',
         path: '/providers',
         gradient: 'from-slate-500 to-gray-600',
+        providerLabel: 'Offer Services',
+        providerPath: '/providers',
       },
     ],
   },
@@ -170,6 +219,8 @@ const serviceCategories = [
         description: 'Find properties for rent or sale',
         path: '/realestate',
         gradient: 'from-emerald-500 to-green-600',
+        providerLabel: 'List Property',
+        providerPath: '/realestate/create',
       },
     ],
   },
@@ -186,6 +237,8 @@ const serviceCategories = [
         path: '/health',
         gradient: 'from-rose-500 to-pink-600',
         isNew: true,
+        providerLabel: 'Register Pharmacy',
+        providerPath: '/health/pharmacy/register',
       },
       {
         id: 'jobs',
@@ -195,6 +248,8 @@ const serviceCategories = [
         path: '/jobs',
         gradient: 'from-blue-600 to-indigo-600',
         isNew: true,
+        providerLabel: 'Post a Job',
+        providerPath: '/jobs/post',
       },
     ],
   },
@@ -342,6 +397,14 @@ const Services = () => {
                           )}
                         </div>
                         <p className="text-sm text-muted-foreground line-clamp-2">{service.description}</p>
+                        {service.providerLabel && (
+                          <button
+                            className="mt-2 text-[11px] text-primary font-semibold hover:underline"
+                            onClick={(e) => { e.stopPropagation(); navigate(service.providerPath!); }}
+                          >
+                            + {service.providerLabel}
+                          </button>
+                        )}
                       </div>
                     </div>
                   </Card>

@@ -25,7 +25,7 @@ export default function PostJob() {
   const { data: categories } = useQuery({
     queryKey: ['job-categories'],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await (supabase as unknown)
         .from('job_categories')
         .select('*')
         .eq('is_active', true)
@@ -122,11 +122,11 @@ export default function PostJob() {
         status: 'pending',
       };
 
-      const { error } = await (supabase as any).from('jobs').insert(jobData);
+      const { error } = await (supabase as unknown).from('jobs').insert(jobData);
       if (error) throw error;
 
       setIsSubmitted(true);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error posting job:', error);
       toast({ title: 'Error', description: error.message || 'Failed to post job', variant: 'destructive' });
     } finally {

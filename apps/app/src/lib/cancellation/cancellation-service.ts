@@ -36,7 +36,7 @@ export interface RideCancellation {
   original_price: number;
   cancellation_fee: number;
   refund_amount: number;
-  fee_calculation_details?: any;
+  fee_calculation_details?: unknown;
   fee_charged_to?: string;
   fee_processed: boolean;
   refund_processed: boolean;
@@ -87,7 +87,7 @@ const calculateCancellationFee = async (params: {
   feeAmount: number;
   refundAmount: number;
   feeChargedTo: string;
-  calculationDetails: any;
+  calculationDetails: unknown;
 }> => {
   try {
     const { data, error } = await supabase.rpc('calculate_cancellation_fee', {
@@ -115,7 +115,7 @@ const calculateCancellationFee = async (params: {
       feeChargedTo: result.fee_charged_to,
       calculationDetails: result.calculation_details,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error in calculateCancellationFee:', error);
     return {
       feeAmount: 0,
@@ -192,7 +192,7 @@ export const cancelRideBooking = async (params: {
           ? `Ride cancelled. Cancellation fee: VUV ${feeCalculation.feeAmount.toFixed(2)}. Refund: VUV ${feeCalculation.refundAmount.toFixed(2)}`
           : `Ride cancelled. Full refund: VUV ${feeCalculation.refundAmount.toFixed(2)}`,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error in cancelRideBooking:', error);
     return { success: false, error: error.message };
   }
@@ -237,7 +237,7 @@ export const requestRefund = async (params: {
       data: data as RefundRequest,
       message: 'Refund request submitted successfully. We will review it within 24-48 hours.',
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error in requestRefund:', error);
     return { success: false, error: error.message };
   }
@@ -393,7 +393,7 @@ export const processAutomaticRefund = async (params: {
       data: refundRequest.data,
       message: 'Refund is being processed and will be credited within 3-5 business days.',
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error in processAutomaticRefund:', error);
     return { success: false, error: error.message };
   }

@@ -88,7 +88,7 @@ export const VEHICLE_CONFIGS: Record<VehicleType, VehicleConfig> = {
     type: 'car',
     name: 'VanuCar Standard',
     basePrice: 500,
-    pricePerKm: 60,
+    pricePerKm: 100,
     pricePerMinute: 12,
     minimumFare: 600,
     capacity: 4,
@@ -98,7 +98,7 @@ export const VEHICLE_CONFIGS: Record<VehicleType, VehicleConfig> = {
     type: 'suv',
     name: 'VanuCar SUV',
     basePrice: 700,
-    pricePerKm: 80,
+    pricePerKm: 130,
     pricePerMinute: 15,
     minimumFare: 800,
     capacity: 6,
@@ -108,7 +108,7 @@ export const VEHICLE_CONFIGS: Record<VehicleType, VehicleConfig> = {
     type: 'van',
     name: 'VanuCar Van',
     basePrice: 900,
-    pricePerKm: 100,
+    pricePerKm: 160,
     pricePerMinute: 18,
     minimumFare: 1000,
     capacity: 8,
@@ -118,7 +118,7 @@ export const VEHICLE_CONFIGS: Record<VehicleType, VehicleConfig> = {
     type: 'wheelchair_van',
     name: 'VanuAccess',
     basePrice: 800,
-    pricePerKm: 80,
+    pricePerKm: 130,
     pricePerMinute: 15,
     minimumFare: 900,
     capacity: 4,
@@ -129,13 +129,35 @@ export const VEHICLE_CONFIGS: Record<VehicleType, VehicleConfig> = {
     type: 'moto',
     name: 'VanuRide Moto',
     basePrice: 300,
-    pricePerKm: 40,
+    pricePerKm: 70,
     pricePerMinute: 8,
     minimumFare: 400,
     capacity: 0,        // delivery only, no passengers
     description: 'Motorcycle courier for deliveries',
     deliveryOnly: true,
   },
+};
+
+// ---------------------------------------------------------------------------
+// Distance-tier minimum fares
+// ---------------------------------------------------------------------------
+// Per-km math alone underprices long Efate runs (e.g. Eton at ~25 km road
+// distance came out at ~1,150 VUV — undeniably wrong for that journey).
+// These tier minimums set a realistic floor that reflects actual driver cost
+// (fuel, return-leg-empty, road wear) for outer-Efate trips. Short city rides
+// stay governed by the per-vehicle `minimumFare` and the per-km math.
+const DISTANCE_TIER_MINIMUMS: Array<{ kmFrom: number; minFare: number; label: string }> = [
+  { kmFrom: 35, minFare: 22000, label: 'Far East/North Efate (35+ km)' },
+  { kmFrom: 25, minFare: 15000, label: 'Outer East Efate (25-35 km)' },
+  { kmFrom: 18, minFare: 7000, label: 'Mid-range (18-25 km)' },
+  { kmFrom: 10, minFare: 2500, label: 'Outskirts (10-18 km)' },
+];
+
+const getDistanceTierMinimum = (distanceKm: number): { minFare: number; label: string } | null => {
+  for (const tier of DISTANCE_TIER_MINIMUMS) {
+    if (distanceKm >= tier.kmFrom) return { minFare: tier.minFare, label: tier.label };
+  }
+  return null;
 };
 
 // ---------------------------------------------------------------------------
@@ -349,7 +371,13 @@ const computeFare = (
   const locSurcharge = getLocationSurcharge(pickup, dropoff);
 
   const rawTotal = subtotal + nightSurcharge + locSurcharge.amount;
-  const totalPrice = Math.max(roundTo50(rawTotal), vehicle.minimumFare);
+  // Apply BOTH the vehicle's minimum AND the distance-tier minimum. The
+  // distance-tier wins for far destinations because it reflects round-trip
+  // driver cost — for an outer-Efate run the driver almost always returns
+  // empty, which the per-km math doesn't cover.
+  const distanceTier = getDistanceTierMinimum(distanceKm);
+  const minFloor = Math.max(vehicle.minimumFare, distanceTier?.minFare ?? 0);
+  const totalPrice = Math.max(roundTo50(rawTotal), minFloor);
 
   return {
     basePrice: roundTo50(base),

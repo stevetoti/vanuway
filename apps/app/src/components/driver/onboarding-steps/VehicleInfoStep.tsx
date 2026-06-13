@@ -42,7 +42,7 @@ export const VehicleInfoStep = ({
   const vehicleTypes = [
     { value: 'car', label: 'Car', icon: Car, capacity: 4 },
     { value: 'suv', label: 'SUV', icon: Car, capacity: 7 },
-    { value: 'van', label: 'Van', icon: Truck, capacity: 8 },
+    { value: 'van', label: 'Van', icon: Truck, capacity: 13 },
     { value: 'moto', label: 'Motorcycle', icon: Bike, capacity: 1 },
   ];
 

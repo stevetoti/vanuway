@@ -21,7 +21,7 @@ export default function FreelancerProfile() {
   const { data: freelancer, isLoading } = useQuery({
     queryKey: ['freelancer', freelancerId],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await (supabase as unknown)
         .from('freelancer_profiles')
         .select('*')
         .eq('id', freelancerId)
@@ -35,7 +35,7 @@ export default function FreelancerProfile() {
   const { data: services } = useQuery({
     queryKey: ['freelancer-services', freelancerId],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await (supabase as unknown)
         .from('freelancer_services')
         .select('*')
         .eq('freelancer_id', freelancerId)
@@ -50,7 +50,7 @@ export default function FreelancerProfile() {
   const { data: reviews } = useQuery({
     queryKey: ['freelancer-reviews', freelancerId],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await (supabase as unknown)
         .from('freelancer_reviews')
         .select('*')
         .eq('freelancer_id', freelancerId)

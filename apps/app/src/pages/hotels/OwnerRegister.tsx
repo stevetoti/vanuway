@@ -20,7 +20,7 @@ const HotelOwnerRegister = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [checkingExisting, setCheckingExisting] = useState(true);
-  const [existingOwner, setExistingOwner] = useState<any>(null);
+  const [existingOwner, setExistingOwner] = useState<unknown>(null);
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
     // Personal Information
@@ -181,7 +181,7 @@ const HotelOwnerRegister = () => {
           .upsert({
             user_id: user.id,
             role: 'hotel_owner',
-          } as any, { onConflict: 'user_id,role' });
+          } as unknown, { onConflict: 'user_id,role' });
       }
 
       toast.success('Registration submitted!', {
@@ -189,7 +189,7 @@ const HotelOwnerRegister = () => {
       });
 
       navigate('/hotels/owner/welcome');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Registration error:', error);
       toast.error('Failed to register', {
         description: error.message,

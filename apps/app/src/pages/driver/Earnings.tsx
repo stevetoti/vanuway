@@ -87,7 +87,7 @@ const DriverEarnings = () => {
 
       if (ridesError) throw ridesError;
       setRideHistory(ridesData || []);
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast.error('Failed to load earnings data');
     } finally {
       setLoading(false);

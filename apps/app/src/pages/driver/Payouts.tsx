@@ -43,7 +43,7 @@ const Payouts = () => {
   const [pendingEarnings, setPendingEarnings] = useState(0);
   const [loading, setLoading] = useState(true);
   const [requesting, setRequesting] = useState(false);
-  const [driverInfo, setDriverInfo] = useState<any>(null);
+  const [driverInfo, setDriverInfo] = useState<unknown>(null);
 
   useEffect(() => {
     if (user) {
@@ -136,7 +136,7 @@ const Payouts = () => {
       });
 
       loadPayouts();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error requesting payout:', error);
       toast.error('Failed to request payout', {
         description: error.message,

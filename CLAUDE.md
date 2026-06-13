@@ -137,6 +137,10 @@ No mobile money (My CASH, M-Vatu) or other providers in production.
 ## Deployment
 
 ```bash
+# REQUIRED before every super-app deploy — catches React-hooks-rules violations,
+# conditional hook calls, and other classes of bugs that vite build silently lets through.
+cd apps/app && pnpm lint
+
 # Deploy super-app
 cd apps/app && npx vercel --prod --yes --token "$VERCEL_TOKEN" --scope pacificwaveprojects --force
 
@@ -148,34 +152,181 @@ Vercel token: use the Pacific Wave Digital token (scope: pacificwaveprojects).
 
 Edge functions are deployed via Supabase MCP tools (not CLI).
 
-## Current Production State (2026-04-05)
+### Lint-before-deploy is non-negotiable
+Vite's build step does NOT run ESLint. So bugs like "early `return null` BEFORE all hooks have run" will compile cleanly and only crash in the browser as **React minified error #300** ("rendered fewer hooks than expected").
 
-### Working (Ride System — FULLY OPERATIONAL)
+The fix is always the same: **every hook (`useState`, `useEffect`, `useRef`, `useMemo`, `useCallback`, `useNavigate`, `useLocation`, `useAuth`, `useQuery`, `useQueryClient`, custom hooks like `useCart`) must be called unconditionally at the top of the component, BEFORE any conditional return or branching logic.**
+
+Pattern to AVOID:
+```tsx
+const Foo = () => {
+  const [x, setX] = useState(0);
+  if (someCondition) return null;        // ❌ next render with different condition = different hook count
+  const [y, setY] = useState(0);
+  return <div>...</div>;
+};
+```
+
+Pattern to USE:
+```tsx
+const Foo = () => {
+  const [x, setX] = useState(0);
+  const [y, setY] = useState(0);          // ✅ ALL hooks called first
+  if (someCondition) return null;         // ✅ early return AFTER all hooks
+  return <div>...</div>;
+};
+```
+
+`pnpm lint` already has `react-hooks/rules-of-hooks` enabled — it catches this. Just run it before deploying.
+
+## Current Production State (2026-04-25)
+
+### Admin notifications & email (NEW)
+- Every important event emails 3 admins: steve@pacificwavedigital.com, notifications@pacificwavedigital.com, dominiontechhub@gmail.com
+- Centralized via `notify_admins()` SQL function + DB triggers on every key table (auth.users, drivers, vendor tables, marketplace_listings, marketplace_messages, support_chat_messages, marketplace_orders, ride_bookings, advertising_subscriptions)
+- `admin_audit_log` table = single source of truth, stamped with `email_sent`/`email_error`
+- `admin-notify` Edge Function uses Resend `/emails/batch` endpoint to fanout in one API call (avoids 2/sec free-tier rate limit)
+- Admin viewer at `/admin/audit-log` (realtime, filter presets, search)
+- Required env: `ADMIN_TRIGGER_SECRET` = `vw_admin_trigger_2026_change_in_prod` (already set)
+- Resend account is `vanuway001@gmail.com`, vanuway.com IS verified there
+- Note: signup emails go through Supabase Custom SMTP, NOT this Resend API — different pipeline
+
+### In-app messaging UX (NEW)
+- Bottom nav: Messages tab replaces Bookings (Bookings still in Profile/Services). Live unread badge polls every 30s.
+- `/messages` user-facing unified inbox (buyers + sellers see all conversations, grouped by listing+other-party)
+- `/marketplace/seller/messages` seller-only inbox (linked from marketplace seller bar)
+- `/admin/messages` admin hub: 3 tabs (Recent feed / Marketplace / AI Support) with universal search
+- Notifications now have a `link` column — clicking ANY bell item navigates to the right action page (chat, order, etc.). Backfilled for existing rows.
+- Marketplace `Chat.tsx` resolves seller-side counterpart from `?buyer=` URL param OR latest inbound message. Optimistic local append after send so messages show even if realtime is delayed.
+- Realtime fix: `marketplace_messages` added to `supabase_realtime` publication.
+
+### AI support chat widget (NEW)
+- Floating navy/orange widget mounted globally via `<SupportChatWidget />` in App.tsx
+- Auto-hides on routes with their own composer (`/marketplace/chat/*`, `/admin/support-chats`, ride track, driver inbox)
+- Powered by Claude Haiku 4.5 with VanuWay knowledge base (URLs, pricing, registration paths, support email)
+- Anonymous visitors tracked by `localStorage` UUID; signed-in users tied to auth user_id
+- Markdown stripped at three layers: system prompt forbids it, server-side regex scrub, client-side defensive renderer
+- All transcripts stored in `support_chat_sessions` + `support_chat_messages`
+- Admin viewer at `/admin/support-chats` with reply-as-staff (amber bubble in user widget)
+- Auto-classifies intent + flags `needs_human` based on keywords
+
+### Vendor auto-sync ("Linked stores") (NEW)
+- `vendor_import_sources` table — one row per vendor per kind, stores source_url + sync_frequency + sync stats
+- `vendor-sync-from-source` Edge Function with diff handlers for ALL 10 vendor types (marketplace, restaurant, hotel, tour, property, event, ferry, shop, car_rental, spa)
+- New items → INSERT as draft. Existing items match by source_external_id or title → price/image auto-update. Items not seen 14+ days → auto-deactivate.
+- Wizard auto-registers source URL on AI import — vendors don't have to manually link
+- `LinkedStoreCard` component on every vendor's My Listings/Manage page (Refresh now button + last-sync stats)
+- pg_cron `vendor-sync-weekly` (Mon 03:00 UTC) ready but inactive until SERVICE_ROLE_KEY added to Vault — manual Refresh works today
+
+### Marketplace e-commerce (NEW — Buy now is LIVE)
+- `marketplace_orders` + `marketplace_order_items` tables with multi-seller RLS
+- Cart store at `lib/marketplace/cart.ts` (localStorage, multi-tab sync)
+- `/marketplace/cart` (delivery form), `/marketplace/orders/:id` (success polling), `/marketplace/seller/orders` (fulfilment workflow)
+- `create-marketplace-payment` re-fetches listings server-side (price-tamper guard)
+- 10% default platform commission (override via `platform_settings.commission_rates.marketplace`)
+- Cart icon with badge in marketplace header
+- Stripe webhook handles marketplace_order_id → flips order to paid + fires in-app notifications + emails to buyer & sellers (via admin-notify pipeline)
+
+### Stripe ad subscription automation (NEW)
+- `create-ad-subscription-payment` lazily creates Stripe product + recurring monthly Price in VUV
+- `cancel-ad-subscription` does graceful end-of-period cancellation (`cancel_at_period_end: true`)
+- Webhook handles full lifecycle: `customer.subscription.updated/deleted`, `invoice.paid` (renewal), `invoice.payment_failed` (past_due)
+- Daily pg_cron `expire-ad-subs-daily` at 02:00 UTC sweeps active subs past their period_end → expired
+
+### Duffel flight booking scaffold (NEEDS API KEYS)
+- `flight_orders` table + `duffel-flight-search` / `duffel-flight-book` / `duffel-flight-confirm` edge functions
+- Two-phase pay-then-ticket: Stripe Checkout captures payment → webhook calls confirm → Duffel `/air/orders` issues ticket → store PNR + ticket numbers
+- UI: `/flights/book` (search → results → passenger forms) + `/flights/orders/:id` (status with auto-poll)
+- **Blocked on env vars**: `DUFFEL_API_TOKEN` (sign up at duffel.com) + `INTERNAL_FN_SECRET` (any random 32+ char string). Until set, search/book return 503 with clear hint.
+
+### CSV import fallback (NEW)
+- `BulkImportWizard` has tabs: AI website scan vs CSV upload
+- Per-vendor CSV templates (`lib/import/csv.ts` covers all 10 vendor types)
+- Use case: vendors with virtualized SPAs (e.g. aelanbasket.com) where AI scraper hits DOM-window limits
+
+### Marketplace browse pagination
+- Replaced hard `.limit(50)` with `useInfiniteQuery` + "Load more" button (30/page)
+
+### Privacy & Approval (NEW)
+- **Vendor approval gate**: All vendor types (incl. new `marketplace_sellers`) must register and be admin-approved before they can post. Existing live sellers backfilled to `verified`.
+- **Listing approval gate**: All new items (manual create + AI/CSV import) insert with pending/draft/inactive status. Browse pages filter by status='active'/is_active=true so nothing reaches public until admin flips.
+- **Admin Approvals page** at `/admin/approvals` — two sections (Vendors / Listings), tabs per type, Approve/Reject + bulk "Approve all".
+- **Marketplace privacy**: phone/email hidden on listings. In-app chat only via `/marketplace/chat/:listingId`. Bypass detection regex (WhatsApp/Viber/phone numbers/emails) flags messages — visible at `/admin/marketplace-chats`.
+
+### AI Website Scraper (NEW)
+- Edge Function `scrape-vendor-import` v8 — Firecrawl /v2/scrape (waitFor 3000ms + 6 scrolls) → Claude Haiku 4.5 tool-use extraction → 8192 max_tokens
+- Shopify shortcut: `/products.json` tried first (free, complete catalog)
+- 10 vendor types supported via `BulkImportWizard` component
+- Secrets needed: `ANTHROPIC_API_KEY`, `FIRECRAWL_API_KEY` (both in Supabase Edge Function secrets)
+- Hard limit: virtualized SPAs (e.g. aelanbasket.com) only render ~16 items in DOM — use CSV import as fallback (planned)
+
+### Home Rails (NEW)
+- 4 horizontal-scroll rails on home: Marketplace, Tours, Drivers, Services. Each auto-hides if empty.
+- "Register your business" collapsed into a single CTA tile + bottom sheet with all 13 vendor types.
+- HomeRails component at `components/home/HomeRails.tsx`.
+
+### Advertising Packages (NEW)
+- 3 monthly tiers: Spotlight (5,000 VUV / 2 days/wk), Standard (10,000 / 4 days), Pro (20,000 / daily). Increase planned at 3 months.
+- Pricing page `/promote-your-business`, status page `/promote/my-subscriptions`
+- DB: `advertising_packages` (3 rows seeded), `advertising_subscriptions`, view `featured_today_v`, function `is_featured_today(vendor_id, days_per_week)` (deterministic doy + hash rotation)
+- Manual payment for now (admin emails instructions, marks active on receipt). Stripe automation deferred.
+- HomeRails surface paid featured items first with "Featured" badge.
+
+## Production State (2026-04-11)
+
+### Ride System — FULLY OPERATIONAL
 - Real ride booking: passenger creates ride → driver sees on Dashboard → accepts → tracking
-- Real-time GPS tracking with car on passenger's map (Leaflet + Supabase realtime)
-- Google Places Autocomplete for location search (API key: AIzaSyBl1DYyQLvc_kRcFSTIrvbNGm8UaCH7lOE)
-- Real-time chat between driver and passenger (ride_messages table)
-- Phone calling via tel: links
-- Navigate button opens Google Maps directions
-- Cancellation with reasons + fee structure
-- Post-ride star rating with compliments
-- Profile photo + vehicle photo upload
-- Driver auto-online on Dashboard open
-- Admin Rides Management page with messages/cancellations view
-- Cruise schedule page with seed data (7 cruise lines, 10 ships)
-- Tour packages page with 8 seeded packages
-- Learn Bislama embedded via learnbislama.com iframe
+- Real-time GPS tracking, chat, cancellation, rating with sub-ratings
+- Google Places Autocomplete (API key: AIzaSyBl1DYyQLvc_kRcFSTIrvbNGm8UaCH7lOE)
+- Ride Hub (/rides) — Book Now, Pre-book, Airport Transfer, Cruise Transfer, Tours
 
-### Auth & Profiles
+### GoVanuatu — ALL 5 PHASES COMPLETE
+- **Driver Profiles** — public profiles, services, reviews, advance booking
+- **Driver CRM** — bookings pipeline, analytics, inbox, demand intelligence
+- **Flight Arrivals** — real data from AeroDataBox API (VLI + SON), daily cron sync
+- **Cruise Schedule** — 7 cruise lines, 10 ships, monthly schedule
+- **Cruise Directory** — partnership info, contacts, requirements
+- **Booking Emails** — 4 templates via Resend (new, confirmed, cancelled, reminder)
+
+### VanuWay Daily (/daily)
+- Weather forecast (Open-Meteo, free, no key)
+- Earthquake monitor (USGS, free, no key)
+- Tsunami alerts (auto from USGS)
+- Currency converter (ExchangeRate API, free + fallback)
+- Kava Price Index (Supabase table, admin-editable)
+- Water Taxi Schedule (Supabase table, admin-editable)
+- Power Outage Reporter (community + admin, Supabase table)
+- Emergency Numbers (Police 112, Ambulance 115, Fire 113, NDMO 22999)
+
+### Notification System
+- Centralized service (lib/notifications/notification-service.ts)
+- In-app + email for bookings, ratings, approvals
+- Real-time Supabase subscription on notifications page
+- 25+ notification types defined
+
+### UI Overhaul (2026-04-07)
+- Driver Dashboard — navy blue, profile photo, green online toggle, demand intel
+- Profile Page — navy blue header, compact stats, icon-only edit
+- Home Page — weather widget, travel info banners, gradient service icons
+- Flight/Cruise pages — airport board + ocean blue styles
+- Header — no logo on inner pages, minimal on service pages
+- Bottom Nav — safe area padding, hidden on full-screen pages
+
+### Auth & Public Access
 - Signup, login, forgot/reset password (Resend SMTP)
 - Role-aware Profile page (admin, driver, vendor auto-detected)
 - First name greeting on home page
+- **No login wall** — all browsing pages are public, login only for actions (booking, checkout, wallet, etc.)
+- Guest bottom nav: Home, Services, Partner, Sign In
+- "Register Your Business" card on home page for vendor registration
+- Partners page (/partners) — 7 vendor types: Driver, Hotel, Restaurant, Tour, Ferry, Pharmacy, Services
 
 ### NOT Working Yet
 - **Payment not wired** — Stripe checkout + COD not triggered from ride flow
 - **Stripe webhook endpoint not configured** in Stripe dashboard
 - **Push notifications** — no FCM setup yet
-- **GoVanuatu Phase 2-4** — driver profiles, advance booking, CRM, B2B (in progress)
+- **SMS** — VanuConnect API access pending
+- **Profile header on all pages** — user requested, not yet done
 
 ### Accounts
 - `steve@pacificwavedigital.com` — super_admin

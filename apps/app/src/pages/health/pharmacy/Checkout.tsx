@@ -68,7 +68,7 @@ export default function PharmacyCheckout() {
   const { data: pharmacy } = useQuery({
     queryKey: ['pharmacy', pharmacyId],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await (supabase as unknown)
         .from('pharmacies')
         .select('*')
         .eq('id', pharmacyId)
@@ -111,7 +111,7 @@ export default function PharmacyCheckout() {
 
       setPrescriptionUrl(publicUrl);
       toast({ title: 'Prescription uploaded' });
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: 'Upload failed',
         description: error.message,
@@ -146,7 +146,7 @@ export default function PharmacyCheckout() {
       const orderNumber = generateOrderNumber();
 
       // Create order
-      const { data: order, error: orderError } = await (supabase as any)
+      const { data: order, error: orderError } = await (supabase as unknown)
         .from('pharmacy_orders')
         .insert({
           order_number: orderNumber,
@@ -182,7 +182,7 @@ export default function PharmacyCheckout() {
         requires_prescription: item.product.requires_prescription,
       }));
 
-      const { error: itemsError } = await (supabase as any)
+      const { error: itemsError } = await (supabase as unknown)
         .from('pharmacy_order_items')
         .insert(orderItems);
 
@@ -201,7 +201,7 @@ export default function PharmacyCheckout() {
 
       navigate(`/health/pharmacy/order/${order.id}`);
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
         title: 'Order failed',
         description: error.message,
@@ -369,7 +369,7 @@ export default function PharmacyCheckout() {
             {deliveryMethod === 'delivery' && pharmacy?.uses_platform_riders && pharmacy?.has_own_delivery && (
               <div className="mt-4">
                 <Label>Delivery By</Label>
-                <Select value={deliveryType} onValueChange={(v) => setDeliveryType(v as any)}>
+                <Select value={deliveryType} onValueChange={(v) => setDeliveryType(v as unknown)}>
                   <SelectTrigger className="mt-2">
                     <SelectValue />
                   </SelectTrigger>
@@ -451,7 +451,7 @@ export default function PharmacyCheckout() {
           <CardContent>
             <RadioGroup
               value={paymentMethod}
-              onValueChange={(v) => setPaymentMethod(v as any)}
+              onValueChange={(v) => setPaymentMethod(v as unknown)}
               className="space-y-3"
             >
               <label className={`flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer ${

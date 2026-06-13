@@ -23,7 +23,7 @@ export default function MyBookings() {
     queryFn: async () => {
       if (!user) return [];
 
-      const { data, error } = await (supabase as any)
+      const { data, error } = await (supabase as unknown)
         .from('transport_bookings')
         .select(`
           *,
@@ -78,17 +78,17 @@ export default function MyBookings() {
   };
 
   // Separate bookings
-  const upcomingBookings = bookings?.filter((b: any) => {
+  const upcomingBookings = bookings?.filter((b: unknown) => {
     const tripDate = parseISO(b.trip?.departure_date);
     return !isBefore(tripDate, new Date()) && b.status !== 'cancelled';
   }) || [];
 
-  const pastBookings = bookings?.filter((b: any) => {
+  const pastBookings = bookings?.filter((b: unknown) => {
     const tripDate = parseISO(b.trip?.departure_date);
     return isBefore(tripDate, new Date()) || b.status === 'cancelled';
   }) || [];
 
-  const renderBookingCard = (booking: any) => {
+  const renderBookingCard = (booking: unknown) => {
     const isFerry = booking.trip?.route?.type === 'ferry';
     const Icon = isFerry ? Ship : Plane;
     const tripDate = parseISO(booking.trip?.departure_date);

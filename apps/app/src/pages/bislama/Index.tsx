@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import type { BislamaTopic, UserBislamaProgress, TopicWithProgress } from '@/types/bislama';
 
-const topicIcons: Record<string, any> = {
+const topicIcons: Record<string, unknown> = {
   'sparkles': Sparkles,
   'hand-wave': BookOpen,
   'calculator': Target,
@@ -53,7 +53,7 @@ const BislamaHome = () => {
 
       // Load user progress if logged in
       let progress: UserBislamaProgress | null = null;
-      let completedLessonsByTopic: Record<string, number> = {};
+      const completedLessonsByTopic: Record<string, number> = {};
 
       if (user) {
         const { data: progressData } = await supabase
@@ -72,7 +72,7 @@ const BislamaHome = () => {
           .eq('status', 'completed');
 
         if (lessonProgress) {
-          lessonProgress.forEach((lp: any) => {
+          lessonProgress.forEach((lp: unknown) => {
             const topicId = lp.bislama_lessons?.topic_id;
             if (topicId) {
               completedLessonsByTopic[topicId] = (completedLessonsByTopic[topicId] || 0) + 1;

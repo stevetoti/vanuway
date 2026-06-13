@@ -62,7 +62,7 @@ const EditHotel = () => {
 
       if (error) throw error;
       setHotel(data);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error loading hotel:', error);
       toast.error('Failed to load hotel details');
       navigate('/hotels/owner/dashboard');
@@ -103,7 +103,7 @@ const EditHotel = () => {
 
       toast.success('Hotel updated successfully');
       navigate('/hotels/owner/dashboard');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error saving hotel:', error);
       toast.error('Failed to save changes');
     } finally {
@@ -111,7 +111,7 @@ const EditHotel = () => {
     }
   };
 
-  const handleInputChange = (field: keyof HotelData, value: any) => {
+  const handleInputChange = (field: keyof HotelData, value: unknown) => {
     setHotel(prev => ({ ...prev, [field]: value }));
   };
 

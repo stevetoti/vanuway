@@ -14,7 +14,7 @@ import {
   Bell, ChevronRight, AlertCircle, PhoneCall, Info, CircleAlert, Siren
 } from 'lucide-react';
 
-const categoryIcons: Record<string, any> = {
+const categoryIcons: Record<string, unknown> = {
   police: Shield,
   fire: Flame,
   medical: Heart,
@@ -25,7 +25,7 @@ const categoryIcons: Record<string, any> = {
   other: Phone,
 };
 
-const alertCategoryIcons: Record<string, any> = {
+const alertCategoryIcons: Record<string, unknown> = {
   cyclone: CloudRain,
   tsunami: Waves,
   earthquake: Mountain,
@@ -82,7 +82,7 @@ export default function EmergencyIndex() {
   const { data: contacts, isLoading: loadingContacts } = useQuery({
     queryKey: ['emergency-services'],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await (supabase as unknown)
         .from('emergency_services')
         .select('*')
         .eq('is_active', true)
@@ -96,7 +96,7 @@ export default function EmergencyIndex() {
   const { data: alerts } = useQuery({
     queryKey: ['emergency-alerts'],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await (supabase as unknown)
         .from('emergency_alerts')
         .select('*')
         .in('status', ['active', 'monitoring'])

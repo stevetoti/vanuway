@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 
-const categoryIcons: Record<string, any> = {
+const categoryIcons: Record<string, unknown> = {
   adventure: Mountain,
   cultural: Camera,
   nature: TreeDeciduous,
@@ -77,7 +77,7 @@ export default function TourDetails() {
   const { data: tour, isLoading } = useQuery({
     queryKey: ['tour', tourId],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await (supabase as unknown)
         .from('tours')
         .select('*')
         .eq('id', tourId)

@@ -22,9 +22,34 @@ serve(async (req) => {
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
     { auth: { persistSession: false } }
   );
+  const supabaseAuth = createClient(
+    Deno.env.get("SUPABASE_URL") ?? "",
+    Deno.env.get("SUPABASE_ANON_KEY") ?? ""
+  );
 
   try {
     logStep("Function started");
+
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) throw new Error("No authorization header provided");
+
+    const token = authHeader.replace("Bearer ", "");
+    const { data: userData, error: userError } = await supabaseAuth.auth.getUser(token);
+    if (userError) throw new Error(`Authentication error: ${userError.message}`);
+
+    const caller = userData.user;
+    if (!caller) throw new Error("User not authenticated");
+
+    const { data: adminRole, error: roleError } = await supabaseAdmin
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", caller.id)
+      .eq("role", "admin")
+      .maybeSingle();
+
+    if (roleError) throw new Error(`Failed to verify admin role: ${roleError.message}`);
+    if (!adminRole) throw new Error("Admin privileges required");
+    logStep("Admin caller verified", { userId: caller.id });
 
     const { driverId, payoutId } = await req.json();
     

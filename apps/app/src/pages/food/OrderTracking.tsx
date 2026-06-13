@@ -15,7 +15,7 @@ interface OrderStatus {
   id: string;
   user_id: string;
   restaurant_id: string;
-  items: any[];
+  items: unknown[];
   total_price: number;
   delivery_address: string;
   payment_method: string;
@@ -43,13 +43,21 @@ interface Driver {
   vehicle_number?: string;
 }
 
-const statusSteps = [
+const deliveryStatusSteps = [
   { key: 'pending', label: 'Order Placed', icon: CheckCircle2 },
   { key: 'confirmed', label: 'Restaurant Confirmed', icon: Clock },
   { key: 'preparing', label: 'Preparing Food', icon: ChefHat },
   { key: 'ready', label: 'Ready for Pickup', icon: PackageCheck },
   { key: 'out_for_delivery', label: 'Out for Delivery', icon: Bike },
   { key: 'delivered', label: 'Delivered', icon: CheckCircle2 },
+];
+
+const pickupStatusSteps = [
+  { key: 'pending', label: 'Order Placed', icon: CheckCircle2 },
+  { key: 'confirmed', label: 'Restaurant Confirmed', icon: Clock },
+  { key: 'preparing', label: 'Preparing Food', icon: ChefHat },
+  { key: 'ready', label: 'Ready for Pickup', icon: PackageCheck },
+  { key: 'delivered', label: 'Picked Up', icon: CheckCircle2 },
 ];
 
 export default function OrderTracking() {
@@ -83,7 +91,7 @@ export default function OrderTracking() {
           filter: `id=eq.${orderId}`,
         },
         (payload) => {
-          const newData = payload.new as any;
+          const newData = payload.new as unknown;
           setOrder({
             ...newData,
             items: Array.isArray(newData.items) ? newData.items : []
@@ -140,10 +148,10 @@ export default function OrderTracking() {
           .single();
 
         if (!driverError) {
-          setDriver(driverData as any);
+          setDriver(driverData as unknown);
         }
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast.error('Failed to load order details');
       console.error(error);
     } finally {
@@ -177,7 +185,7 @@ export default function OrderTracking() {
 
       toast.success('Order cancelled successfully');
       navigate('/bookings');
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast.error('Failed to cancel order');
     }
   };
@@ -205,7 +213,7 @@ export default function OrderTracking() {
       toast.success('Thank you for your feedback!');
       setShowRatingModal(false);
       navigate('/bookings');
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast.error('Failed to submit rating');
     } finally {
       setSubmittingRating(false);
@@ -233,6 +241,8 @@ export default function OrderTracking() {
     );
   }
 
+  const isPickup = order.delivery_address?.toLowerCase().startsWith('pickup from restaurant');
+  const statusSteps = isPickup ? pickupStatusSteps : deliveryStatusSteps;
   const currentStepIndex = getCurrentStepIndex();
   const isDelivered = order.status === 'delivered';
   const isCancelled = order.status === 'cancelled';
@@ -423,7 +433,7 @@ export default function OrderTracking() {
             <CardTitle>Order Details</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            {order.items.map((item: any, index: number) => (
+            {order.items.map((item: unknown, index: number) => (
               <div key={index} className="flex items-center justify-between">
                 <div>
                   <p className="font-medium">{item.name}</p>

@@ -33,7 +33,7 @@ export default function RealEstateIndex() {
   const { data: properties, isLoading } = useQuery({
     queryKey: ['properties', listingType, propertyType, island, minBedrooms, searchQuery],
     queryFn: async () => {
-      let query = (supabase as any)
+      let query = (supabase as unknown)
         .from('properties')
         .select('*')
         .eq('status', 'active')
@@ -65,7 +65,7 @@ export default function RealEstateIndex() {
   const { data: featuredProperties } = useQuery({
     queryKey: ['featured-properties'],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await (supabase as unknown)
         .from('properties')
         .select('*')
         .eq('status', 'active')

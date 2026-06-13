@@ -9,8 +9,13 @@ import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
 import {
   ArrowLeft, Ship, Plane, Plus, MapPin, Clock, Calendar, DollarSign,
-  Users, Edit, Trash2, AlertCircle, CheckCircle2, Settings, BarChart3
+  Users, Edit, Trash2, AlertCircle, CheckCircle2, Settings, BarChart3, Sparkles
 } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
+import { useToast } from '@/hooks/use-toast';
+import { BulkImportWizard, type ImportedItem } from '@/components/import/BulkImportWizard';
+import { LinkedStoreCard } from '@/components/import/LinkedStoreCard';
+import { registerImportSource, makeExternalIdFromItem } from '@/lib/import/source-link';
 import { format, parseISO } from 'date-fns';
 
 export default function OperatorDashboard() {
@@ -23,7 +28,7 @@ export default function OperatorDashboard() {
   const { data: operators, isLoading: loadingOperators } = useQuery({
     queryKey: ['my-operators'],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await (supabase as unknown)
         .from('transport_operators')
         .select('*')
         .order('name');
@@ -34,12 +39,42 @@ export default function OperatorDashboard() {
   });
 
   const [selectedOperator, setSelectedOperator] = useState<string | null>(null);
+  const [importOpen, setImportOpen] = useState(false);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const importRoutes = async (items: ImportedItem[], context?: { sourceUrl?: string; mode: 'ai' | 'csv' }) => {
+    if (!selectedOperator) {
+      toast({ title: 'Pick an operator first', variant: 'destructive' });
+      return;
+    }
+    const sourceId = user ? await registerImportSource(user.id, 'ferry', context?.sourceUrl) : null;
+    const rows = items.map((it) => ({
+      operator_id: selectedOperator,
+      type: 'ferry',
+      origin_island: String(it.from_location || 'Efate'),
+      destination_island: String(it.to_location || 'Tanna'),
+      duration_minutes: parseDurationMinutes(String(it.duration || '')),
+      base_price: Number(it.price) || 0,
+      is_active: false, // pending admin approval
+      source_id: sourceId,
+      source_external_id: makeExternalIdFromItem(it),
+      last_seen_in_source_at: sourceId ? new Date().toISOString() : null,
+    }));
+    const { error } = await (supabase as unknown).from('transport_routes').insert(rows);
+    if (error) throw error;
+    toast({
+      title: `Imported ${rows.length} routes`,
+      description: sourceId ? "Your website is now linked. We'll auto-sync new products weekly." : undefined,
+    });
+    queryClient.invalidateQueries({ queryKey: ['operator-routes', selectedOperator] });
+  };
 
   const { data: routes, isLoading: loadingRoutes } = useQuery({
     queryKey: ['operator-routes', selectedOperator],
     queryFn: async () => {
       if (!selectedOperator) return [];
-      const { data, error } = await (supabase as any)
+      const { data, error } = await (supabase as unknown)
         .from('transport_routes')
         .select('*, operator:transport_operators(*)')
         .eq('operator_id', selectedOperator)
@@ -55,7 +90,7 @@ export default function OperatorDashboard() {
     queryKey: ['operator-schedules', selectedOperator],
     queryFn: async () => {
       if (!selectedOperator) return [];
-      const { data, error } = await (supabase as any)
+      const { data, error } = await (supabase as unknown)
         .from('transport_schedules')
         .select('*, route:transport_routes(*)')
         .eq('route.operator_id', selectedOperator)
@@ -71,7 +106,7 @@ export default function OperatorDashboard() {
     queryKey: ['operator-trips', selectedOperator],
     queryFn: async () => {
       if (!selectedOperator) return [];
-      const { data, error } = await (supabase as any)
+      const { data, error } = await (supabase as unknown)
         .from('transport_trips')
         .select('*, route:transport_routes(*), schedule:transport_schedules(*)')
         .gte('departure_date', new Date().toISOString().split('T')[0])
@@ -88,7 +123,7 @@ export default function OperatorDashboard() {
     queryKey: ['operator-bookings', selectedOperator],
     queryFn: async () => {
       if (!selectedOperator) return [];
-      const { data, error } = await (supabase as any)
+      const { data, error } = await (supabase as unknown)
         .from('transport_bookings')
         .select('*, trip:transport_trips(*, route:transport_routes(*))')
         .order('booked_at', { ascending: false })
@@ -144,6 +179,9 @@ export default function OperatorDashboard() {
 
       {/* Operator Selection */}
       <div className="px-4 py-4">
+        <div className="mb-4">
+          <LinkedStoreCard vendorKind="ferry" label="your ferry routes" />
+        </div>
         <Card className="mb-4">
           <CardContent className="p-4">
             <Label className="text-sm font-medium mb-2 block">Select Operator</Label>
@@ -153,7 +191,7 @@ export default function OperatorDashboard() {
               onChange={(e) => setSelectedOperator(e.target.value)}
             >
               <option value="">Choose an operator...</option>
-              {operators?.map((op: any) => (
+              {operators?.map((op: unknown) => (
                 <option key={op.id} value={op.id}>
                   {op.name} ({op.type})
                 </option>
@@ -212,9 +250,14 @@ export default function OperatorDashboard() {
               <TabsContent value="routes" className="space-y-4">
                 <div className="flex items-center justify-between">
                   <h3 className="font-semibold">Routes</h3>
-                  <Button size="sm" onClick={() => navigate(`/ferry/operator/add-route?operator=${selectedOperator}`)}>
-                    <Plus className="h-4 w-4 mr-1" />Add Route
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="outline" onClick={() => setImportOpen(true)}>
+                      <Sparkles className="h-4 w-4 mr-1 text-orange-500" />Import
+                    </Button>
+                    <Button size="sm" onClick={() => navigate(`/ferry/operator/add-route?operator=${selectedOperator}`)}>
+                      <Plus className="h-4 w-4 mr-1" />Add Route
+                    </Button>
+                  </div>
                 </div>
 
                 {loadingRoutes ? (
@@ -235,7 +278,7 @@ export default function OperatorDashboard() {
                   </Card>
                 ) : (
                   <div className="space-y-3">
-                    {routes?.map((route: any) => (
+                    {routes?.map((route: unknown) => (
                       <Card key={route.id}>
                         <CardContent className="p-4">
                           <div className="flex items-start justify-between">
@@ -293,7 +336,7 @@ export default function OperatorDashboard() {
                   </Card>
                 ) : (
                   <div className="space-y-3">
-                    {schedules?.filter((s: any) => s.route).map((schedule: any) => (
+                    {schedules?.filter((s: unknown) => s.route).map((schedule: unknown) => (
                       <Card key={schedule.id}>
                         <CardContent className="p-4">
                           <div className="flex items-start justify-between">
@@ -348,7 +391,7 @@ export default function OperatorDashboard() {
                   </Card>
                 ) : (
                   <div className="space-y-3">
-                    {trips?.map((trip: any) => (
+                    {trips?.map((trip: unknown) => (
                       <Card key={trip.id}>
                         <CardContent className="p-4">
                           <div className="flex items-start justify-between">
@@ -394,7 +437,7 @@ export default function OperatorDashboard() {
                   </Card>
                 ) : (
                   <div className="space-y-3">
-                    {bookings?.map((booking: any) => (
+                    {bookings?.map((booking: unknown) => (
                       <Card key={booking.id}>
                         <CardContent className="p-4">
                           <div className="flex items-start justify-between">
@@ -429,8 +472,33 @@ export default function OperatorDashboard() {
           </>
         )}
       </div>
+
+      <BulkImportWizard
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        vendorType="ferry"
+        itemLabel="routes"
+        previewFields={[
+          { key: 'name', label: 'Route', type: 'text' },
+          { key: 'from_location', label: 'From', type: 'text' },
+          { key: 'to_location', label: 'To', type: 'text' },
+          { key: 'price', label: 'Price (VUV)', type: 'number' },
+          { key: 'duration', label: 'Duration', type: 'text' },
+        ]}
+        onConfirm={importRoutes}
+      />
     </div>
   );
+}
+
+function parseDurationMinutes(text: string): number {
+  if (!text) return 60;
+  const m = text.toLowerCase();
+  const hMatch = m.match(/(\d+(?:\.\d+)?)\s*h/);
+  if (hMatch) return Math.round(parseFloat(hMatch[1]) * 60);
+  const mMatch = m.match(/(\d+)\s*m/);
+  if (mMatch) return parseInt(mMatch[1], 10);
+  return 60;
 }
 
 function Label({ children, className, ...props }: { children: React.ReactNode; className?: string }) {

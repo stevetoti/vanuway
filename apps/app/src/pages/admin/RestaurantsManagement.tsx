@@ -70,7 +70,7 @@ const RestaurantsManagement = () => {
 
       if (restaurantsError) throw restaurantsError;
       setRestaurants(restaurantsData || []);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error loading data:', error);
       toast.error('Failed to load restaurant data');
     } finally {
@@ -89,7 +89,7 @@ const RestaurantsManagement = () => {
 
       toast.success(`Owner ${status === 'approved' ? 'approved' : 'rejected'} successfully`);
       loadData();
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast.error(error.message || 'Failed to update status');
     }
   };
@@ -105,7 +105,7 @@ const RestaurantsManagement = () => {
 
       toast.success(`Restaurant ${isOpen ? 'opened' : 'closed'} successfully`);
       loadData();
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast.error(error.message || 'Failed to update status');
     }
   };

@@ -26,7 +26,7 @@ export const PWAInstallPrompt = () => {
     }
 
     // Detect iOS
-    const iOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+    const iOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as unknown).MSStream;
     setIsIOS(iOS);
 
     // Listen for the beforeinstallprompt event

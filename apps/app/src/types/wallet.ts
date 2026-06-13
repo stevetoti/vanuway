@@ -32,7 +32,7 @@ export interface Transaction {
   status: 'pending' | 'completed' | 'failed' | 'cancelled';
   created_at: string;
   updated_at: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface WalletBalance {

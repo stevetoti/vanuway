@@ -26,6 +26,15 @@ Thumbs.db
 # Vercel
 .vercel
 
+# Supabase local CLI state
+**/supabase/.temp/
+
+# Generated launch media
+launch-assets/**/assets/
+launch-assets/**/captures/
+launch-assets/**/exports/
+launch-assets/**/higgsfield/
+
 # Capacitor builds (keep configs)
 apps/app/android/app/build
 apps/app/android/.gradle

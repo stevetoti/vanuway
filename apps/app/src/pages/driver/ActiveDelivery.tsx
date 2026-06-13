@@ -22,7 +22,7 @@ interface FoodOrder {
   id: string;
   user_id: string;
   restaurant_id: string;
-  items: any;
+  items: unknown;
   total_price: number;
   status: string;
   delivery_address: string;
@@ -76,7 +76,7 @@ const ActiveDelivery = () => {
 
       if (restaurantError) throw restaurantError;
       setRestaurant(restaurantData);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error loading order:', error);
       toast.error('Failed to load delivery details');
       navigate('/driver/dashboard');
@@ -105,7 +105,7 @@ const ActiveDelivery = () => {
       } else {
         toast.success('Status updated');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error updating delivery:', error);
       toast.error('Failed to update status');
     } finally {
@@ -287,7 +287,7 @@ const ActiveDelivery = () => {
         <Card className="p-4 space-y-4">
           <h3 className="font-semibold">Order Details</h3>
           <div className="space-y-2">
-            {items.map((item: any, idx: number) => (
+            {items.map((item: unknown, idx: number) => (
               <div key={idx} className="flex justify-between text-sm">
                 <span>{item.quantity}x {item.name}</span>
                 <span className="text-muted-foreground">{item.price?.toLocaleString()} VUV</span>

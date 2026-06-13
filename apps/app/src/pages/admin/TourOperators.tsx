@@ -44,7 +44,7 @@ export default function AdminTourOperators() {
   const loadData = async () => {
     try {
       // Load operators
-      const { data: operatorsData, error: operatorsError } = await (supabase as any)
+      const { data: operatorsData, error: operatorsError } = await (supabase as unknown)
         .from('tour_operators')
         .select('*')
         .order('created_at', { ascending: false });
@@ -53,7 +53,7 @@ export default function AdminTourOperators() {
       setOperators(operatorsData || []);
 
       // Load tours pending approval
-      const { data: toursData, error: toursError } = await (supabase as any)
+      const { data: toursData, error: toursError } = await (supabase as unknown)
         .from('tours')
         .select('*')
         .order('created_at', { ascending: false });
@@ -70,7 +70,7 @@ export default function AdminTourOperators() {
 
   const updateOperatorStatus = async (operatorId: string, status: string, reason?: string) => {
     try {
-      const updateData: any = {
+      const updateData: unknown = {
         application_status: status,
         reviewed_at: new Date().toISOString(),
       };
@@ -82,7 +82,7 @@ export default function AdminTourOperators() {
         updateData.is_active = false;
       }
 
-      const { error } = await (supabase as any)
+      const { error } = await (supabase as unknown)
         .from('tour_operators')
         .update(updateData)
         .eq('id', operatorId);
@@ -101,7 +101,7 @@ export default function AdminTourOperators() {
 
   const updateTourStatus = async (tourId: string, status: string) => {
     try {
-      const updateData: any = {
+      const updateData: unknown = {
         approval_status: status,
       };
 
@@ -109,7 +109,7 @@ export default function AdminTourOperators() {
         updateData.is_active = true;
       }
 
-      const { error } = await (supabase as any)
+      const { error } = await (supabase as unknown)
         .from('tours')
         .update(updateData)
         .eq('id', tourId);
@@ -126,7 +126,7 @@ export default function AdminTourOperators() {
   };
 
   const getStatusBadge = (status: string) => {
-    const config: Record<string, { variant: any; label: string; icon: any }> = {
+    const config: Record<string, { variant: unknown; label: string; icon: unknown }> = {
       pending: { variant: 'secondary', label: 'Pending', icon: Clock },
       submitted: { variant: 'default', label: 'Submitted', icon: Clock },
       under_review: { variant: 'default', label: 'Under Review', icon: Eye },

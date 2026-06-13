@@ -28,7 +28,7 @@ export default function ProviderDetails() {
   const { data: provider, isLoading } = useQuery({
     queryKey: ['service-provider', providerId],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await (supabase as unknown)
         .from('service_providers')
         .select('*')
         .eq('id', providerId)
@@ -43,7 +43,7 @@ export default function ProviderDetails() {
   const { data: categories } = useQuery({
     queryKey: ['service-categories'],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await (supabase as unknown)
         .from('service_categories')
         .select('*')
         .eq('is_active', true);
@@ -56,7 +56,7 @@ export default function ProviderDetails() {
   const { data: reviews } = useQuery({
     queryKey: ['provider-reviews', providerId],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await (supabase as unknown)
         .from('service_reviews')
         .select('*')
         .eq('provider_id', providerId)
@@ -74,7 +74,7 @@ export default function ProviderDetails() {
     queryKey: ['saved-provider', providerId, user?.id],
     queryFn: async () => {
       if (!user) return false;
-      const { data } = await (supabase as any)
+      const { data } = await (supabase as unknown)
         .from('saved_providers')
         .select('id')
         .eq('provider_id', providerId)
@@ -91,14 +91,14 @@ export default function ProviderDetails() {
       if (!user) throw new Error('Login required');
 
       if (isSaved) {
-        const { error } = await (supabase as any)
+        const { error } = await (supabase as unknown)
           .from('saved_providers')
           .delete()
           .eq('provider_id', providerId)
           .eq('user_id', user.id);
         if (error) throw error;
       } else {
-        const { error } = await (supabase as any)
+        const { error } = await (supabase as unknown)
           .from('saved_providers')
           .insert({ provider_id: providerId, user_id: user.id });
         if (error) throw error;

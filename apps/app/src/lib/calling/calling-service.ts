@@ -131,7 +131,7 @@ export const initiateCall = async (params: {
       callerMaskedNumber: callerMasking.data?.masked_number,
       receiverMaskedNumber: receiverMasking.data?.masked_number,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error initiating call:', error);
     return { success: false, error: error.message };
   }
@@ -150,7 +150,7 @@ export const updateCallStatus = async (
     providerSessionId?: string;
   }
 ) => {
-  const updateData: any = {
+  const updateData: unknown = {
     call_status: status,
   };
 
@@ -178,7 +178,7 @@ export const updateCallStatus = async (
  * End a call
  */
 export const endCall = async (callId: string, quality?: number) => {
-  const updateData: any = {
+  const updateData: unknown = {
     call_status: 'completed',
     ended_at: new Date().toISOString(),
   };
@@ -314,7 +314,7 @@ export const getOrCreateMaskedNumber = async (params: {
     }
 
     return { success: true, data: masking as PhoneMasking };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error in getOrCreateMaskedNumber:', error);
     return { success: false, error: error.message };
   }
@@ -457,7 +457,7 @@ export const checkVoIPAvailability = async (): Promise<{
     }
 
     // Check connection type (if available)
-    const connection = (navigator as any).connection || (navigator as any).mozConnection || (navigator as any).webkitConnection;
+    const connection = (navigator as unknown).connection || (navigator as unknown).mozConnection || (navigator as unknown).webkitConnection;
 
     if (connection) {
       const effectiveType = connection.effectiveType; // '4g', '3g', '2g', 'slow-2g'

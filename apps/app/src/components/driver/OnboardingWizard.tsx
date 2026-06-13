@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { Check } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Check, RotateCcw } from 'lucide-react';
 import { ONBOARDING_STEPS, OnboardingStep, DriverOnboardingData } from '@/types/driver-onboarding';
 import { PersonalInfoStep } from './onboarding-steps/PersonalInfoStep';
 import { LicenseInfoStep } from './onboarding-steps/LicenseInfoStep';
@@ -9,19 +10,73 @@ import { VehicleInfoStep } from './onboarding-steps/VehicleInfoStep';
 import { DocumentUploadStep } from './onboarding-steps/DocumentUploadStep';
 import { BankingInfoStep } from './onboarding-steps/BankingInfoStep';
 import { ReviewStep } from './onboarding-steps/ReviewStep';
+import { toast } from 'sonner';
 
 interface OnboardingWizardProps {
   onComplete: (data: DriverOnboardingData) => Promise<void>;
 }
 
+const AUTOSAVE_KEY = 'vanuway_driver_onboarding_draft';
+
+// File objects can't be stored in localStorage — strip them
+const sanitizeForStorage = (data: Partial<DriverOnboardingData>): unknown => {
+  const copy = JSON.parse(JSON.stringify({
+    ...data,
+    documents: undefined, // Files can't be serialized
+  }));
+  return copy;
+};
+
 export const OnboardingWizard = ({ onComplete }: OnboardingWizardProps) => {
   const [currentStep, setCurrentStep] = useState<OnboardingStep>(1);
   const [formData, setFormData] = useState<Partial<DriverOnboardingData>>({});
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
+  const [restored, setRestored] = useState(false);
+
+  // Restore draft on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(AUTOSAVE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.formData) setFormData(parsed.formData);
+        if (parsed.currentStep) setCurrentStep(parsed.currentStep);
+        if (parsed.completedSteps) setCompletedSteps(new Set(parsed.completedSteps));
+        setRestored(true);
+        toast.success('Welcome back! Your progress was restored.');
+      }
+    } catch (e) {
+      console.warn('Failed to restore draft:', e);
+    }
+  }, []);
+
+  // Autosave whenever formData or step changes
+  useEffect(() => {
+    try {
+      const payload = {
+        formData: sanitizeForStorage(formData),
+        currentStep,
+        completedSteps: Array.from(completedSteps),
+        savedAt: new Date().toISOString(),
+      };
+      localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(payload));
+    } catch (e) {
+      // localStorage full or unavailable — ignore
+    }
+  }, [formData, currentStep, completedSteps]);
+
+  const clearDraft = () => {
+    localStorage.removeItem(AUTOSAVE_KEY);
+    setFormData({});
+    setCurrentStep(1);
+    setCompletedSteps(new Set());
+    setRestored(false);
+    toast.info('Form cleared. Starting fresh.');
+  };
 
   const progress = ((currentStep - 1) / (ONBOARDING_STEPS.length - 1)) * 100;
 
-  const handleStepComplete = (stepData: any) => {
+  const handleStepComplete = (stepData: unknown) => {
     // Save step data
     const stepKey = {
       1: 'personal',
@@ -52,7 +107,15 @@ export const OnboardingWizard = ({ onComplete }: OnboardingWizardProps) => {
   };
 
   const handleSubmit = async () => {
-    await onComplete(formData as DriverOnboardingData);
+    try {
+      await onComplete(formData as DriverOnboardingData);
+      // Only clear draft on successful submission
+      localStorage.removeItem(AUTOSAVE_KEY);
+    } catch (err) {
+      // Draft preserved so user can retry without re-entering
+      toast.error('Submission failed. Your progress is saved — you can retry.');
+      throw err;
+    }
   };
 
   const renderStep = () => {
@@ -117,11 +180,23 @@ export const OnboardingWizard = ({ onComplete }: OnboardingWizardProps) => {
           <span className="text-sm font-medium">
             Step {currentStep} of {ONBOARDING_STEPS.length}
           </span>
-          <span className="text-sm text-muted-foreground">
-            {Math.round(progress)}% Complete
-          </span>
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-muted-foreground">
+              {Math.round(progress)}% Complete
+            </span>
+            {restored && (
+              <Button type="button" variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={clearDraft}>
+                <RotateCcw className="h-3 w-3" />
+                Start Over
+              </Button>
+            )}
+          </div>
         </div>
         <Progress value={progress} className="h-2" />
+        <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+          <Check className="h-3 w-3 text-green-500" />
+          Your progress is automatically saved
+        </p>
       </div>
 
       {/* Step Indicators */}

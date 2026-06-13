@@ -28,7 +28,7 @@ export default function AddTour() {
   const { user } = useAuth();
   const { toast } = useToast();
 
-  const [operator, setOperator] = useState<any>(null);
+  const [operator, setOperator] = useState<unknown>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [formData, setFormData] = useState({
@@ -62,7 +62,7 @@ export default function AddTour() {
   const loadOperator = async () => {
     if (!user) return;
 
-    const { data, error } = await (supabase as any)
+    const { data, error } = await (supabase as unknown)
       .from('tour_operators')
       .select('*')
       .eq('user_id', user.id)
@@ -81,7 +81,7 @@ export default function AddTour() {
     }));
   };
 
-  const updateField = (field: string, value: any) => {
+  const updateField = (field: string, value: unknown) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
@@ -168,7 +168,7 @@ export default function AddTour() {
         review_count: 0,
       };
 
-      const { error } = await (supabase as any)
+      const { error } = await (supabase as unknown)
         .from('tours')
         .insert(tourData);
 
@@ -180,7 +180,7 @@ export default function AddTour() {
       });
 
       navigate('/tours/operator/dashboard');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error adding tour:', error);
       toast({
         title: 'Error',

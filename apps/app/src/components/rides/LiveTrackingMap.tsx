@@ -189,7 +189,7 @@ export const LiveTrackingMap = ({
           table: 'drivers',
           filter: `user_id=eq.${driverId}`,
         },
-        (payload: any) => {
+        (payload: unknown) => {
           const { current_lat, current_lng } = payload.new;
           if (current_lat && current_lng) {
             const newPos = { lat: current_lat, lng: current_lng };

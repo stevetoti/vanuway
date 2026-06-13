@@ -85,7 +85,7 @@ const TourProviderDashboard = () => {
         .limit(5);
 
       setRecentBookings((bookingsData || []) as unknown as TourBooking[]);
-      setRecentBookings((bookingsData || []) as any);
+      setRecentBookings((bookingsData || []) as unknown);
 
       // Calculate stats
       const activeCount = 0; // Simplified for now
@@ -102,7 +102,7 @@ const TourProviderDashboard = () => {
       ) || 0;
 
       const avgRating = toursData?.length 
-        ? toursData.reduce((sum, tour: any) => sum + (tour.average_rating || 0), 0) / toursData.length
+        ? toursData.reduce((sum, tour: unknown) => sum + (tour.average_rating || 0), 0) / toursData.length
         : 0;
 
       setStats({
@@ -111,7 +111,7 @@ const TourProviderDashboard = () => {
         totalRevenue,
         averageRating: avgRating,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error loading dashboard:', error);
       toast.error('Failed to load dashboard');
     } finally {

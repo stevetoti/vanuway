@@ -47,14 +47,18 @@ export const PersonalInfoStep = ({ initialData, onNext }: PersonalInfoStepProps)
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) setFormData(JSON.parse(saved));
-    } catch {}
+    } catch (error) {
+      console.warn('Could not restore driver personal info draft:', error);
+    }
   }, []);
 
   // Auto-save on change
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(formData));
-    } catch {}
+    } catch (error) {
+      console.warn('Could not save driver personal info draft:', error);
+    }
   }, [formData]);
 
   const handleSubmit = (e: React.FormEvent) => {

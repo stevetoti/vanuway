@@ -23,7 +23,7 @@ import {
 import { ServiceCategory, ServiceProvider, VANUATU_ISLANDS, SERVICE_ICONS } from '@/types/serviceProvider';
 import { cn } from '@/lib/utils';
 
-const iconMap: Record<string, any> = {
+const iconMap: Record<string, unknown> = {
   Wrench, Zap, Hammer, Paintbrush, Sparkles, TreePine, Wind, Truck, Shield,
   Bug, Home, Flame, Car, Camera, ChefHat, PartyPopper, Laptop, GraduationCap,
   Scissors, Refrigerator
@@ -38,7 +38,7 @@ export default function ProvidersIndex() {
   const { data: categories } = useQuery({
     queryKey: ['service-categories'],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await (supabase as unknown)
         .from('service_categories')
         .select('*')
         .eq('is_active', true)
@@ -52,7 +52,7 @@ export default function ProvidersIndex() {
   const { data: providers, isLoading } = useQuery({
     queryKey: ['service-providers', selectedCategory, selectedIsland, searchQuery],
     queryFn: async () => {
-      let query = (supabase as any)
+      let query = (supabase as unknown)
         .from('service_providers')
         .select('*')
         .eq('verification_status', 'verified')
@@ -76,12 +76,12 @@ export default function ProvidersIndex() {
       if (data && data.length > 0) return data as ServiceProvider[];
       // Fallback seed data for when Supabase is empty
       return [
-        { id: 'seed-1', business_name: 'Island Plumbing', description: 'Professional plumbing services for residential and commercial properties across Port Vila.', categories: ['plumbing'], island: 'Efate', area: 'Port Vila', profile_photo_url: '', average_rating: 4.7, total_reviews: 45, years_experience: 12, hourly_rate: 3500, is_active: true, is_available: true, verification_status: 'verified', accepts_emergency: true, phone: '+678 55123' } as any,
-        { id: 'seed-2', business_name: 'Pacific Electrical', description: 'Licensed electricians providing installation, repairs, and maintenance services.', categories: ['electrical'], island: 'Efate', area: 'Port Vila', profile_photo_url: '', average_rating: 4.6, total_reviews: 38, years_experience: 8, hourly_rate: 4000, is_active: true, is_available: true, verification_status: 'verified', accepts_emergency: true, phone: '+678 55234' } as any,
-        { id: 'seed-3', business_name: 'Vila Cleaning', description: 'Professional house and office cleaning services. Deep cleaning, regular maintenance, and move-out cleaning.', categories: ['cleaning'], island: 'Efate', area: 'Port Vila', profile_photo_url: '', average_rating: 4.8, total_reviews: 62, years_experience: 5, hourly_rate: 2000, is_active: true, is_available: true, verification_status: 'verified', accepts_emergency: false, phone: '+678 55345' } as any,
-        { id: 'seed-4', business_name: 'Vanuatu Auto Repair', description: 'Full-service auto mechanic shop. Engine repairs, servicing, tire changes, and diagnostics.', categories: ['automotive'], island: 'Efate', area: 'Nambatu', profile_photo_url: '', average_rating: 4.5, total_reviews: 51, years_experience: 15, hourly_rate: 3000, is_active: true, is_available: true, verification_status: 'verified', accepts_emergency: true, phone: '+678 55456' } as any,
-        { id: 'seed-5', business_name: 'Island IT Support', description: 'Computer repairs, network setup, WiFi installation, and IT consulting for businesses and homes.', categories: ['it_services'], island: 'Efate', area: 'Port Vila', profile_photo_url: '', average_rating: 4.4, total_reviews: 29, years_experience: 6, hourly_rate: 5000, is_active: true, is_available: true, verification_status: 'verified', accepts_emergency: false, phone: '+678 55567' } as any,
-        { id: 'seed-6', business_name: 'Paradise Beauty Salon', description: 'Hair styling, beauty treatments, manicures, pedicures, and spa services in a relaxing atmosphere.', categories: ['beauty'], island: 'Efate', area: 'Port Vila Town', profile_photo_url: '', average_rating: 4.9, total_reviews: 78, years_experience: 10, hourly_rate: 2500, is_active: true, is_available: true, verification_status: 'verified', accepts_emergency: false, phone: '+678 55678' } as any,
+        { id: 'seed-1', business_name: 'Island Plumbing', description: 'Professional plumbing services for residential and commercial properties across Port Vila.', categories: ['plumbing'], island: 'Efate', area: 'Port Vila', profile_photo_url: '', average_rating: 4.7, total_reviews: 45, years_experience: 12, hourly_rate: 3500, is_active: true, is_available: true, verification_status: 'verified', accepts_emergency: true, phone: '+678 55123' } as unknown,
+        { id: 'seed-2', business_name: 'Pacific Electrical', description: 'Licensed electricians providing installation, repairs, and maintenance services.', categories: ['electrical'], island: 'Efate', area: 'Port Vila', profile_photo_url: '', average_rating: 4.6, total_reviews: 38, years_experience: 8, hourly_rate: 4000, is_active: true, is_available: true, verification_status: 'verified', accepts_emergency: true, phone: '+678 55234' } as unknown,
+        { id: 'seed-3', business_name: 'Vila Cleaning', description: 'Professional house and office cleaning services. Deep cleaning, regular maintenance, and move-out cleaning.', categories: ['cleaning'], island: 'Efate', area: 'Port Vila', profile_photo_url: '', average_rating: 4.8, total_reviews: 62, years_experience: 5, hourly_rate: 2000, is_active: true, is_available: true, verification_status: 'verified', accepts_emergency: false, phone: '+678 55345' } as unknown,
+        { id: 'seed-4', business_name: 'Vanuatu Auto Repair', description: 'Full-service auto mechanic shop. Engine repairs, servicing, tire changes, and diagnostics.', categories: ['automotive'], island: 'Efate', area: 'Nambatu', profile_photo_url: '', average_rating: 4.5, total_reviews: 51, years_experience: 15, hourly_rate: 3000, is_active: true, is_available: true, verification_status: 'verified', accepts_emergency: true, phone: '+678 55456' } as unknown,
+        { id: 'seed-5', business_name: 'Island IT Support', description: 'Computer repairs, network setup, WiFi installation, and IT consulting for businesses and homes.', categories: ['it_services'], island: 'Efate', area: 'Port Vila', profile_photo_url: '', average_rating: 4.4, total_reviews: 29, years_experience: 6, hourly_rate: 5000, is_active: true, is_available: true, verification_status: 'verified', accepts_emergency: false, phone: '+678 55567' } as unknown,
+        { id: 'seed-6', business_name: 'Paradise Beauty Salon', description: 'Hair styling, beauty treatments, manicures, pedicures, and spa services in a relaxing atmosphere.', categories: ['beauty'], island: 'Efate', area: 'Port Vila Town', profile_photo_url: '', average_rating: 4.9, total_reviews: 78, years_experience: 10, hourly_rate: 2500, is_active: true, is_available: true, verification_status: 'verified', accepts_emergency: false, phone: '+678 55678' } as unknown,
       ] as ServiceProvider[];
     },
   });

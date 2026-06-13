@@ -16,7 +16,7 @@ const HotelMessages = () => {
   const [loading, setLoading] = useState(true);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
-  const [otherParticipants, setOtherParticipants] = useState<Record<string, any>>({});
+  const [otherParticipants, setOtherParticipants] = useState<Record<string, unknown>>({});
 
   useEffect(() => {
     if (user) {
@@ -62,7 +62,7 @@ const HotelMessages = () => {
       setConversations(convs);
 
       // Load other participants info
-      const participants: Record<string, any> = {};
+      const participants: Record<string, unknown> = {};
       for (const conv of convs) {
         const participant = await HotelChatService.getOtherParticipant(
           conv.id,
@@ -165,7 +165,7 @@ const HotelMessages = () => {
                         <div className="flex items-center gap-2 flex-1 min-w-0">
                           <Building2 className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                           <p className="font-semibold text-sm truncate">
-                            {(conv as any).hotel?.name || 'Hotel'}
+                            {(conv as unknown).hotel?.name || 'Hotel'}
                           </p>
                         </div>
                         {unread > 0 && (
@@ -203,7 +203,7 @@ const HotelMessages = () => {
             {selectedConversation ? (
               <ChatWidget
                 hotelId={selectedConversation.hotel_id!}
-                hotelName={(selectedConversation as any).hotel?.name || 'Hotel'}
+                hotelName={(selectedConversation as unknown).hotel?.name || 'Hotel'}
                 ownerId={
                   selectedConversation.participant1_id === user?.id
                     ? selectedConversation.participant2_id

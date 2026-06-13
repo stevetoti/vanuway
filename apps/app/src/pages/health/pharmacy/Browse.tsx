@@ -28,7 +28,7 @@ export default function BrowsePharmacies() {
   const { data: pharmacies, isLoading } = useQuery({
     queryKey: ['pharmacies', island, deliveryFilter, searchQuery],
     queryFn: async () => {
-      let query = (supabase as any)
+      let query = (supabase as unknown)
         .from('pharmacies')
         .select('*')
         .eq('status', 'approved')

@@ -109,8 +109,8 @@ const HotelDetails = () => {
         ...hotelData,
         rooms: roomsData || [],
         reviews: reviewsData || [],
-      } as any);
-    } catch (error: any) {
+      } as unknown);
+    } catch (error: unknown) {
       console.error('Error loading hotel:', error);
       toast.error('Failed to load hotel details');
       navigate('/hotels');
@@ -191,7 +191,7 @@ const HotelDetails = () => {
 
       setShowBookingDialog(false);
       navigate('/bookings');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error creating booking:', error);
       toast.error('Failed to create booking', {
         description: error.message,
@@ -420,7 +420,7 @@ const HotelDetails = () => {
             </Card>
 
             {/* Chat with Owner */}
-            {(hotel as any).owner?.user_id && (
+            {(hotel as unknown).owner?.user_id && (
               <Card className="p-6">
                 <h3 className="font-semibold text-lg mb-3">Have Questions?</h3>
                 <p className="text-sm text-muted-foreground mb-4">
@@ -429,7 +429,7 @@ const HotelDetails = () => {
                 <ChatWidget
                   hotelId={hotel.id}
                   hotelName={hotel.name}
-                  ownerId={(hotel as any).owner.user_id}
+                  ownerId={(hotel as unknown).owner.user_id}
                   triggerButton={true}
                 />
               </Card>

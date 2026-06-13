@@ -81,7 +81,7 @@ export default function PharmacyRegister() {
         .getPublicUrl(fileName);
 
       setLogoUrl(publicUrl);
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: 'Upload failed',
         description: error.message,
@@ -96,7 +96,7 @@ export default function PharmacyRegister() {
     mutationFn: async () => {
       if (!user) throw new Error('Login required');
 
-      const { data, error } = await (supabase as any)
+      const { data, error } = await (supabase as unknown)
         .from('pharmacies')
         .insert({
           user_id: user.id,
@@ -134,7 +134,7 @@ export default function PharmacyRegister() {
       });
       navigate('/health/pharmacy/pending');
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
         title: 'Registration failed',
         description: error.message,

@@ -6,13 +6,58 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Phone, Navigation, CheckCircle, XCircle, Loader2 } from 'lucide-react';
+import { Phone, Navigation, CheckCircle, XCircle, Loader2, Shuffle } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { RideMessaging, MessageButton } from '@/components/rides/RideMessaging';
 import { CancellationDialog } from '@/components/rides/CancellationDialog';
+import { ReassignDriverDialog } from '@/components/admin/ReassignDriverDialog';
 import { getUnreadCount } from '@/lib/rides/messaging-service';
 import { LiveTrackingMap } from '@/components/rides/LiveTrackingMap';
 import { DriverLocationService } from '@/lib/rides/location-tracking';
+
+/**
+ * Pulls a 1-hour signed URL for the passenger's pickup photo via the
+ * pickup-photo-sign edge function. The photo lives in the private
+ * ride-pickup-photos bucket; only the passenger, the driver of this ride,
+ * or an admin can get a signed URL. Auto-refetches when `hasPhoto` flips.
+ */
+function PassengerPickupPhoto({ rideId, hasPhoto, hidden }: { rideId: string; hasPhoto: boolean; hidden: boolean }) {
+  const [signedUrl, setSignedUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!hasPhoto || hidden) { setSignedUrl(null); return; }
+    let cancelled = false;
+    setLoading(true);
+    supabase.functions.invoke('pickup-photo-sign', { body: { rideId } })
+      .then(({ data }) => { if (!cancelled) setSignedUrl((data?.url as string) || null); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [rideId, hasPhoto, hidden]);
+
+  if (hidden || !hasPhoto) return null;
+
+  return (
+    <Card className="p-3 border-blue-200 bg-blue-50/40">
+      <div className="flex items-center gap-2 mb-2">
+        <div className="h-2 w-2 rounded-full bg-blue-500" />
+        <p className="text-xs font-bold uppercase tracking-wide text-blue-700">Look for this passenger</p>
+      </div>
+      {signedUrl ? (
+        <a href={signedUrl} target="_blank" rel="noreferrer">
+          <img src={signedUrl} alt="Passenger pickup photo" className="w-full max-h-72 object-cover rounded-lg border border-blue-200" />
+        </a>
+      ) : (
+        <div className="py-6 text-xs text-muted-foreground text-center flex items-center justify-center gap-2">
+          {loading ? <><Loader2 className="h-3 w-3 animate-spin" /> Loading photo…</> : 'Photo unavailable'}
+        </div>
+      )}
+      <p className="text-[11px] text-muted-foreground mt-1.5 text-center">
+        Tap to enlarge · Photo shared by passenger
+      </p>
+    </Card>
+  );
+}
 
 interface RideDetails {
   id: string;
@@ -28,6 +73,7 @@ interface RideDetails {
   price: number;
   status: string;
   created_at: string;
+  pickup_photo_url?: string | null;
 }
 
 interface DriverInfo {
@@ -53,6 +99,7 @@ const ActiveRide = () => {
   const [chatOpen, setChatOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [handoverDialogOpen, setHandoverDialogOpen] = useState(false);
 
   useEffect(() => {
     fetchRideDetails();
@@ -136,12 +183,15 @@ const ActiveRide = () => {
       if (error) throw error;
       setRide(data);
 
-      // Fetch passenger phone
-      if (data.user_id) {
+      // Prefer the phone snapshot on the booking (reliable for Book-Now);
+      // fall back to the passenger's current profile phone.
+      if (data.passenger_phone) {
+        setPassengerPhone(data.passenger_phone);
+      } else if (data.user_id) {
         const { data: profile } = await supabase.from('profiles').select('phone').eq('id', data.user_id).maybeSingle();
         if (profile?.phone) setPassengerPhone(profile.phone);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast.error('Failed to load ride details');
       navigate('/driver/dashboard');
     } finally {
@@ -172,7 +222,7 @@ const ActiveRide = () => {
       }).then(({ error: notifError }) => {
         if (notifError) console.warn('Notification failed:', notifError);
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast.error('Failed to update ride status');
     }
   };
@@ -218,7 +268,7 @@ const ActiveRide = () => {
         type: 'ride_earning',
         description: `Ride earnings: ${ride.pickup_location} → ${ride.dropoff_location}`,
         balance_after: driverData.total_earnings + ride.price,
-      } as any).then(({ error: e }) => { if (e) console.warn('Transaction:', e); });
+      } as unknown).then(({ error: e }) => { if (e) console.warn('Transaction:', e); });
 
       // Notify passenger (non-blocking)
       supabase.from('notifications').insert({
@@ -230,7 +280,7 @@ const ActiveRide = () => {
 
       toast.success('Ride completed! Earnings added to your account.');
       navigate('/driver/dashboard');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error completing ride:', error);
       toast.error('Failed to complete ride');
     }
@@ -246,14 +296,14 @@ const ActiveRide = () => {
           status: 'cancelled',
           cancellation_reason: reason,
           cancelled_by: 'driver',
-        } as any)
+        } as unknown)
         .eq('id', ride.id);
 
       if (rideError) throw rideError;
 
       await supabase.from('drivers').update({
         status: 'available', is_available: true, is_online: true, current_ride_id: null,
-      } as any).eq('user_id', user.id);
+      } as unknown).eq('user_id', user.id);
 
       supabase.from('notifications').insert({
         user_id: ride.user_id,
@@ -265,7 +315,7 @@ const ActiveRide = () => {
       toast.success('Ride cancelled');
       setCancelDialogOpen(false);
       navigate('/driver/dashboard');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error cancelling ride:', error);
       toast.error('Failed to cancel ride');
     }
@@ -364,6 +414,12 @@ const ActiveRide = () => {
           showDriverMarker={true}
           showRoute={true}
         />
+
+        {/* Passenger pickup photo — passenger may have snapped a selfie or
+            outfit shot to help the driver spot them. Stored in a private
+            bucket; we fetch a 1-hour signed URL via the pickup-photo-sign
+            edge function. Only useful before pickup; auto-cleared on done. */}
+        <PassengerPickupPhoto rideId={ride.id} hasPhoto={!!ride.pickup_photo_url} hidden={ride.status === 'in_progress'} />
 
         {/* Ride Details */}
         <Card className="p-6 space-y-4">
@@ -487,6 +543,19 @@ const ActiveRide = () => {
             </Button>
           )}
 
+          {/* Hand over to another driver — only before pickup completes */}
+          {['accepted', 'arriving', 'arrived'].includes(ride.status) && (
+            <Button
+              variant="outline"
+              className="w-full"
+              size="lg"
+              onClick={() => setHandoverDialogOpen(true)}
+            >
+              <Shuffle className="h-4 w-4 mr-2" />
+              Hand over to another driver
+            </Button>
+          )}
+
           {/* Cancel Button - available for all active statuses */}
           {['accepted', 'arriving', 'in_progress'].includes(ride.status) && (
             <Button
@@ -508,6 +577,19 @@ const ActiveRide = () => {
             userType="driver"
             rideStatus={ride.status}
             fareAmount={ride.price}
+          />
+
+          <ReassignDriverDialog
+            open={handoverDialogOpen}
+            onOpenChange={setHandoverDialogOpen}
+            rideId={ride.id}
+            rideVehicleType={ride.vehicle_type}
+            currentDriverUserId={ride.driver_id}
+            actor="driver"
+            onReassigned={() => {
+              setHandoverDialogOpen(false);
+              navigate('/driver');
+            }}
           />
         </div>
       </div>

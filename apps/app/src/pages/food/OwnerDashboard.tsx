@@ -14,7 +14,11 @@ import {
   Clock,
   TrendingUp,
   AlertCircle,
+  Sparkles,
 } from 'lucide-react';
+import { BulkImportWizard, type ImportedItem } from '@/components/import/BulkImportWizard';
+import { LinkedStoreCard } from '@/components/import/LinkedStoreCard';
+import { registerImportSource, makeExternalIdFromItem } from '@/lib/import/source-link';
 
 interface Restaurant {
   id: string;
@@ -41,6 +45,28 @@ const RestaurantOwnerDashboard = () => {
     pendingOrders: 0,
     totalEarnings: 0,
   });
+  const [importOpenFor, setImportOpenFor] = useState<string | null>(null);
+
+  const importMenuItems = async (restaurantId: string, items: ImportedItem[], context?: { sourceUrl?: string; mode: 'ai' | 'csv' }) => {
+    const sourceId = user ? await registerImportSource(user.id, 'restaurant', context?.sourceUrl) : null;
+    const rows = items.map((it) => ({
+      restaurant_id: restaurantId,
+      name: String(it.name || '').slice(0, 200),
+      description: String(it.description || ''),
+      price: Number(it.price) || 0,
+      category: String(it.category || ''),
+      image_url: String(it.image_url || ''),
+      is_available: false, // pending admin approval
+      source_id: sourceId,
+      source_external_id: makeExternalIdFromItem(it),
+      last_seen_in_source_at: sourceId ? new Date().toISOString() : null,
+    }));
+    const { error } = await supabase.from('menu_items').insert(rows);
+    if (error) throw error;
+    toast.success(`Imported ${rows.length} menu items — pending admin approval`, {
+      description: sourceId ? "Your website is now linked. We'll auto-sync new products weekly." : undefined,
+    });
+  };
 
   useEffect(() => {
     if (user) {
@@ -108,7 +134,7 @@ const RestaurantOwnerDashboard = () => {
           totalEarnings,
         });
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error loading dashboard:', error);
       toast.error('Failed to load dashboard');
     } finally {
@@ -150,6 +176,8 @@ const RestaurantOwnerDashboard = () => {
             Manage Orders
           </Button>
         </div>
+
+        <LinkedStoreCard vendorKind="restaurant" label="your restaurant" />
 
         {/* Verification Status */}
         {ownerProfile.verification_status === 'pending' && (
@@ -238,8 +266,8 @@ const RestaurantOwnerDashboard = () => {
                   </div>
                   <div className="flex items-center gap-4">
                     <span className={`px-2 py-1 rounded text-xs font-medium ${
-                      restaurant.is_open 
-                        ? 'bg-green-100 text-green-800' 
+                      restaurant.is_open
+                        ? 'bg-green-100 text-green-800'
                         : 'bg-yellow-100 text-yellow-800'
                     }`}>
                       {restaurant.is_open ? 'Open' : 'Closed'}
@@ -248,6 +276,14 @@ const RestaurantOwnerDashboard = () => {
                       <TrendingUp className="h-4 w-4 text-muted-foreground" />
                       {restaurant.rating || 0}
                     </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setImportOpenFor(restaurant.id)}
+                    >
+                      <Sparkles className="h-4 w-4 mr-1 text-orange-500" />
+                      Import menu
+                    </Button>
                     <Button variant="outline" size="sm">
                       Manage
                     </Button>
@@ -258,6 +294,23 @@ const RestaurantOwnerDashboard = () => {
           )}
         </Card>
       </div>
+
+      <BulkImportWizard
+        open={!!importOpenFor}
+        onOpenChange={(open) => !open && setImportOpenFor(null)}
+        vendorType="restaurant"
+        itemLabel="menu items"
+        previewFields={[
+          { key: 'name', label: 'Name', type: 'text' },
+          { key: 'price', label: 'Price (VUV)', type: 'number' },
+          { key: 'category', label: 'Category', type: 'text' },
+          { key: 'description', label: 'Description', type: 'text' },
+        ]}
+        onConfirm={async (items, context) => {
+          if (!importOpenFor) return;
+          await importMenuItems(importOpenFor, items, context);
+        }}
+      />
     </Layout>
   );
 };

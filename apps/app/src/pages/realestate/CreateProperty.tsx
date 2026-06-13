@@ -63,7 +63,7 @@ export default function CreateProperty() {
     mutationFn: async () => {
       if (!user) throw new Error('Login required');
 
-      const { data, error } = await (supabase as any)
+      const { data, error } = await (supabase as unknown)
         .from('properties')
         .insert({
           user_id: user.id,
@@ -90,7 +90,7 @@ export default function CreateProperty() {
           contact_email: formData.contact_email || null,
           contact_whatsapp: formData.contact_whatsapp || null,
           show_contact: formData.show_contact,
-          status: 'active',
+          status: 'pending', // pending admin approval before going public
         })
         .select()
         .single();
@@ -98,14 +98,14 @@ export default function CreateProperty() {
       if (error) throw error;
       return data;
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       toast({
-        title: 'Property Listed!',
-        description: 'Your property has been posted successfully.',
+        title: 'Property Submitted',
+        description: 'An admin will review and publish it shortly. You can find it under "My Properties".',
       });
-      navigate(`/realestate/${data.id}`);
+      navigate(`/realestate/my-properties`);
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
         title: 'Error',
         description: error.message || 'Failed to create listing',
@@ -146,7 +146,7 @@ export default function CreateProperty() {
 
         setImages(prev => [...prev, publicUrl]);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: 'Upload failed',
         description: error.message || 'Failed to upload image',

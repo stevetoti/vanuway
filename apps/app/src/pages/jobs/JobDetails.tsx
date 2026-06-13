@@ -40,7 +40,7 @@ export default function JobDetails() {
   const { data: job, isLoading } = useQuery({
     queryKey: ['job', jobId],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await (supabase as unknown)
         .from('jobs')
         .select('*, category:job_categories(*)')
         .eq('id', jobId)
@@ -55,7 +55,7 @@ export default function JobDetails() {
     queryKey: ['job-saved', jobId, user?.id],
     queryFn: async () => {
       if (!user) return false;
-      const { data, error } = await (supabase as any)
+      const { data, error } = await (supabase as unknown)
         .from('job_saves')
         .select('id')
         .eq('job_id', jobId)
@@ -71,7 +71,7 @@ export default function JobDetails() {
     queryKey: ['job-application', jobId, user?.id],
     queryFn: async () => {
       if (!user) return null;
-      const { data, error } = await (supabase as any)
+      const { data, error } = await (supabase as unknown)
         .from('job_applications')
         .select('*')
         .eq('job_id', jobId)
@@ -87,14 +87,14 @@ export default function JobDetails() {
     mutationFn: async () => {
       if (!user) throw new Error('Please sign in');
       if (isSaved) {
-        const { error } = await (supabase as any)
+        const { error } = await (supabase as unknown)
           .from('job_saves')
           .delete()
           .eq('job_id', jobId)
           .eq('user_id', user.id);
         if (error) throw error;
       } else {
-        const { error } = await (supabase as any)
+        const { error } = await (supabase as unknown)
           .from('job_saves')
           .insert({ job_id: jobId, user_id: user.id });
         if (error) throw error;
@@ -117,7 +117,7 @@ export default function JobDetails() {
         throw new Error('Please fill in required fields');
       }
 
-      const { error } = await (supabase as any)
+      const { error } = await (supabase as unknown)
         .from('job_applications')
         .insert({
           job_id: jobId,
@@ -142,7 +142,7 @@ export default function JobDetails() {
         description: 'Your application has been sent to the employer',
       });
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
         title: 'Error',
         description: error.message || 'Failed to submit application',

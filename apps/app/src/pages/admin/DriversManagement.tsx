@@ -91,7 +91,7 @@ const AdminDriversManagement = () => {
 
       if (error) throw error;
       setDrivers(data as Driver[] || []);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error loading drivers:', error);
       toast.error('Failed to load drivers');
     } finally {
@@ -156,7 +156,7 @@ const AdminDriversManagement = () => {
 
       setShowApprovalDialog(false);
       setSelectedDriver(null);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error updating driver:', error);
       toast.error('Failed to update driver');
     } finally {
@@ -165,7 +165,7 @@ const AdminDriversManagement = () => {
   };
 
   const getStatusBadge = (status: string) => {
-    const config: Record<string, { variant: any; label: string; className: string }> = {
+    const config: Record<string, { variant: unknown; label: string; className: string }> = {
       available: { variant: 'default', label: 'Online', className: 'bg-green-100 text-green-700' },
       busy: { variant: 'default', label: 'On Trip', className: 'bg-yellow-100 text-yellow-700' },
       offline: { variant: 'secondary', label: 'Offline', className: 'bg-gray-100 text-gray-600' },

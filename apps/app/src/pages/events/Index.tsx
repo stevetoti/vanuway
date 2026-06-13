@@ -16,7 +16,7 @@ import {
 import { CommunityEvent, EventCategory } from '@/types/events';
 import { format, parseISO, isToday, isTomorrow, isThisWeek, isThisMonth } from 'date-fns';
 
-const categoryIcons: Record<string, any> = {
+const categoryIcons: Record<string, unknown> = {
   cultural: Users,
   music: Music,
   sports: Trophy,
@@ -52,7 +52,7 @@ export default function EventsIndex() {
   const { data: events, isLoading } = useQuery({
     queryKey: ['community-events'],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await (supabase as unknown)
         .from('community_events')
         .select('*')
         .eq('status', 'approved')
@@ -68,7 +68,7 @@ export default function EventsIndex() {
     queryKey: ['my-event-registrations', user?.id],
     queryFn: async () => {
       if (!user) return [];
-      const { data, error } = await (supabase as any)
+      const { data, error } = await (supabase as unknown)
         .from('event_registrations')
         .select('event_id, status')
         .eq('user_id', user.id);
@@ -79,7 +79,7 @@ export default function EventsIndex() {
     enabled: !!user,
   });
 
-  const registrationMap = new Map(registrations?.map((r: any) => [r.event_id, r.status]) || []);
+  const registrationMap = new Map(registrations?.map((r: unknown) => [r.event_id, r.status]) || []);
 
   const filteredEvents = events?.filter(event => {
     const matchesSearch = event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||

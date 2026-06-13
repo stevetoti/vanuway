@@ -264,7 +264,7 @@ const EnhancedEarnings = () => {
         <Card className="p-6">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-semibold">Earnings History</h2>
-            <Tabs value={timeRange} onValueChange={(v) => setTimeRange(v as any)}>
+            <Tabs value={timeRange} onValueChange={(v) => setTimeRange(v as unknown)}>
               <TabsList>
                 <TabsTrigger value="week">This Week</TabsTrigger>
                 <TabsTrigger value="month">This Month</TabsTrigger>

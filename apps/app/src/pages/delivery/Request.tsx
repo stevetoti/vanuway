@@ -75,7 +75,7 @@ const DeliveryRequest = () => {
 
       toast.success('Delivery booked! Finding a driver...');
       navigate(`/rides/track/${result.bookingId}`);
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast.error(error.message || 'Failed to book delivery');
     } finally {
       setLoading(false);

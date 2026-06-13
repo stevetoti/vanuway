@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -27,6 +27,28 @@ export default function CreateListing() {
   const { user } = useAuth();
   const { toast } = useToast();
 
+  // Gate: only approved marketplace sellers can post listings.
+  useEffect(() => {
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+    (async () => {
+      const { data } = await (supabase as unknown)
+        .from('marketplace_sellers')
+        .select('verification_status')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if (!data) {
+        toast({ title: 'Apply to sell first', description: 'You need to register as a seller before posting listings.' });
+        navigate('/marketplace/seller/register');
+      } else if (data.verification_status !== 'verified') {
+        navigate('/marketplace/seller/register');
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -47,7 +69,7 @@ export default function CreateListing() {
   const { data: categories } = useQuery({
     queryKey: ['marketplace-categories'],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await (supabase as unknown)
         .from('marketplace_categories')
         .select('*')
         .order('name');
@@ -63,7 +85,7 @@ export default function CreateListing() {
 
       const price = formData.listing_type === 'free' ? 0 : parseInt(formData.price) || 0;
 
-      const { data, error } = await (supabase as any)
+      const { data, error } = await (supabase as unknown)
         .from('marketplace_listings')
         .insert({
           user_id: user.id,
@@ -80,7 +102,7 @@ export default function CreateListing() {
           contact_whatsapp: formData.contact_whatsapp || null,
           show_phone: formData.show_phone,
           images,
-          status: 'active',
+          status: 'draft', // pending admin approval before going public
         })
         .select()
         .single();
@@ -90,12 +112,12 @@ export default function CreateListing() {
     },
     onSuccess: (data) => {
       toast({
-        title: 'Listing Created!',
-        description: 'Your item has been posted to the marketplace.',
+        title: 'Listing Submitted',
+        description: 'An admin will review and publish it shortly. You can find it under "My Listings".',
       });
-      navigate(`/marketplace/${data.id}`);
+      navigate(`/marketplace/my-listings`);
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
         title: 'Error',
         description: error.message || 'Failed to create listing',
@@ -136,7 +158,7 @@ export default function CreateListing() {
 
         setImages(prev => [...prev, publicUrl]);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: 'Upload failed',
         description: error.message || 'Failed to upload image',

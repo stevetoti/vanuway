@@ -179,7 +179,7 @@ const handler = async (req: Request): Promise<Response> => {
       JSON.stringify({ success: true, data: emailResponse }),
       { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error in send-auth-email function:", error);
     return new Response(
       JSON.stringify({ error: error.message }),

@@ -64,7 +64,7 @@ export default function RestaurantDetail() {
 
   const categories = [...new Set(menuItems?.map((item) => item.category) || [])];
 
-  const handleAddToCart = (item: any) => {
+  const handleAddToCart = (item: unknown) => {
     addItem({
       id: item.id,
       name: item.name,

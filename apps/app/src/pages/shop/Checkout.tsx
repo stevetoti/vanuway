@@ -51,7 +51,7 @@ export default function ShopCheckout() {
   const { data: shop } = useQuery({
     queryKey: ['shop', shopId],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await (supabase as unknown)
         .from('shops')
         .select('*')
         .eq('id', shopId)
@@ -85,7 +85,7 @@ export default function ShopCheckout() {
       }
 
       // Create order
-      const { data: order, error: orderError } = await (supabase as any)
+      const { data: order, error: orderError } = await (supabase as unknown)
         .from('shop_orders')
         .insert({
           user_id: user.id,
@@ -118,7 +118,7 @@ export default function ShopCheckout() {
         special_instructions: item.special_instructions || null,
       }));
 
-      const { error: itemsError } = await (supabase as any)
+      const { error: itemsError } = await (supabase as unknown)
         .from('shop_order_items')
         .insert(items);
 
@@ -128,13 +128,22 @@ export default function ShopCheckout() {
     },
     onSuccess: (order) => {
       sessionStorage.removeItem('shopCart');
+      if (deliveryType === 'delivery') {
+        supabase.functions.invoke('create-shop-delivery-route', {
+          body: { orderId: order.id },
+        }).then(({ error, data }) => {
+          if (error || data?.error) {
+            console.warn('Failed to create shop delivery route', error || data?.error);
+          }
+        });
+      }
       toast({
         title: 'Order Placed!',
         description: `Your order #${order.order_number} has been placed`,
       });
       navigate(`/shop/order/${order.id}`);
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
         title: 'Order Failed',
         description: error.message || 'Something went wrong',
@@ -179,7 +188,7 @@ export default function ShopCheckout() {
             <CardTitle className="text-lg">Delivery Method</CardTitle>
           </CardHeader>
           <CardContent>
-            <RadioGroup value={deliveryType} onValueChange={(v) => setDeliveryType(v as any)}>
+            <RadioGroup value={deliveryType} onValueChange={(v) => setDeliveryType(v as unknown)}>
               <div
                 className={cn(
                   "flex items-center space-x-3 p-4 rounded-lg border-2 cursor-pointer transition-colors",
@@ -286,7 +295,7 @@ export default function ShopCheckout() {
             <CardTitle className="text-lg">Payment Method</CardTitle>
           </CardHeader>
           <CardContent>
-            <RadioGroup value={paymentMethod} onValueChange={(v) => setPaymentMethod(v as any)}>
+            <RadioGroup value={paymentMethod} onValueChange={(v) => setPaymentMethod(v as unknown)}>
               <div
                 className={cn(
                   "flex items-center space-x-3 p-4 rounded-lg border-2 cursor-pointer",

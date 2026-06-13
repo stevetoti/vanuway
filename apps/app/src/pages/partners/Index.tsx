@@ -1,283 +1,242 @@
-import { Layout } from '@/components/layout/Layout';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
+import { BottomNav } from '@/components/layout/BottomNav';
 import {
-  Car,
-  Building2,
-  Utensils,
-  Compass,
-  Ship,
-  Stethoscope,
-  Wrench,
-  ArrowRight,
-  DollarSign,
-  Clock,
-  Users,
-  Shield,
-  Star,
-  TrendingUp,
-  CheckCircle2,
+  Car, Building2, Utensils, Compass, Ship, Stethoscope, Wrench, Zap,
+  ArrowLeft, ArrowRight, ChevronRight, Star, Briefcase, Users, Heart,
+  ShoppingBag, Home, CalendarDays,
 } from 'lucide-react';
+
+const partnerTypes = [
+  {
+    icon: Car,
+    title: 'Driver',
+    desc: 'Drive & earn on your schedule',
+    path: '/driver/register',
+    color: 'text-orange-600',
+    bg: 'bg-orange-50',
+    accent: 'border-orange-200',
+    popular: true,
+  },
+  {
+    icon: Utensils,
+    title: 'Restaurant',
+    desc: 'List your restaurant for delivery & orders',
+    path: '/food/owner/register',
+    color: 'text-green-600',
+    bg: 'bg-green-50',
+    accent: 'border-green-200',
+    popular: true,
+  },
+  {
+    icon: Building2,
+    title: 'Hotel',
+    desc: 'Reach more guests with online bookings',
+    path: '/hotels/owner/register',
+    color: 'text-blue-600',
+    bg: 'bg-blue-50',
+    accent: 'border-blue-200',
+  },
+  {
+    icon: Compass,
+    title: 'Tours & Experiences',
+    desc: 'Offer tours to local & international visitors',
+    path: '/tours/provider/register',
+    color: 'text-amber-600',
+    bg: 'bg-amber-50',
+    accent: 'border-amber-200',
+  },
+  {
+    icon: Home,
+    title: 'Real Estate',
+    desc: 'List properties for sale or rent',
+    path: '/realestate/create',
+    color: 'text-emerald-600',
+    bg: 'bg-emerald-50',
+    accent: 'border-emerald-200',
+  },
+  {
+    icon: ShoppingBag,
+    title: 'Marketplace Seller',
+    desc: 'Apply to sell items to buyers across Vanuatu',
+    path: '/marketplace/seller/register',
+    color: 'text-purple-600',
+    bg: 'bg-purple-50',
+    accent: 'border-purple-200',
+  },
+  {
+    icon: CalendarDays,
+    title: 'Event Organiser',
+    desc: 'List concerts, markets, festivals & more',
+    path: '/events/create',
+    color: 'text-pink-600',
+    bg: 'bg-pink-50',
+    accent: 'border-pink-200',
+  },
+  {
+    icon: Ship,
+    title: 'Ferry / Transport',
+    desc: 'List ferry routes & inter-island services',
+    path: '/ferry/operator/register',
+    color: 'text-cyan-600',
+    bg: 'bg-cyan-50',
+    accent: 'border-cyan-200',
+  },
+  {
+    icon: Stethoscope,
+    title: 'Pharmacy',
+    desc: 'Sell medicines & health products online',
+    path: '/health/pharmacy/register',
+    color: 'text-rose-600',
+    bg: 'bg-rose-50',
+    accent: 'border-rose-200',
+  },
+  {
+    icon: Heart,
+    title: 'Hospital / Lab',
+    desc: 'Register your hospital or laboratory',
+    path: '/health/pharmacy/register',
+    color: 'text-red-500',
+    bg: 'bg-red-50',
+    accent: 'border-red-200',
+  },
+  {
+    icon: Briefcase,
+    title: 'Post a Job',
+    desc: 'Hire staff or find contractors',
+    path: '/jobs/post',
+    color: 'text-indigo-600',
+    bg: 'bg-indigo-50',
+    accent: 'border-indigo-200',
+  },
+  {
+    icon: Users,
+    title: 'Become a Freelancer',
+    desc: 'Offer your skills & get hired',
+    path: '/jobs/become-freelancer',
+    color: 'text-purple-600',
+    bg: 'bg-purple-50',
+    accent: 'border-purple-200',
+  },
+  {
+    icon: Wrench,
+    title: 'Service Provider',
+    desc: 'Plumbing, electrical, cleaning & more',
+    path: '/providers',
+    color: 'text-slate-600',
+    bg: 'bg-slate-50',
+    accent: 'border-slate-200',
+  },
+  {
+    icon: Zap,
+    title: 'Utility Company',
+    desc: 'UNELCO, water, telecom — send alerts to users',
+    path: '/utility/register',
+    color: 'text-yellow-600',
+    bg: 'bg-yellow-50',
+    accent: 'border-yellow-200',
+  },
+];
+
+const dashboards = [
+  { label: 'Driver', path: '/driver/dashboard' },
+  { label: 'Hotel', path: '/hotels/owner/dashboard' },
+  { label: 'Restaurant', path: '/food/owner/dashboard' },
+  { label: 'Tours', path: '/tours/provider/dashboard' },
+  { label: 'Ferry', path: '/ferry/operator/dashboard' },
+  { label: 'Real Estate', path: '/realestate/my-properties' },
+  { label: 'Marketplace', path: '/marketplace/my-listings' },
+  { label: 'Events', path: '/events/my-events' },
+  { label: 'Utility', path: '/utility/dashboard' },
+];
 
 const PartnersIndex = () => {
   const navigate = useNavigate();
 
-  const partnerTypes = [
-    {
-      icon: Car,
-      title: 'Become a Driver',
-      description: 'Drive with VanuWay and earn money on your own schedule. Keep 80% of every fare.',
-      benefits: ['Flexible hours', 'Weekly payouts', 'Full support', 'Choose your rides'],
-      path: '/driver/register',
-      gradient: 'from-orange-500 to-orange-600',
-      iconBg: 'bg-orange-100',
-      iconColor: 'text-orange-600',
-      buttonText: 'Apply as Driver',
-      popular: true,
-    },
-    {
-      icon: Building2,
-      title: 'List Your Hotel',
-      description: 'Reach more guests and grow your hospitality business with VanuWay Stay.',
-      benefits: ['No upfront fees', 'Booking management', 'Guest reviews', 'Analytics dashboard'],
-      path: '/hotels/owner/register',
-      gradient: 'from-blue-500 to-blue-600',
-      iconBg: 'bg-blue-100',
-      iconColor: 'text-blue-600',
-      buttonText: 'Register Hotel',
-      popular: false,
-    },
-    {
-      icon: Utensils,
-      title: 'Partner Your Restaurant',
-      description: 'Join VanuWay Eats and reach more customers across Vanuatu with food delivery.',
-      benefits: ['Expand your reach', 'Order management', 'Menu control', 'Marketing support'],
-      path: '/food/owner/register',
-      gradient: 'from-green-500 to-emerald-600',
-      iconBg: 'bg-green-100',
-      iconColor: 'text-green-600',
-      buttonText: 'Register Restaurant',
-      popular: true,
-    },
-    {
-      icon: Compass,
-      title: 'Offer Tours & Experiences',
-      description: 'Share your local expertise and create unforgettable experiences for visitors.',
-      benefits: ['Set your own prices', 'Flexible scheduling', 'Global reach', 'Booking system'],
-      path: '/tours/provider/register',
-      gradient: 'from-amber-500 to-yellow-600',
-      iconBg: 'bg-amber-100',
-      iconColor: 'text-amber-600',
-      buttonText: 'Register as Tour Provider',
-      popular: false,
-    },
-    {
-      icon: Ship,
-      title: 'Ferry & Transport Operator',
-      description: 'List your ferry routes and inter-island transport services on VanuWay.',
-      benefits: ['Route management', 'Online bookings', 'Schedule control', 'Passenger management'],
-      path: '/ferry/operator/register',
-      gradient: 'from-sky-500 to-cyan-600',
-      iconBg: 'bg-sky-100',
-      iconColor: 'text-sky-600',
-      buttonText: 'Register as Operator',
-      popular: false,
-    },
-    {
-      icon: Stethoscope,
-      title: 'Register Your Pharmacy',
-      description: 'Join VanuHealth and make medicines and health products accessible across Vanuatu.',
-      benefits: ['Online catalogue', 'Order fulfilment', 'Delivery integration', 'Inventory tracking'],
-      path: '/health/pharmacy/register',
-      gradient: 'from-rose-500 to-pink-600',
-      iconBg: 'bg-rose-100',
-      iconColor: 'text-rose-600',
-      buttonText: 'Register Pharmacy',
-      popular: false,
-    },
-    {
-      icon: Wrench,
-      title: 'Offer Your Services',
-      description: 'Plumbing, electrical, cleaning, repairs — list your trade or professional service.',
-      benefits: ['Service listings', 'Customer requests', 'Reviews & ratings', 'Grow your business'],
-      path: '/providers',
-      gradient: 'from-violet-500 to-purple-600',
-      iconBg: 'bg-violet-100',
-      iconColor: 'text-violet-600',
-      buttonText: 'List Your Service',
-      popular: false,
-    },
-  ];
-
-  const stats = [
-    { value: '80%', label: 'Earnings You Keep' },
-    { value: '0', label: 'Upfront Fees' },
-    { value: '24/7', label: 'Platform Access' },
-    { value: '1000+', label: 'Active Users' },
-  ];
-
-  const whyPartner = [
-    {
-      icon: DollarSign,
-      title: 'Earn More',
-      description: 'Keep 80% of every transaction. Weekly payouts to your bank or mobile money.',
-    },
-    {
-      icon: Clock,
-      title: 'Flexibility',
-      description: 'Work on your own terms. Set your own schedule, prices, and availability.',
-    },
-    {
-      icon: TrendingUp,
-      title: 'Grow Your Business',
-      description: 'Access our growing customer base across Vanuatu and beyond.',
-    },
-    {
-      icon: Shield,
-      title: 'Full Support',
-      description: 'Dedicated partner support, training, and marketing assistance.',
-    },
-  ];
-
   return (
-    <Layout>
-      {/* Hero Section */}
-      <div className="bg-gradient-to-br from-[#1e3a5f] via-[#1e3a5f] to-orange-600 text-white">
-        <div className="container py-12 text-center space-y-6">
-          <Badge className="bg-orange-500 text-white border-0 text-sm px-4 py-1">
-            Join Vanuatu&apos;s #1 Platform
-          </Badge>
-          <h1 className="text-4xl md:text-5xl font-bold">
-            Partner with <span className="text-orange-400">VanuWay</span>
-          </h1>
-          <p className="text-lg text-blue-100 max-w-2xl mx-auto">
-            Whether you drive, host, cook, or offer services — grow your business
-            with Vanuatu&apos;s all-in-one digital platform.
-          </p>
+    <div className="min-h-screen bg-gray-50 pb-20">
+      {/* Compact header */}
+      <div className="bg-gradient-to-br from-[#233C6F] to-[#19294d] text-white">
+        <div className="container px-4 py-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Button variant="ghost" size="icon" className="h-8 w-8 text-white hover:bg-white/10" onClick={() => navigate(-1)}>
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <div>
+              <h1 className="text-lg font-bold">Partner with VanuWay</h1>
+              <p className="text-[10px] text-white/50">Register your business and start earning</p>
+            </div>
+          </div>
 
-          {/* Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-6 max-w-3xl mx-auto">
-            {stats.map((stat) => (
-              <div key={stat.label} className="bg-white/10 backdrop-blur rounded-xl p-4">
-                <p className="text-2xl md:text-3xl font-bold text-orange-400">{stat.value}</p>
-                <p className="text-sm text-blue-200">{stat.label}</p>
+          {/* Stats row — compact */}
+          <div className="flex gap-2">
+            {[
+              { val: '80%', label: 'You keep' },
+              { val: '0', label: 'Upfront' },
+              { val: '24/7', label: 'Access' },
+            ].map(s => (
+              <div key={s.label} className="flex-1 bg-white/10 rounded-xl py-2 text-center">
+                <p className="text-sm font-bold text-orange-400">{s.val}</p>
+                <p className="text-[9px] text-white/50">{s.label}</p>
               </div>
             ))}
           </div>
         </div>
       </div>
 
-      <div className="container py-10 space-y-12">
-        {/* Partner Types */}
-        <div>
-          <div className="text-center mb-8">
-            <h2 className="text-3xl font-bold mb-2">Choose Your Partnership</h2>
-            <p className="text-muted-foreground">Select the category that fits your business</p>
-          </div>
+      <div className="container px-4 py-4 max-w-lg space-y-3">
+        {/* Partner type list — native list style */}
+        <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Choose your business type</p>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {partnerTypes.map((partner) => {
-              const Icon = partner.icon;
-              return (
-                <Card
-                  key={partner.title}
-                  className="relative overflow-hidden flex flex-col h-full hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border-2 hover:border-orange-200"
-                >
-                  {partner.popular && (
-                    <div className="absolute top-3 right-3">
-                      <Badge className="bg-orange-500 text-white border-0 gap-1">
-                        <Star className="h-3 w-3 fill-white" />
+        <div className="space-y-2">
+          {partnerTypes.map((partner) => {
+            const Icon = partner.icon;
+            return (
+              <button
+                key={partner.title}
+                className={`w-full flex items-center gap-3 p-3.5 bg-white rounded-xl border ${partner.accent} text-left active:scale-[0.98] transition-transform hover:shadow-sm`}
+                onClick={() => navigate(partner.path)}
+              >
+                <div className={`h-11 w-11 rounded-xl ${partner.bg} flex items-center justify-center flex-shrink-0`}>
+                  <Icon className={`h-5 w-5 ${partner.color}`} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-sm font-bold">{partner.title}</p>
+                    {partner.popular && (
+                      <Badge className="bg-orange-500 text-white text-[8px] h-4 px-1.5 gap-0.5">
+                        <Star className="h-2.5 w-2.5 fill-white" />
                         Popular
                       </Badge>
-                    </div>
-                  )}
-
-                  {/* Gradient top bar */}
-                  <div className={`h-1.5 bg-gradient-to-r ${partner.gradient}`} />
-
-                  <div className="p-6 flex flex-col flex-grow">
-                    <div className={`inline-flex items-center justify-center w-14 h-14 rounded-2xl ${partner.iconBg} mb-4`}>
-                      <Icon className={`h-7 w-7 ${partner.iconColor}`} />
-                    </div>
-
-                    <h3 className="text-xl font-bold mb-2">{partner.title}</h3>
-                    <p className="text-muted-foreground text-sm mb-4 flex-grow">
-                      {partner.description}
-                    </p>
-
-                    <ul className="space-y-2 mb-6">
-                      {partner.benefits.map((benefit) => (
-                        <li key={benefit} className="flex items-center gap-2 text-sm">
-                          <CheckCircle2 className="h-4 w-4 text-orange-500 flex-shrink-0" />
-                          {benefit}
-                        </li>
-                      ))}
-                    </ul>
-
-                    <Button
-                      className={`w-full bg-gradient-to-r ${partner.gradient} hover:opacity-90 text-white border-0`}
-                      onClick={() => navigate(partner.path)}
-                    >
-                      {partner.buttonText}
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </Button>
+                    )}
                   </div>
-                </Card>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Why Partner Section */}
-        <div className="bg-gradient-to-br from-orange-50 to-amber-50 rounded-3xl p-8 md:p-12">
-          <h2 className="text-3xl font-bold text-center mb-2">
-            Why Partner with <span className="text-orange-600">VanuWay</span>?
-          </h2>
-          <p className="text-center text-muted-foreground mb-10">
-            Everything you need to succeed on our platform
-          </p>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {whyPartner.map((item) => {
-              const Icon = item.icon;
-              return (
-                <div key={item.title} className="text-center">
-                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-white shadow-md mb-4">
-                    <Icon className="h-8 w-8 text-orange-600" />
-                  </div>
-                  <h3 className="font-bold text-lg mb-2">{item.title}</h3>
-                  <p className="text-sm text-muted-foreground">{item.description}</p>
+                  <p className="text-[11px] text-muted-foreground">{partner.desc}</p>
                 </div>
-              );
-            })}
-          </div>
+                <ArrowRight className="h-4 w-4 text-gray-300 flex-shrink-0" />
+              </button>
+            );
+          })}
         </div>
 
         {/* Already a partner? */}
-        <div className="text-center py-6">
-          <h3 className="text-xl font-bold mb-2">Already a partner?</h3>
-          <p className="text-muted-foreground mb-6">Access your dashboard to manage your business</p>
-          <div className="flex flex-wrap justify-center gap-3">
-            <Button variant="outline" size="sm" onClick={() => navigate('/driver/dashboard')}>
-              Driver Dashboard
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => navigate('/hotels/owner/dashboard')}>
-              Hotel Dashboard
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => navigate('/food/owner/dashboard')}>
-              Restaurant Dashboard
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => navigate('/tours/provider/dashboard')}>
-              Tour Dashboard
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => navigate('/ferry/operator/dashboard')}>
-              Ferry Dashboard
-            </Button>
+        <div className="pt-4">
+          <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Already a partner?</p>
+          <div className="flex gap-2 flex-wrap">
+            {dashboards.map(d => (
+              <button
+                key={d.label}
+                className="px-3 py-1.5 bg-white border rounded-lg text-[11px] font-medium text-gray-700 hover:bg-gray-50 active:scale-95 transition-transform"
+                onClick={() => navigate(d.path)}
+              >
+                {d.label}
+              </button>
+            ))}
           </div>
         </div>
       </div>
-    </Layout>
+      <BottomNav />
+    </div>
   );
 };
 

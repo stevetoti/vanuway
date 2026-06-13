@@ -162,7 +162,7 @@ export const RideMessaging = ({
       </div>
 
       {/* Messages */}
-      <ScrollArea className="flex-1 p-4" ref={scrollRef as any}>
+      <ScrollArea className="flex-1 p-4" ref={scrollRef as unknown}>
         <div className="space-y-3">
           {messages.length === 0 ? (
             <div className="text-center text-muted-foreground text-sm py-8">

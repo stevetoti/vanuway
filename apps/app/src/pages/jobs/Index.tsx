@@ -28,7 +28,7 @@ export default function JobsIndex() {
   const { data: categories } = useQuery({
     queryKey: ['job-categories'],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await (supabase as unknown)
         .from('job_categories')
         .select('*')
         .eq('is_active', true)
@@ -42,7 +42,7 @@ export default function JobsIndex() {
   const { data: jobs, isLoading } = useQuery({
     queryKey: ['jobs'],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await (supabase as unknown)
         .from('jobs')
         .select('*, category:job_categories(*)')
         .eq('status', 'approved')
@@ -59,13 +59,13 @@ export default function JobsIndex() {
     queryKey: ['saved-jobs', user?.id],
     queryFn: async () => {
       if (!user) return [];
-      const { data, error } = await (supabase as any)
+      const { data, error } = await (supabase as unknown)
         .from('job_saves')
         .select('job_id')
         .eq('user_id', user.id);
 
       if (error) throw error;
-      return data.map((s: any) => s.job_id);
+      return data.map((s: unknown) => s.job_id);
     },
     enabled: !!user,
   });

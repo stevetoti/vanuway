@@ -4,10 +4,10 @@ project_id = "ljervgzsovamehnlztxf"
 verify_jwt = false
 
 [functions.create-ride-payment]
-verify_jwt = false
+verify_jwt = true
 
 [functions.process-driver-payout]
-verify_jwt = false
+verify_jwt = true
 
 [functions.check-payment-status]
 verify_jwt = false
@@ -16,4 +16,16 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.send-auth-email]
+verify_jwt = false
+
+[functions.create-marketplace-payment]
+verify_jwt = true
+
+[functions.sync-marketplace-payment]
+verify_jwt = true
+
+[functions.create-shop-delivery-route]
+verify_jwt = true
+
+[functions.stripe-webhook]
 verify_jwt = false

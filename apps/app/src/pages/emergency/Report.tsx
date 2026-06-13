@@ -95,7 +95,7 @@ export default function ReportEmergency() {
 
     setIsSubmitting(true);
     try {
-      const { error } = await (supabase as any).from('emergency_reports').insert({
+      const { error } = await (supabase as unknown).from('emergency_reports').insert({
         user_id: user.id,
         category,
         title,

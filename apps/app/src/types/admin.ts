@@ -64,7 +64,7 @@ export interface DriverWithDetails {
   created_at: string;
 
   // Related data
-  vehicles?: any[];
+  vehicles?: unknown[];
   documents?: DriverDocument[];
   applications?: DriverApplication[];
 }

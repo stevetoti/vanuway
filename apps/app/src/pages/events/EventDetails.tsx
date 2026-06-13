@@ -17,7 +17,7 @@ import {
 import { CommunityEvent, EventRegistration } from '@/types/events';
 import { format, parseISO } from 'date-fns';
 
-const categoryIcons: Record<string, any> = {
+const categoryIcons: Record<string, unknown> = {
   cultural: Users,
   music: Music,
   sports: Trophy,
@@ -42,7 +42,7 @@ export default function EventDetails() {
   const { data: event, isLoading } = useQuery({
     queryKey: ['event', eventId],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await (supabase as unknown)
         .from('community_events')
         .select('*')
         .eq('id', eventId)
@@ -58,7 +58,7 @@ export default function EventDetails() {
     queryKey: ['event-registration', eventId, user?.id],
     queryFn: async () => {
       if (!user) return null;
-      const { data, error } = await (supabase as any)
+      const { data, error } = await (supabase as unknown)
         .from('event_registrations')
         .select('*')
         .eq('event_id', eventId)
@@ -76,13 +76,13 @@ export default function EventDetails() {
       if (!user) throw new Error('Please login to register');
 
       if (registration) {
-        const { error } = await (supabase as any)
+        const { error } = await (supabase as unknown)
           .from('event_registrations')
           .update({ status })
           .eq('id', registration.id);
         if (error) throw error;
       } else {
-        const { error } = await (supabase as any)
+        const { error } = await (supabase as unknown)
           .from('event_registrations')
           .insert({
             event_id: eventId,
@@ -102,7 +102,7 @@ export default function EventDetails() {
           : "We'll remind you about this event",
       });
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
         title: 'Error',
         description: error.message || 'Failed to update registration',
@@ -114,7 +114,7 @@ export default function EventDetails() {
   const cancelMutation = useMutation({
     mutationFn: async () => {
       if (!registration) return;
-      const { error } = await (supabase as any)
+      const { error } = await (supabase as unknown)
         .from('event_registrations')
         .delete()
         .eq('id', registration.id);

@@ -21,14 +21,14 @@ export default function MyApplications() {
     queryKey: ['my-applications', user?.id],
     queryFn: async () => {
       if (!user) return [];
-      const { data, error } = await (supabase as any)
+      const { data, error } = await (supabase as unknown)
         .from('job_applications')
         .select('*, job:jobs(*, category:job_categories(*))')
         .eq('applicant_id', user.id)
         .order('applied_at', { ascending: false });
 
       if (error) throw error;
-      return data as (JobApplication & { job: any })[];
+      return data as (JobApplication & { job: unknown })[];
     },
     enabled: !!user,
   });

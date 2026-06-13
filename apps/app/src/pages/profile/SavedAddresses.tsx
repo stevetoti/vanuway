@@ -48,7 +48,7 @@ export default function SavedAddresses() {
         ...addr,
         label: addr.label as 'home' | 'work' | 'other'
       })));
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast.error('Failed to load addresses');
       console.error(error);
     } finally {
@@ -78,7 +78,7 @@ export default function SavedAddresses() {
       setShowAddModal(false);
       resetForm();
       fetchAddresses();
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast.error(error.message || 'Failed to add address');
     } finally {
       setIsSubmitting(false);
@@ -105,7 +105,7 @@ export default function SavedAddresses() {
       setShowEditModal(false);
       resetForm();
       fetchAddresses();
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast.error(error.message || 'Failed to update address');
     } finally {
       setIsSubmitting(false);
@@ -125,7 +125,7 @@ export default function SavedAddresses() {
 
       toast.success('Address deleted successfully');
       fetchAddresses();
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast.error(error.message || 'Failed to delete address');
     }
   };
@@ -148,7 +148,7 @@ export default function SavedAddresses() {
 
       toast.success('Default address updated');
       fetchAddresses();
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast.error(error.message || 'Failed to set default address');
     }
   };
@@ -291,7 +291,7 @@ export default function SavedAddresses() {
             <div className="space-y-4 py-4">
               <div>
                 <Label className="mb-3 block">Address Label</Label>
-                <RadioGroup value={label} onValueChange={(v) => setLabel(v as any)}>
+                <RadioGroup value={label} onValueChange={(v) => setLabel(v as unknown)}>
                   <div className="grid grid-cols-3 gap-3">
                     <div className="flex items-center space-x-2 border rounded-lg p-3 cursor-pointer hover:bg-muted/50">
                       <RadioGroupItem value="home" id="home" />
@@ -356,7 +356,7 @@ export default function SavedAddresses() {
             <div className="space-y-4 py-4">
               <div>
                 <Label className="mb-3 block">Address Label</Label>
-                <RadioGroup value={label} onValueChange={(v) => setLabel(v as any)}>
+                <RadioGroup value={label} onValueChange={(v) => setLabel(v as unknown)}>
                   <div className="grid grid-cols-3 gap-3">
                     <div className="flex items-center space-x-2 border rounded-lg p-3 cursor-pointer hover:bg-muted/50">
                       <RadioGroupItem value="home" id="edit-home" />

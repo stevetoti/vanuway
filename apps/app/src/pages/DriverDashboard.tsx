@@ -28,8 +28,8 @@ export const DriverDashboard = () => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [driver, setDriver] = useState<Driver | null>(null);
-  const [stats, setStats] = useState<any>(null);
-  const [earnings, setEarnings] = useState<any>(null);
+  const [stats, setStats] = useState<unknown>(null);
+  const [earnings, setEarnings] = useState<unknown>(null);
   const [isOnline, setIsOnline] = useState(false);
   const [isAvailable, setIsAvailable] = useState(false);
 

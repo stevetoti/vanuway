@@ -38,7 +38,7 @@ export default function TourOperatorRegister() {
 
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [existingOperator, setExistingOperator] = useState<any>(null);
+  const [existingOperator, setExistingOperator] = useState<unknown>(null);
 
   // Form data
   const [formData, setFormData] = useState({
@@ -94,7 +94,7 @@ export default function TourOperatorRegister() {
   const checkExistingOperator = async () => {
     if (!user) return;
 
-    const { data, error } = await (supabase as any)
+    const { data, error } = await (supabase as unknown)
       .from('tour_operators')
       .select('*')
       .eq('user_id', user.id)
@@ -108,7 +108,7 @@ export default function TourOperatorRegister() {
     }
   };
 
-  const updateField = (field: string, value: any) => {
+  const updateField = (field: string, value: unknown) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
@@ -212,7 +212,7 @@ export default function TourOperatorRegister() {
       let operatorId: string;
 
       if (existingOperator) {
-        const { error } = await (supabase as any)
+        const { error } = await (supabase as unknown)
           .from('tour_operators')
           .update(operatorData)
           .eq('id', existingOperator.id);
@@ -220,7 +220,7 @@ export default function TourOperatorRegister() {
         if (error) throw error;
         operatorId = existingOperator.id;
       } else {
-        const { data, error } = await (supabase as any)
+        const { data, error } = await (supabase as unknown)
           .from('tour_operators')
           .insert(operatorData)
           .select()
@@ -231,7 +231,7 @@ export default function TourOperatorRegister() {
       }
 
       // Create application record
-      const { error: appError } = await (supabase as any)
+      const { error: appError } = await (supabase as unknown)
         .from('tour_operator_applications')
         .insert({
           operator_id: operatorId,
@@ -256,7 +256,7 @@ export default function TourOperatorRegister() {
       });
 
       navigate('/tours/operator/pending');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Registration error:', error);
       toast({
         title: 'Registration Failed',

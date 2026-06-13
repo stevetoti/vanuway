@@ -44,8 +44,8 @@ export const AdminDrivers = () => {
   const { driverId } = useParams();
 
   const [loading, setLoading] = useState(true);
-  const [drivers, setDrivers] = useState<any[]>([]);
-  const [selectedDriver, setSelectedDriver] = useState<any>(null);
+  const [drivers, setDrivers] = useState<unknown[]>([]);
+  const [selectedDriver, setSelectedDriver] = useState<unknown>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [adminUserId, setAdminUserId] = useState<string | null>(null);
@@ -91,7 +91,7 @@ export const AdminDrivers = () => {
   const loadDrivers = async () => {
     setLoading(true);
     try {
-      const filters: any = {};
+      const filters: unknown = {};
       if (statusFilter !== 'all') {
         filters.status = statusFilter;
       }
@@ -290,7 +290,7 @@ export const AdminDrivers = () => {
                 {selectedDriver.driver_vehicles &&
                 selectedDriver.driver_vehicles.length > 0 ? (
                   <div className="space-y-3">
-                    {selectedDriver.driver_vehicles.map((vehicle: any) => (
+                    {selectedDriver.driver_vehicles.map((vehicle: unknown) => (
                       <div
                         key={vehicle.id}
                         className="border rounded-lg p-4 flex items-center justify-between"
@@ -321,7 +321,7 @@ export const AdminDrivers = () => {
                 {selectedDriver.driver_documents &&
                 selectedDriver.driver_documents.length > 0 ? (
                   <div className="space-y-2">
-                    {selectedDriver.driver_documents.map((doc: any) => (
+                    {selectedDriver.driver_documents.map((doc: unknown) => (
                       <div
                         key={doc.id}
                         className="flex items-center justify-between p-3 border rounded-lg"

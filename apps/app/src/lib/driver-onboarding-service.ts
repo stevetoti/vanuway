@@ -77,7 +77,7 @@ export class DriverOnboardingService {
       license_plate: data.vehicle.license_plate,
       vehicle_model: data.vehicle.make + ' ' + data.vehicle.model,
       vehicle_type: data.vehicle.vehicle_type,
-    } as any;
+    } as unknown;
 
     if (existingDriver) {
       // Update existing driver
@@ -192,9 +192,42 @@ export class DriverOnboardingService {
           file_type: file.type,
           verification_status: 'pending',
         });
+
+        // For the profile photo, also publish to the public `avatars` bucket
+        // and update profiles.avatar_url. The driver_documents row above is
+        // kept for the admin verification audit trail; this side-write makes
+        // the photo visible in the driver directory, home rails, chat, and
+        // admin views (a DB trigger mirrors profiles.avatar_url to
+        // drivers.profile_photo_url). Without this, photos sit in the private
+        // documents bucket and never appear in public listings.
+        if (doc.type === 'profile_photo') {
+          await this.publishProfilePhoto(userId, file);
+        }
       });
 
     await Promise.all(uploadPromises);
+  }
+
+  /**
+   * Upload the driver's profile photo to the public avatars bucket and update
+   * profiles.avatar_url. A DB trigger then syncs to drivers.profile_photo_url.
+   */
+  static async publishProfilePhoto(userId: string, file: File): Promise<void> {
+    const ext = file.name.split('.').pop();
+    const path = `${userId}/avatar.${ext}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('avatars')
+      .upload(path, file, { upsert: true, cacheControl: '3600' });
+
+    if (uploadError) {
+      throw new Error(`Failed to publish profile photo: ${uploadError.message}`);
+    }
+
+    const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(path);
+    const url = `${publicUrl}?t=${Date.now()}`;
+
+    await supabase.from('profiles').update({ avatar_url: url }).eq('id', userId);
   }
 
   /**
@@ -225,7 +258,7 @@ export class DriverOnboardingService {
       status: 'submitted',
       submitted_at: new Date().toISOString(),
       application_data: data,
-    } as any;
+    } as unknown;
 
     if (existingApp) {
       const { error } = await supabase

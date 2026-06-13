@@ -25,7 +25,7 @@ export default function Freelancers() {
   const { data: categories } = useQuery({
     queryKey: ['job-categories'],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await (supabase as unknown)
         .from('job_categories')
         .select('*')
         .eq('is_active', true)
@@ -39,7 +39,7 @@ export default function Freelancers() {
   const { data: freelancers, isLoading } = useQuery({
     queryKey: ['freelancers'],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await (supabase as unknown)
         .from('freelancer_profiles')
         .select('*')
         .eq('status', 'approved')

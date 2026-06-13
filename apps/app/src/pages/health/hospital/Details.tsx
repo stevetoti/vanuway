@@ -19,7 +19,7 @@ export default function HospitalDetails() {
   const { data: hospital, isLoading } = useQuery({
     queryKey: ['hospital', hospitalId],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await (supabase as unknown)
         .from('hospitals')
         .select('*')
         .eq('id', hospitalId)
@@ -32,7 +32,7 @@ export default function HospitalDetails() {
   const { data: departments } = useQuery({
     queryKey: ['hospital-departments', hospitalId],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await (supabase as unknown)
         .from('hospital_departments')
         .select('*')
         .eq('hospital_id', hospitalId)
@@ -47,7 +47,7 @@ export default function HospitalDetails() {
   const { data: doctors } = useQuery({
     queryKey: ['hospital-doctors', hospitalId],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await (supabase as unknown)
         .from('doctors')
         .select('*, department:hospital_departments(*)')
         .eq('hospital_id', hospitalId)

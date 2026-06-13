@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -14,6 +14,7 @@ import { LiveTrackingMap } from '@/components/rides/LiveTrackingMap';
 import { RideMessaging, MessageButton } from '@/components/rides/RideMessaging';
 import { CancellationDialog } from '@/components/rides/CancellationDialog';
 import { RideRating } from '@/components/rides/RideRating';
+import { PickupPhotoCapture } from '@/components/rides/PickupPhotoCapture';
 import { getVehicleEmoji, getVehicleColor } from '@/lib/rides/vehicle-icons';
 
 interface RideBooking {
@@ -30,6 +31,8 @@ interface RideBooking {
   price: number;
   created_at: string;
   driver_id?: string;
+  rating?: number | null;
+  pickup_photo_url?: string | null;
 }
 
 interface Driver {
@@ -49,7 +52,7 @@ interface Driver {
   phone?: string;
 }
 
-const statusConfig: Record<string, { label: string; color: string; icon: any; description: string }> = {
+const statusConfig: Record<string, { label: string; color: string; icon: unknown; description: string }> = {
   pending: { label: 'Finding Driver', color: 'bg-amber-500', icon: Loader2, description: 'Searching for available drivers nearby...' },
   accepted: { label: 'Driver Assigned', color: 'bg-blue-500', icon: Car, description: 'Your driver has accepted the ride' },
   arriving: { label: 'Driver On The Way', color: 'bg-blue-600', icon: Navigation, description: 'Your driver is heading to your pickup location' },
@@ -63,6 +66,7 @@ export default function TrackRide() {
   const { bookingId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
 
   const [booking, setBooking] = useState<RideBooking | null>(null);
   const [driver, setDriver] = useState<Driver | null>(null);
@@ -96,19 +100,22 @@ export default function TrackRide() {
   }, [bookingId]);
 
   const fetchDriverInfo = async (driverUserId: string) => {
-    let { data } = await (supabase.from('drivers')
-      .select('id, user_id, vehicle_model, vehicle_type, vehicle_color, license_plate, rating, total_rides, current_lat, current_lng, first_name, last_name, vehicle_photo_url') as any)
+    const driverCols = 'id, user_id, vehicle_model, vehicle_type, vehicle_color, license_plate, rating, total_rides, current_lat, current_lng, first_name, last_name, vehicle_photo_url, phone_number';
+    let { data } = await (supabase.from('drivers').select(driverCols) as unknown)
       .eq('user_id', driverUserId).maybeSingle();
     if (!data) {
-      const res = await (supabase.from('drivers')
-        .select('id, user_id, vehicle_model, vehicle_type, vehicle_color, license_plate, rating, total_rides, current_lat, current_lng, first_name, last_name, vehicle_photo_url') as any)
+      const res = await (supabase.from('drivers').select(driverCols) as unknown)
         .eq('id', driverUserId).maybeSingle();
       data = res.data;
     }
     if (data) {
-      // Get driver's phone number from profiles
-      const { data: profile } = await supabase.from('profiles').select('phone').eq('id', data.user_id).maybeSingle();
-      setDriver({ ...data, phone: profile?.phone || null });
+      // Prefer drivers.phone_number (captured at onboarding); fall back to profiles.phone.
+      let phone: string | null = data.phone_number || null;
+      if (!phone && data.user_id) {
+        const { data: profile } = await supabase.from('profiles').select('phone').eq('id', data.user_id).maybeSingle();
+        phone = profile?.phone || null;
+      }
+      setDriver({ ...data, phone });
     }
   };
 
@@ -118,6 +125,14 @@ export default function TrackRide() {
       if (error) throw error;
       setBooking(data);
       if (data.driver_id) await fetchDriverInfo(data.driver_id);
+      // If the user landed here from a "Rate this ride" CTA elsewhere, OR the
+      // ride is already complete and unrated when the page first loads (e.g.
+      // they navigated away after drop-off and came back), surface the rating
+      // dialog without making them hunt for the button.
+      if (data.status === 'completed' && !data.rating &&
+          (searchParams.get('rate') === '1' || searchParams.get('rate') === 'true')) {
+        setRatingOpen(true);
+      }
     } catch {
       toast.error('Failed to load ride details');
       navigate('/bookings');
@@ -130,11 +145,11 @@ export default function TrackRide() {
     if (!booking) return;
     try {
       const { error } = await supabase.from('ride_bookings')
-        .update({ status: 'cancelled', cancellation_reason: reason, cancelled_by: 'passenger' } as any)
+        .update({ status: 'cancelled', cancellation_reason: reason, cancelled_by: 'passenger' } as unknown)
         .eq('id', booking.id);
       if (error) throw error;
       if (booking.driver_id) {
-        supabase.from('drivers').update({ status: 'available', is_available: true, is_online: true, current_ride_id: null } as any)
+        supabase.from('drivers').update({ status: 'available', is_available: true, is_online: true, current_ride_id: null } as unknown)
           .eq('user_id', booking.driver_id).then(({ error: e }) => { if (e) console.warn(e); });
         supabase.from('notifications').insert({ user_id: booking.driver_id, title: 'Ride Cancelled', message: `Passenger cancelled: ${reason}`, type: 'ride_cancelled' })
           .then(({ error: e }) => { if (e) console.warn(e); });
@@ -288,6 +303,19 @@ export default function TrackRide() {
           </div>
         </div>
 
+        {/* Pickup photo — show only while a driver is en route or arrived. Once
+            the trip starts, the driver and passenger are together and the
+            photo is no longer useful. */}
+        {driverAssigned && booking.status !== 'in_progress' && (
+          <div className="px-4 pb-3">
+            <PickupPhotoCapture
+              rideId={booking.id}
+              existingPath={booking.pickup_photo_url}
+              onUploaded={(path) => setBooking((b) => (b ? { ...b, pickup_photo_url: path } : b))}
+            />
+          </div>
+        )}
+
         {/* Action Buttons */}
         <div className="px-4 pb-6 pt-1">
           {canCancel && (
@@ -301,13 +329,50 @@ export default function TrackRide() {
             </Button>
           )}
 
-          {isCompleted && (
-            <div className="space-y-2">
-              <Button className="w-full h-12" onClick={() => setRatingOpen(true)}>
-                <Star className="h-4 w-4 mr-2" />
-                Rate Your Ride
-              </Button>
+          {isCompleted && !booking.rating && (
+            <div className="space-y-3">
+              {/* Big amber rating card — impossible to miss after drop-off. */}
+              <button
+                type="button"
+                onClick={() => setRatingOpen(true)}
+                className="w-full text-left rounded-2xl p-4 bg-gradient-to-br from-amber-400 via-orange-400 to-orange-500 text-white shadow-lg shadow-amber-500/30 active:scale-[0.99] transition-transform"
+              >
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="h-12 w-12 rounded-full bg-white/25 flex items-center justify-center flex-shrink-0">
+                    <Star className="h-6 w-6 fill-white text-white" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-base leading-tight">How was your ride{driver?.first_name ? ` with ${driver.first_name}` : ''}?</p>
+                    <p className="text-white/90 text-xs mt-0.5">Tap a star — takes 10 seconds</p>
+                  </div>
+                </div>
+                <div className="flex justify-between gap-1 mb-1">
+                  {[1, 2, 3, 4, 5].map((s) => (
+                    <Star key={s} className="h-9 w-9 fill-white/30 text-white" />
+                  ))}
+                </div>
+                <p className="text-center text-[11px] text-white/80 mt-2 font-medium">Your feedback helps drivers improve</p>
+              </button>
               <Button variant="outline" className="w-full h-10" onClick={() => navigate('/')}>
+                Book Another Ride
+              </Button>
+            </div>
+          )}
+
+          {isCompleted && booking.rating && (
+            <div className="space-y-2">
+              <Card className="bg-green-50 border-green-200 p-3 text-center">
+                <p className="text-sm text-green-800 font-medium mb-1">Thanks for rating this ride</p>
+                <div className="flex justify-center gap-0.5">
+                  {[1, 2, 3, 4, 5].map((s) => (
+                    <Star
+                      key={s}
+                      className={`h-5 w-5 ${s <= (booking.rating || 0) ? 'fill-amber-400 text-amber-400' : 'text-gray-200'}`}
+                    />
+                  ))}
+                </div>
+              </Card>
+              <Button className="w-full h-12" onClick={() => navigate('/')}>
                 Book Another Ride
               </Button>
             </div>
@@ -382,6 +447,7 @@ export default function TrackRide() {
         pickupLocation={booking.pickup_location}
         dropoffLocation={booking.dropoff_location}
         fare={booking.price}
+        onSubmitted={(stars) => setBooking((b) => (b ? { ...b, rating: stars } : b))}
       />
 
       {/* Chat Panel — renders when driver is assigned (even before driver info loads) */}

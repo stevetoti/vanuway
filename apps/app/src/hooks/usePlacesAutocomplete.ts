@@ -7,6 +7,10 @@ export interface PlaceResult {
   placeId: string;
 }
 
+type ProgrammaticPlacesInput = HTMLInputElement & {
+  _setProgrammaticValue?: (value: string) => void;
+};
+
 export const usePlacesAutocomplete = (
   inputRef: React.RefObject<HTMLInputElement>,
   isLoaded: boolean,
@@ -110,12 +114,12 @@ export const usePlacesAutocomplete = (
   useEffect(() => {
     if (inputRef && 'current' in inputRef && inputRef.current) {
       // Attach immediately
-      (inputRef.current as any)._setProgrammaticValue = setProgrammaticValue;
+      (inputRef.current as ProgrammaticPlacesInput)._setProgrammaticValue = setProgrammaticValue;
       
       // Also re-attach after a delay in case of timing issues
       setTimeout(() => {
         if (inputRef.current) {
-          (inputRef.current as any)._setProgrammaticValue = setProgrammaticValue;
+          (inputRef.current as ProgrammaticPlacesInput)._setProgrammaticValue = setProgrammaticValue;
         }
       }, 100);
     }

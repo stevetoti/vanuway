@@ -9,8 +9,12 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import {
   ArrowLeft, Plus, Eye, Heart, Clock, MapPin, ChevronRight,
-  Package, MoreVertical, Edit, Trash2, RefreshCw, CheckCircle
+  Package, MoreVertical, Edit, Trash2, RefreshCw, CheckCircle, Sparkles
 } from 'lucide-react';
+import { useState } from 'react';
+import { BulkImportWizard, type ImportedItem } from '@/components/import/BulkImportWizard';
+import { LinkedStoreCard } from '@/components/import/LinkedStoreCard';
+import { mapMarketplaceCategory, mapMarketplaceCondition } from '@/lib/import/marketplace-mappers';
 import { formatDistanceToNow, parseISO } from 'date-fns';
 import { MarketplaceListing, LISTING_TYPES, LISTING_STATUSES } from '@/types/marketplace';
 import { cn } from '@/lib/utils';
@@ -26,13 +30,72 @@ export default function MyListings() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [importOpen, setImportOpen] = useState(false);
+
+  const importListings = async (items: ImportedItem[], context?: { sourceUrl?: string; mode: 'ai' | 'csv' }) => {
+    if (!user) return;
+    const { data: seller } = await (supabase as unknown)
+      .from('marketplace_sellers')
+      .select('verification_status')
+      .eq('user_id', user.id)
+      .maybeSingle();
+    if (!seller || seller.verification_status !== 'verified') {
+      toast({ title: 'Apply to sell first', description: 'Register as a seller and wait for admin approval before importing listings.' });
+      navigate('/marketplace/seller/register');
+      return;
+    }
+    let sourceId: string | null = null;
+    if (context?.sourceUrl) {
+      const { data: src } = await (supabase as unknown)
+        .from('vendor_import_sources')
+        .upsert({
+          user_id: user.id,
+          vendor_kind: 'marketplace',
+          source_url: context.sourceUrl,
+          is_active: true,
+          sync_frequency: 'weekly',
+        }, { onConflict: 'user_id,vendor_kind' })
+        .select('id')
+        .single();
+      sourceId = src?.id || null;
+    }
+    const { data: prof } = await (supabase as unknown)
+      .from('profiles').select('phone').eq('id', user.id).maybeSingle();
+    const contactPhone = prof?.phone || '+678';
+    const now = new Date().toISOString();
+    const rows = items.map((it) => ({
+      user_id: user.id,
+      title: String(it.name || '').slice(0, 200) || 'Untitled',
+      description: String(it.description || it.name || 'No description'),
+      category: mapMarketplaceCategory(it.category),
+      subcategory: it.category ? String(it.category) : null,
+      price: Number(it.price) || 0,
+      condition: mapMarketplaceCondition(it.condition),
+      island: 'Efate',
+      listing_type: 'sale',
+      contact_phone: contactPhone,
+      images: it.image_url ? [String(it.image_url)] : [],
+      status: 'draft',
+      source_id: sourceId,
+      source_external_id: it.handle || it.slug || it.id || (it.name ? String(it.name).toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 80) : null),
+      last_seen_in_source_at: sourceId ? now : null,
+    }));
+    const { error } = await (supabase as unknown).from('marketplace_listings').insert(rows);
+    if (error) throw error;
+    toast({
+      title: `Imported ${rows.length} listings — pending admin approval`,
+      description: sourceId ? 'Your website is now linked. We\'ll auto-sync new products weekly.' : undefined,
+    });
+    queryClient.invalidateQueries({ queryKey: ['my-marketplace-listings'] });
+    queryClient.invalidateQueries({ queryKey: ['vendor-source'] });
+  };
 
   const { data: listings, isLoading } = useQuery({
     queryKey: ['my-marketplace-listings', user?.id],
     queryFn: async () => {
       if (!user) return [];
 
-      const { data, error } = await (supabase as any)
+      const { data, error } = await (supabase as unknown)
         .from('marketplace_listings')
         .select('*')
         .eq('user_id', user.id)
@@ -46,7 +109,7 @@ export default function MyListings() {
 
   const updateStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      const { error } = await (supabase as any)
+      const { error } = await (supabase as unknown)
         .from('marketplace_listings')
         .update({ status })
         .eq('id', id)
@@ -65,7 +128,7 @@ export default function MyListings() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await (supabase as any)
+      const { error } = await (supabase as unknown)
         .from('marketplace_listings')
         .delete()
         .eq('id', id)
@@ -249,7 +312,8 @@ export default function MyListings() {
       </div>
 
       {/* Content */}
-      <div className="p-4">
+      <div className="p-4 space-y-4">
+        <LinkedStoreCard vendorKind="marketplace" label="your store" />
         <Tabs defaultValue="active" className="space-y-4">
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="active">
@@ -341,16 +405,38 @@ export default function MyListings() {
         </Tabs>
       </div>
 
-      {/* New Listing Button */}
-      <div className="fixed bottom-20 left-0 right-0 px-4">
+      {/* New Listing Buttons */}
+      <div className="fixed bottom-20 left-0 right-0 px-4 grid grid-cols-2 gap-2">
         <Button
-          className="w-full h-12 shadow-lg bg-purple-600 hover:bg-purple-700"
+          variant="outline"
+          className="h-12 shadow-lg bg-white"
+          onClick={() => setImportOpen(true)}
+        >
+          <Sparkles className="h-4 w-4 mr-2 text-orange-500" />
+          Import from website
+        </Button>
+        <Button
+          className="h-12 shadow-lg bg-purple-600 hover:bg-purple-700"
           onClick={() => navigate('/marketplace/create')}
         >
           <Plus className="h-5 w-5 mr-2" />
-          Post New Listing
+          Post New
         </Button>
       </div>
+
+      <BulkImportWizard
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        vendorType="marketplace"
+        itemLabel="listings"
+        previewFields={[
+          { key: 'name', label: 'Title', type: 'text' },
+          { key: 'price', label: 'Price (VUV)', type: 'number' },
+          { key: 'condition', label: 'Condition', type: 'text' },
+          { key: 'description', label: 'Description', type: 'text' },
+        ]}
+        onConfirm={importListings}
+      />
     </div>
   );
 }
