@@ -4,7 +4,7 @@
  */
 
 import { supabase } from '@/integrations/supabase/client';
-import { calculateRidePrice, VehicleType, PriceEstimate } from './pricing';
+import { calculateRidePrice, VehicleType, PriceEstimate, VEHICLE_CONFIGS } from './pricing';
 import { autoAssignDriver, findNearbyDrivers } from './driver-assignment';
 import { Location } from './location-tracking';
 
@@ -67,12 +67,19 @@ export const createRideRequest = async (
   request: CreateRideRequest
 ): Promise<RideServiceResult<RideDetails>> => {
   try {
-    // Validate passenger count
-    const vehicleConfig = request.vehicleType === 'car' ? 4 : 1;
-    if (request.passengerCount > vehicleConfig) {
+    // Validate passenger count against the selected passenger vehicle type.
+    const vehicleConfig = VEHICLE_CONFIGS[request.vehicleType];
+    if (!vehicleConfig || vehicleConfig.deliveryOnly) {
       return {
         success: false,
-        error: `${request.vehicleType === 'car' ? 'VanuCar' : 'VanuRide'} can only carry ${vehicleConfig} passenger(s)`,
+        error: 'Please choose a passenger vehicle type',
+      };
+    }
+
+    if (request.passengerCount > vehicleConfig.capacity) {
+      return {
+        success: false,
+        error: `${vehicleConfig.name} can only carry ${vehicleConfig.capacity} passenger(s)`,
       };
     }
 

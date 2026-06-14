@@ -13,6 +13,7 @@ import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { supabase } from '@/integrations/supabase/client';
+import { PASSENGER_VEHICLES, VEHICLE_CONFIGS } from '@/lib/rides/pricing';
 
 // Fix default marker icons — wrapped in try/catch for safety
 try {
@@ -114,36 +115,26 @@ const generateFallbackCars = (): RealCar[] => {
   }));
 };
 
-// Vehicle types
-const vehicleTypes = [
-  {
-    id: 'standard',
-    name: 'Standard',
-    description: '4 seats · Affordable',
-    price: 500,
-    eta: '3 min',
-    icon: '🚗',
-    multiplier: 1,
-  },
-  {
-    id: 'premium',
-    name: 'Premium',
-    description: '4 seats · Comfortable',
-    price: 800,
-    eta: '5 min',
-    icon: '🚙',
-    multiplier: 1.6,
-  },
-  {
-    id: 'van',
-    name: 'Van',
-    description: '6 seats · Spacious',
-    price: 1000,
-    eta: '7 min',
-    icon: '🚐',
-    multiplier: 2,
-  },
-];
+const vehicleIcons = {
+  car: '🚗',
+  suv: '🚙',
+  van: '🚐',
+  wheelchair_van: '♿',
+} as const;
+
+// Vehicle types use the production pricing config so every ride entry path
+// shows the same passenger options: Standard, SUV, Van, and VanuAccess.
+const vehicleTypes = PASSENGER_VEHICLES.map((type) => {
+  const vehicle = VEHICLE_CONFIGS[type];
+  return {
+    id: type,
+    name: vehicle.name,
+    description: `${vehicle.capacity} seats · ${vehicle.description}`,
+    price: vehicle.minimumFare,
+    eta: type === 'car' ? '3 min' : type === 'suv' ? '5 min' : '8 min',
+    icon: vehicleIcons[type],
+  };
+});
 
 // Animated cars component with real drivers
 function AnimatedCars() {
@@ -193,7 +184,7 @@ export default function RidesIndex() {
   const [rideState, setRideState] = useState<RideState>('idle');
   const [pickup, setPickup] = useState('');
   const [destination, setDestination] = useState('');
-  const [selectedVehicle, setSelectedVehicle] = useState('standard');
+  const [selectedVehicle, setSelectedVehicle] = useState('car');
   const [panelExpanded, setPanelExpanded] = useState(true);
   const [mapCenter, setMapCenter] = useState<[number, number]>(PORT_VILA_CENTER);
   const [searchingProgress, setSearchingProgress] = useState(0);

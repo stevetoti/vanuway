@@ -163,7 +163,7 @@ export default function FlightSchedule() {
           {/* Book a flight CTA */}
           <button
             className="w-full p-3 bg-gradient-to-r from-sky-500 to-blue-600 rounded-xl text-white text-left flex items-center gap-3"
-            onClick={() => navigate('/flights')}
+            onClick={() => navigate('/flights/book')}
           >
             <Plane className="h-5 w-5 flex-shrink-0" />
             <div className="flex-1">

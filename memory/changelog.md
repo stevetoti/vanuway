@@ -1,5 +1,13 @@
 # VanuWay Changelog
 
+## 2026-06-14 — [Codex] Flight arrivals route and ride vehicle options hotfix
+
+### Demo-blocking app regressions
+- Restored `/flights` to the public flight arrivals board and moved flight booking CTAs to `/flights/book`, so the Flights service opens arrivals again instead of the Duffel booking form.
+- Aligned the older ride map entry path with the production ride vehicle config (`car`, `suv`, `van`, `wheelchair_van`) instead of stale `standard`/`premium` ids.
+- Fixed ride request passenger validation to use `VEHICLE_CONFIGS` capacity/name for every passenger vehicle type, preventing SUV/van/wheelchair rides from being treated as a one-passenger ride.
+- Verified the app with `pnpm exec eslint .` (0 errors, existing warnings only) and `pnpm build`.
+
 ## 2026-06-02 — [Codex] Prebooking Google Places locations
 
 ### Advance booking location autocomplete

@@ -31,7 +31,7 @@ interface TripWithDetails extends TransportTrip {
 
 export default function FerryIndex() {
   const navigate = useNavigate();
-  // Ferry-only page. Flights moved to /flights (Duffel-powered, worldwide).
+  // Ferry-only page. Flight booking moved to /flights/book (Duffel-powered, worldwide).
   const activeTab = 'ferry' as const;
   const [origin, setOrigin] = useState('Efate');
   const [destination, setDestination] = useState('');
@@ -146,7 +146,7 @@ export default function FerryIndex() {
 
           {/* Looking for flights nudge */}
           <button
-            onClick={() => navigate('/flights')}
+            onClick={() => navigate('/flights/book')}
             className="w-full mb-4 p-2.5 bg-white/15 hover:bg-white/25 rounded-lg flex items-center gap-2 text-left transition-colors"
           >
             <Plane className="h-4 w-4 flex-shrink-0" />

@@ -294,7 +294,7 @@ const AppContent = () => {
                 <Route path="/tours/:tourId" element={<TourDetails />} />
                 <Route path="/cruise/schedule" element={<CruiseSchedule />} />
                 <Route path="/cruise/lines" element={<CruiseDirectory />} />
-                <Route path="/flights" element={<FlightBook />} />
+                <Route path="/flights" element={<FlightSchedule />} />
                 <Route path="/flights/arrivals" element={<FlightSchedule />} />
                 <Route path="/daily" element={<DailyHub />} />
                 <Route path="/emergency" element={<EmergencyIndex />} />

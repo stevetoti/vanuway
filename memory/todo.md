@@ -191,7 +191,7 @@
 - [x] Stripe webhook endpoint configuration in dashboard — deployed signed webhook handler on 2026-05-02
 - [x] Marketplace order page has authenticated Stripe session sync fallback for paid orders when webhook delivery is delayed/misconfigured.
 - [ ] Verify exact live Stripe webhook endpoint signing secret/config so webhooks stop returning 400 without relying on the order-page fallback.
-- [ ] Provide `SUPABASE_ACCESS_TOKEN` to Codex environment or expose Supabase deploy MCP tools so Edge Functions can be listed/deployed from this workspace. — [Codex] 2026-06-02: local project is linked to `ljervgzsovamehnlztxf`, but CLI cannot authenticate.
+- [x] Provide `SUPABASE_ACCESS_TOKEN` to Codex environment or expose Supabase deploy MCP tools so Edge Functions can be listed/deployed from this workspace. — [Codex] 2026-06-02: local project is linked to `ljervgzsovamehnlztxf`, but CLI cannot authenticate. — [Codex] 2026-06-14: root `.env.local` now has the token and `supabase functions list --project-ref ljervgzsovamehnlztxf` worked from the repo root.
 - [ ] Cash on delivery flow completion
 - [ ] Ride receipt/summary email after completion
 - [ ] Continue TypeScript strict-mode cleanup: generated Supabase types/schema drift and Google Maps typings still block a clean strict build.
