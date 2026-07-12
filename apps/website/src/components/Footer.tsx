@@ -13,6 +13,7 @@ const footerLinks = {
   company: [
     { label: "About Us", href: "/about" },
     { label: "For Business", href: "/business" },
+    { label: "Blog", href: "/blog" },
     { label: "Contact", href: "/contact" },
     { label: "Careers", href: "/services#health-career" },
   ],

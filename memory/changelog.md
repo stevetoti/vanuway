@@ -1,5 +1,16 @@
 # VanuWay Changelog
 
+## 2026-07-12 — [Claude Code] Public blog on vanuway.com (/blog + /blog/[slug])
+
+### Marketing website blog wired to shared agency Supabase
+- New `apps/website/src/lib/blog.ts` — typed PostgREST client for the shared agency blog DB (`rndegttgwtpkbjtvjgnc.supabase.co`, table `blog_posts`, `site_id='vanuway'`). Uses the public anon key (RLS restricts reads to `published=true`), ISR `revalidate: 300`, and fails soft (empty list) on network errors so the site never crashes on a Supabase outage.
+- New `/blog` list page — server component matching the site's deep-blue/vibrant-orange visual language. Branded "Articles coming soon" empty state (zero rows exist yet). Cards show hero image, category, date, excerpt, read time.
+- New `/blog/[slug]` detail page — `react-markdown` + `remark-gfm` with Tailwind component overrides (headings, blockquotes, tables, code, images), hero image with `image_alt`, category/date/read-time meta row, `generateMetadata()` with canonical `https://vanuway.com/blog/{slug}` + OG/Twitter images, `notFound()` on missing slug (bogus slugs 404). Bottom CTA to app.vanuway.com.
+- Added Blog link to Navbar (desktop + mobile) and Footer (Company column).
+- `sitemap.ts` now async — includes `/blog` plus one entry per published post.
+- Deps added to `@vanuway/website`: `react-markdown`, `remark-gfm`.
+- Verified: `pnpm --filter @vanuway/website build` clean; live Supabase query returns 200 with `[]`.
+
 ## 2026-06-14 — [Codex] Flight arrivals route and ride vehicle options hotfix
 
 ### Demo-blocking app regressions
