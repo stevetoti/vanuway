@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import GoogleAnalytics from "@/components/GoogleAnalytics";
 
 export const metadata: Metadata = {
   title: "VanuWay — Everything You Need, All in One App",
@@ -40,6 +41,9 @@ export const metadata: Metadata = {
     description: "Vanuatu's all-in-one super app for transport, food, travel, community, health, and more.",
     images: ["https://vanuway.com/og-image.png"],
   },
+  verification: {
+    google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION,
+  },
 };
 
 export default function RootLayout({
@@ -53,6 +57,7 @@ export default function RootLayout({
         <Navbar />
         <main>{children}</main>
         <Footer />
+        <GoogleAnalytics />
       </body>
     </html>
   );

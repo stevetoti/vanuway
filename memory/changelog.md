@@ -1,5 +1,16 @@
 # VanuWay Changelog
 
+## 2026-09-07 — [Claude Code] Google Analytics 4 on vanuway.com
+
+- New `apps/website/src/components/GoogleAnalytics.tsx` — env-driven gtag loader
+  (renders nothing unless `NEXT_PUBLIC_GA_MEASUREMENT_ID` is set; `next/script`
+  afterInteractive), same pattern as stevetoti-website.
+- Mounted in `apps/website/src/app/layout.tsx`; also added
+  `metadata.verification.google` from `NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION`.
+- REQUIRES Vercel env on project **website** (prj_DkSf4614nIqaL866HjksbnPWYvk8):
+  `NEXT_PUBLIC_GA_MEASUREMENT_ID=G-MCCQ55BH96`, then redeploy for the tag to fire.
+- `pnpm build` clean (Next 15).
+
 ## 2026-07-12 — [Claude Code] Public blog on vanuway.com (/blog + /blog/[slug])
 
 ### Marketing website blog wired to shared agency Supabase
