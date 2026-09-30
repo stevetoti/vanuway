@@ -3,6 +3,10 @@
 import { useState } from "react";
 import Link from "next/link";
 import { submitContactForm } from "./actions";
+import { useFormBotFields, HoneypotField } from "@/components/security/FormBotFields";
+import { TurnstileWidget } from "@/components/security/TurnstileWidget";
+
+const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? null;
 
 const contactReasons = [
   "General Inquiry",
@@ -40,6 +44,9 @@ export default function ContactPage() {
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const bot = useFormBotFields();
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -47,9 +54,14 @@ export default function ContactPage() {
     setSubmitting(true);
 
     const formData = new FormData(e.currentTarget);
+    formData.set("website", bot.honeypot);
+    formData.set("form_started_at", bot.formStartedAt ? String(bot.formStartedAt) : "");
+    formData.set("turnstile_token", turnstileToken ?? "");
     const result = await submitContactForm(formData);
 
     setSubmitting(false);
+    setAttempt((a) => a + 1);
+    setTurnstileToken(null);
     if (result.success) {
       setSubmitted(true);
     } else {
@@ -210,11 +222,16 @@ export default function ContactPage() {
                       />
                     </div>
 
-                    {error && <p className="text-red-600 text-sm">{error}</p>}
+                    <HoneypotField value={bot.honeypot} onChange={bot.setHoneypot} />
+                    {TURNSTILE_SITE_KEY && (
+                      <TurnstileWidget key={attempt} siteKey={TURNSTILE_SITE_KEY} onVerify={setTurnstileToken} />
+                    )}
+
+                    {error && <p role="alert" className="text-red-600 text-sm">{error}</p>}
 
                     <button
                       type="submit"
-                      disabled={submitting}
+                      disabled={submitting || (!!TURNSTILE_SITE_KEY && !turnstileToken)}
                       className="btn-primary w-full sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {submitting ? "Sending..." : "Send Message"}
