@@ -38,6 +38,14 @@ only accepts preview values via `--value`, which we never use).
 filled honeypot → success view (silent); digit-only message → content error; no token →
 "complete the human verification"; Cloudflare challenge script loads.
 
+**Deploy note (my mistake, fixed):** the first deploy (`website-n38xhhlx8`, 09:47 local)
+was built from a local `main` that was two commits behind `origin/main` (Codex's blog +
+GA4 work from 2026-09-07), so vanuway.com lost /blog and analytics for about 20 minutes.
+Caught when the push was rejected; rebased, rebuilt the merged tree and redeployed
+`website-qhvrewz24` (10:07) — /blog 200, gtag present, contact guard re-verified. The
+CLAUDE.md order is Verify → Commit → **Push** → Deploy for exactly this reason; I
+deployed before pushing. Always `git pull --ff-only` before a CLI production deploy.
+
 **Stephen must add** `vanuway.com`, `www.vanuway.com` and
 `website-pacificwaveprojects.vercel.app` to the shared Turnstile widget; until then the
 widget errors and every submission is refused (fail-closed). Then send one real message
