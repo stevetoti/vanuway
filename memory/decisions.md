@@ -1,5 +1,25 @@
 # VanuWay Architectural Decisions
 
+## 2026-10-01 — [Claude Code] Contact form: fail closed, escape everything, limit durably
+
+**Context:** the website's contact action silently dropped messages when `RESEND_API_KEY`
+was missing (it logged and returned success) and had no bot defence. Spam bots hit the
+sibling PWD/stevetoti forms in Sept 2026 and buy CAPTCHA tokens, so a CAPTCHA alone is
+not a gate.
+
+**Decision:** apply the PWD `form-bot-defence` layers in order (honeypot + fill time →
+content sanity → Turnstile → durable per-IP/per-email limits → email). Missing Turnstile
+keys, an unreachable limiter, or a missing Resend key all REFUSE the submission with a
+"temporarily unavailable, email hello@vanuway.com" message — never a fake success. The
+limiter lives on the VanuWay Supabase project (`take_form_request`) and is called over
+PostgREST with the service role so the marketing site gains no supabase-js dependency.
+Owner mail sends from the Digiassist Resend domain through a domain-restricted key
+because neither vanuway.com nor pacificwavedigital.com is verified on a key we can
+read; `CONTACT_FROM_EMAIL` / `CONTACT_TO_EMAIL` override it.
+
+**Reason:** a form that reports success while dropping the message is worse than a
+visible outage; fail-closed surfaces misconfiguration on the first real test.
+
 ### Resend API key lives in Supabase Vault, fetched by RPC, never in source or env
 **Context:** `admin-notify` originally read `RESEND_API_KEY` from the Supabase Edge Function env var with a hardcoded fallback in source. Two failure modes hit production simultaneously: (1) the env var was set to a key from a *different* Resend account where vanuway.com isn't verified — accepting requests but failing delivery silently; (2) the hardcoded fallback was a live secret committed to source. Even the v9 send loop was using `/emails/batch` and only checking HTTP status, never per-email status, so the audit log lied about success.
 **Decision:** Single source of truth is `vault.secrets` row `RESEND_API_KEY_VANUWAY001` (vanuway001@gmail.com Resend account, vanuway.com verified). Edge function fetches it via `public.get_resend_api_key()` — a SECURITY DEFINER RPC scoped to `service_role` only (anon/authenticated REVOKED). Result is cached in worker memory for the lifetime of the Deno instance, so cold start pays one DB round-trip and warm requests pay zero. The Supabase Edge Function env var `RESEND_API_KEY` is intentionally NOT consulted any more — env was the trap, not the safety net. Send loop switched from `/emails/batch` to per-recipient `/emails` POST (~600ms apart, under Resend free-tier 2 req/sec) so per-recipient errors land in `admin_audit_log.email_error` instead of disappearing.

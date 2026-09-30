@@ -1,5 +1,56 @@
 # VanuWay Changelog
 
+## 2026-10-01 — [Claude Code] Website contact form: bot defence (commit 9d9ea60, deployed website-n38xhhlx8 → vanuway.com)
+
+Applied the `form-bot-defence` skill (`~/.claude/skills/form-bot-defence/`; playbook
+`_knowledge-base/procedures/BOT-SIGNUP-DEFENCE.md`).
+
+**Found first:** the Vercel project `website` had no `RESEND_API_KEY`, so
+`submitContactForm` logged every message to the console and reported success — no
+contact message from vanuway.com has ever been delivered. The action also interpolated
+user input into the email HTML unescaped.
+
+- `apps/website/src/app/contact/actions.ts`: parse → honeypot + 3 s minimum fill time →
+  content sanity → server-verified Cloudflare Turnstile (fail-closed) → durable limits
+  (`take_form_request`: 5/hour per IP, 3/hour per email, hashed buckets) → Resend. Missing
+  `RESEND_API_KEY` now refuses with a "temporarily unavailable" message instead of a fake
+  success. All values HTML-escaped; "Review signals" line for soft flags. Filled honeypot
+  → silent success.
+- `apps/website/src/lib/security/{bot-signals,turnstile,form-guard}.ts` (skill templates)
+  + `rate-limit.ts` (PostgREST RPC over fetch — no supabase-js dependency in the site).
+- `apps/website/src/components/security/{TurnstileWidget,FormBotFields}.tsx`;
+  `contact/page.tsx` sends `website`, `form_started_at`, `turnstile_token` with the
+  FormData, re-keys the widget after each attempt, disables submit until a token exists.
+- `supabase/migrations/20261001000000_form_rate_limit.sql` applied to
+  `ljervgzsovamehnlztxf` (`form_request_limits` table + `take_form_request`, service_role
+  only).
+
+**Vercel env (production, project `website`):** `NEXT_PUBLIC_TURNSTILE_SITE_KEY`,
+`TURNSTILE_SECRET_KEY` (shared PWD Turnstile widget), `RESEND_API_KEY` (NEW
+domain-restricted key "vanuway-website (contact form)", sending access for
+digiassistai.com only), `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` (VanuWay project, for
+the limiter). Owner mail goes to `steve@pacificwavedigital.com` from
+`VanuWay Contact <noreply@digiassistai.com>`; override with `CONTACT_TO_EMAIL` /
+`CONTACT_FROM_EMAIL` once vanuway.com is verified in Resend. Preview env not set (CLI
+only accepts preview values via `--value`, which we never use).
+
+**Verified live with Playwright on vanuway.com/contact:** submit < 3 s → "That was quick";
+filled honeypot → success view (silent); digit-only message → content error; no token →
+"complete the human verification"; Cloudflare challenge script loads.
+
+**Stephen must add** `vanuway.com`, `www.vanuway.com` and
+`website-pacificwaveprojects.vercel.app` to the shared Turnstile widget; until then the
+widget errors and every submission is refused (fail-closed). Then send one real message
+and confirm it lands at steve@pacificwavedigital.com.
+
+## 2026-06-14 — [Codex] Facebook page launch assets
+
+### Facebook page banner and profile photo
+- Added `launch-assets/vanuway-launch-assets-2026/scripts/export-facebook-page-assets.cjs` to generate branded Facebook page assets from the official VanuWay logo, brand palette, and real app screenshots.
+- Exported `launch-assets/vanuway-launch-assets-2026/facebook-page/vanuway-facebook-cover-1640x624.png` as a high-resolution Facebook cover/banner with VanuWay positioning, service highlights, CTA, and app phone mockups.
+- Exported `launch-assets/vanuway-launch-assets-2026/facebook-page/vanuway-facebook-profile-1024x1024.png` as a square profile image designed to crop cleanly into Facebook's circular profile frame.
+- Added `launch-assets/vanuway-launch-assets-2026/scripts/export-ride-booking-post-image.cjs` and exported bilingual English/Bislama ride-booking social post graphics in portrait and square formats using the real VanuWay ride selection screen.
+
 ## 2026-09-07 — [Claude Code] Google Analytics 4 on vanuway.com
 
 - New `apps/website/src/components/GoogleAnalytics.tsx` — env-driven gtag loader
