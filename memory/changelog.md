@@ -46,7 +46,14 @@ Caught when the push was rejected; rebased, rebuilt the merged tree and redeploy
 CLAUDE.md order is Verify → Commit → **Push** → Deploy for exactly this reason; I
 deployed before pushing. Always `git pull --ff-only` before a CLI production deploy.
 
-**Stephen must add** `vanuway.com`, `www.vanuway.com` and
+**2026-10-02 update:** the first shared Turnstile widget was at 9 of its 10-hostname cap, so
+Stephen created a second widget ("PWD sites 2": rapidentrepreneurs.com, www.rapidentrepreneurs.com,
+vanuway.com, www.vanuway.com). Its keys replaced the first widget's on the `website` Vercel project
+(production), redeployed `website-j4o5ri5a8` (vanuway.com); verified the new site key is baked into
+the /contact chunk and the widget renders the "Verify you are human" checkbox with no error. Local
+copy of the widget-2 keys: `TURNSTILE2_*` in the Digiassist AI `.env.local`.
+
+**Superseded by the update above —** originally: Stephen must add `vanuway.com`, `www.vanuway.com` and
 `website-pacificwaveprojects.vercel.app` to the shared Turnstile widget; until then the
 widget errors and every submission is refused (fail-closed). Then send one real message
 and confirm it lands at steve@pacificwavedigital.com.
