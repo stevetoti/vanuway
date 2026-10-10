@@ -12,6 +12,12 @@
   no company. Repo CLAUDE.md lists the client as Dominium Tech Hub — reconcile with Stephen.
 - Made in a clean worktree from `origin/main` (64f86c4) because the main checkout had
   uncommitted app/launch-asset work by another agent.
+- Commit 77a2c33; `pnpm build` (website) clean. Deployed `apps/website` via logged-in
+  Vercel CLI (`--scope pacificwaveprojects --force`, no token flag): `website-7k5uac4dn`
+  (dpl_Db4mikDJ22GcDiM3aDt69wJyibUH). Verified live: credit link present on vanuway.com
+  /, /about, /blog, /contact; GA tag intact. No edge functions or migrations.
+- FOUND (not fixed): https://www.vanuway.com fails with "SSL certificate has expired" —
+  check the www domain/certificate on the Vercel `website` project / Cloudflare DNS.
 
 ## 2026-10-01 — [Claude Code] Website contact form: bot defence (commit 9d9ea60, deployed website-n38xhhlx8 → vanuway.com)
 
