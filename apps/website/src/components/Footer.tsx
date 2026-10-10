@@ -121,6 +121,17 @@ export default function Footer() {
         <div className="mt-12 pt-8 border-t border-blue-800 flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-sm text-blue-300">
             © {new Date().getFullYear()} VanuWay. All rights reserved.
+            <span className="block sm:inline sm:ml-2">
+              Built by{" "}
+              <a
+                href="https://www.globaldigitalprime.com"
+                target="_blank"
+                rel="noopener"
+                className="text-blue-200 hover:text-white underline-offset-2 hover:underline transition-colors"
+              >
+                Global Digital Prime
+              </a>
+            </span>
           </p>
           <div className="flex gap-6">
             <Link href="/privacy" className="text-sm text-blue-300 hover:text-white transition-colors">

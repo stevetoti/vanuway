@@ -1,5 +1,18 @@
 # VanuWay Changelog
 
+## 2026-10-10 — [Claude Code] Footer: Built by Global Digital Prime
+
+- `apps/website/src/components/Footer.tsx`: added a modest "Built by Global Digital Prime"
+  credit next to the copyright line, linking to https://www.globaldigitalprime.com
+  (`target="_blank" rel="noopener"`, no nofollow). Marketing website (vanuway.com) only;
+  super-app untouched.
+- No ownership/company statements changed. For the record, the live site's only entity
+  statements are in /terms ("operated by Pacific Wave Digital Ltd"; IP "of Pacific Wave
+  Digital Ltd"); footer says "© 2026 VanuWay. All rights reserved."; /about and /privacy name
+  no company. Repo CLAUDE.md lists the client as Dominium Tech Hub — reconcile with Stephen.
+- Made in a clean worktree from `origin/main` (64f86c4) because the main checkout had
+  uncommitted app/launch-asset work by another agent.
+
 ## 2026-10-01 — [Claude Code] Website contact form: bot defence (commit 9d9ea60, deployed website-n38xhhlx8 → vanuway.com)
 
 Applied the `form-bot-defence` skill (`~/.claude/skills/form-bot-defence/`; playbook
