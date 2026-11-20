@@ -1,5 +1,12 @@
 # VanuWay Changelog
 
+## 2026-11-21 — [Claude Code] Ride handoff from Life in Vanuatu (branch `claude/lifeinvanuatu-handoff`, NOT deployed)
+
+- `/rides?pickup_lat=..&drop_lat=..&passengers=..&source=lifeinvanuatu` now forwards to a new public `/rides/new`, which pre-fills the RequestRide form (pickup, destination, passengers, smallest vehicle that fits) and shows a "Trip from Life in Vanuatu" card. Nothing is booked until the person taps Find Driver.
+- Guests keep the trip through sign-in (`sessionStorage`, 30 min); Login now returns to `location.state.from` (same-site only).
+- New `apps/app/src/lib/rides/handoff.ts` with 7 Node tests (`pnpm test`). Lint 0 errors (69 warnings, same as main); build passes.
+- No database, edge function or payment changes. Contract: `docs/lifeinvanuatu-handoff.md`. Release note: `docs/deployment/release-note-lifeinvanuatu-handoff-2026-11-21.md`.
+
 ## 2026-10-10 — [Claude Code] Footer: Built by Global Digital Prime
 
 - `apps/website/src/components/Footer.tsx`: added a modest "Built by Global Digital Prime"

@@ -4,7 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useEffect } from 'react';
+import { hasHandoff } from '@/lib/rides/handoff';
 import {
   ArrowLeft, Car, Calendar, Plane, Ship, ChevronRight,
   Clock, Users, MapPin, Navigation, Zap, Star,
@@ -14,7 +16,14 @@ import { useAuth } from '@/hooks/useAuth';
 
 export default function RideHub() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
+
+  // A trip handed over from Life in Vanuatu (/rides?pickup_lat=...) opens the
+  // pre-filled request form. See docs/lifeinvanuatu-handoff.md.
+  useEffect(() => {
+    if (hasHandoff(location.search)) navigate(`/rides/new${location.search}`, { replace: true });
+  }, [location.search, navigate]);
 
   // Past rides that are completed but never rated. Surfaced as a top banner so
   // riders who missed the post-drop-off prompt have an obvious way back in.

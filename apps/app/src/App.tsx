@@ -225,6 +225,8 @@ const AppContent = () => {
                 <Route path="/" element={<Index />} />
                 <Route path="/services" element={<Services />} />
                 <Route path="/rides" element={<RideHub />} />
+                {/* Public: a trip handed over by Life in Vanuatu, shown before sign-in */}
+                <Route path="/rides/new" element={<RequestRide />} />
                 <Route path="/food" element={<Restaurants />} />
                 <Route path="/food/restaurant/:id" element={<RestaurantDetail />} />
                 <Route path="/drivers" element={<BrowseDrivers />} />

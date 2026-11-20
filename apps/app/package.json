@@ -8,7 +8,8 @@
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "node --test src/lib/rides/handoff.test.ts"
   },
   "dependencies": {
     "@capacitor/android": "^8.0.2",

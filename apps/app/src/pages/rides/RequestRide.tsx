@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -18,6 +18,10 @@ import { createRideRequest, subscribeToRideUpdates, cancelRide as cancelRideServ
 import { loadGoogleMaps, isGoogleMapsAvailable, searchGooglePlaces, reverseGeocodeGoogle } from '@/lib/google-maps';
 import { lazy, Suspense } from 'react';
 import type { RideMapDriver } from '@/components/rides/RideMap';
+import {
+  clearPendingHandoff, loadPendingHandoff, parseRideHandoff, savePendingHandoff,
+  vehicleFor, MAX_PASSENGERS, type RideHandoff,
+} from '@/lib/rides/handoff';
 
 // Dynamically import the map to avoid react-leaflet initialization crash
 const RideMap = lazy(() => import('@/components/rides/RideMap'));
@@ -82,6 +86,7 @@ function generateRoute(from: [number, number], to: [number, number]): [number, n
 
 export default function RequestRide() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { serviceType } = useParams();
   const { user } = useAuth();
 
@@ -105,6 +110,38 @@ export default function RequestRide() {
   const [isSearching, setIsSearching] = useState(false);
   const [googleReady, setGoogleReady] = useState(false);
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // A trip handed over by Life in Vanuatu (/rides/new?pickup_lat=...), or one
+  // kept in this tab while the person signed in. It only pre-fills the form.
+  const [handoff, setHandoff] = useState<RideHandoff | null>(null);
+
+  useEffect(() => {
+    const fromLink = parseRideHandoff(location.search);
+    const trip = fromLink ?? (location.pathname === '/rides/new' ? loadPendingHandoff() : null);
+    if (!trip) return;
+    if (fromLink) savePendingHandoff(fromLink);
+    setHandoff(trip);
+    setPassengerCount(trip.passengers);
+    setSelectedVehicle(vehicleFor(trip.passengers));
+    if (trip.pickup) setPickupLocation(trip.pickup);
+    if (trip.dropoff) setDropoffLocation(trip.dropoff);
+    if (trip.pickup && trip.dropoff) {
+      setMapCenter([(trip.pickup.lat + trip.dropoff.lat) / 2, (trip.pickup.lng + trip.dropoff.lng) / 2]);
+      setStep('vehicle');
+    } else if (trip.pickup) {
+      setMapCenter([trip.pickup.lat, trip.pickup.lng]);
+      setActiveField('dropoff');
+      setStep('destination');
+    }
+    // Read once, when the page opens.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const changePassengers = (delta: number) => {
+    const next = Math.min(MAX_PASSENGERS, Math.max(1, passengerCount + delta));
+    setPassengerCount(next);
+    const capacity = vehicleTypes.find(v => v.id === selectedVehicle)?.capacity ?? 4;
+    if (capacity < next) setSelectedVehicle(vehicleFor(next));
+  };
 
   // Try to load Google Maps on mount (if API key is configured)
   useEffect(() => {
@@ -191,7 +228,8 @@ export default function RequestRide() {
       setLocationSheetOpen(false);
       setTimeout(() => {
         setActiveField('dropoff');
-        setStep('destination');
+        // A handed-over destination is already set: go straight to vehicles.
+        setStep(dropoffLocation ? 'vehicle' : 'destination');
       }, 300);
     } else {
       setDropoffLocation(location);
@@ -208,7 +246,8 @@ export default function RequestRide() {
   const handleFindDriver = async () => {
     if (!user) {
       toast.error('Please login to book a ride');
-      navigate('/login');
+      // Come back to this trip after signing in.
+      navigate('/login', { state: { from: location.pathname + location.search } });
       return;
     }
     if (!pickupLocation || !dropoffLocation || !estimate) {
@@ -246,6 +285,7 @@ export default function RequestRide() {
       }
 
       setCreatedRideId(result.data.id);
+      clearPendingHandoff();
       setStep('searching');
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Something went wrong';
@@ -441,8 +481,55 @@ export default function RequestRide() {
         </button>
       </div>
 
-      {/* BOTTOM SHEET */}
-      <div className="relative z-[900]">
+      {/* BOTTOM SHEET (scrolls under the header when a handed-over trip adds its summary) */}
+      <div className={`relative z-[900] ${handoff ? 'max-h-[calc(100dvh-4rem)] overflow-y-auto' : ''}`}>
+        {handoff && (step === 'pickup' || step === 'destination' || step === 'vehicle') && (
+          <div
+            data-testid="lifeinvanuatu-handoff"
+            className="mx-3 mb-2 rounded-2xl border border-emerald-200 bg-emerald-50/95 p-3 text-sm shadow-lg backdrop-blur"
+          >
+            <p className="text-[11px] font-bold uppercase tracking-wider text-emerald-800">
+              {handoff.source === 'lifeinvanuatu' ? 'Trip from Life in Vanuatu' : 'Trip from a link'}
+            </p>
+            <dl className="mt-1.5 space-y-1">
+              <div className="flex gap-2">
+                <dt className="w-12 shrink-0 text-muted-foreground">From</dt>
+                <dd className="min-w-0 font-semibold" data-testid="handoff-from">{pickupLocation?.name ?? 'Choose below'}</dd>
+              </div>
+              <div className="flex gap-2">
+                <dt className="w-12 shrink-0 text-muted-foreground">To</dt>
+                <dd className="min-w-0 font-semibold" data-testid="handoff-to">{dropoffLocation?.name ?? 'Choose below'}</dd>
+              </div>
+              <div className="flex items-center gap-2">
+                <dt className="w-12 shrink-0 text-muted-foreground">People</dt>
+                <dd className="flex items-center gap-2 font-semibold">
+                  <button
+                    type="button"
+                    aria-label="Fewer people"
+                    className="flex h-8 w-8 items-center justify-center rounded-full border bg-white disabled:opacity-40"
+                    disabled={passengerCount <= 1}
+                    onClick={() => changePassengers(-1)}
+                  >
+                    <Minus className="h-4 w-4" />
+                  </button>
+                  <span data-testid="handoff-people">{passengerCount}</span>
+                  <button
+                    type="button"
+                    aria-label="More people"
+                    className="flex h-8 w-8 items-center justify-center rounded-full border bg-white disabled:opacity-40"
+                    disabled={passengerCount >= MAX_PASSENGERS}
+                    onClick={() => changePassengers(1)}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </button>
+                </dd>
+              </div>
+            </dl>
+            <p className="mt-2 text-xs text-emerald-900/80">
+              Check the trip, choose a vehicle and payment, then tap Find Driver. Nothing is booked until you do.
+            </p>
+          </div>
+        )}
         {/* ---- STEP: PICKUP ---- */}
         {step === 'pickup' && (
           <div className="bg-white rounded-t-3xl shadow-[0_-4px_20px_rgba(0,0,0,0.1)] p-5 pb-8 animate-in slide-in-from-bottom duration-300">

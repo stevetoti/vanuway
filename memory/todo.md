@@ -1,5 +1,10 @@
 # VanuWay TODO
 
+## OPEN — Life in Vanuatu ride handoff (added 2026-11-21 — [Claude Code])
+- [ ] Review and deploy branch `claude/lifeinvanuatu-handoff` (see docs/deployment/release-note-lifeinvanuatu-handoff-2026-11-21.md)
+- [ ] Store `source`/`utm_*` with the booking (new `ride_bookings` column or analytics event) so rides from Life in Vanuatu can be counted
+- [ ] Keep the handed-over trip through Sign-up and Google OAuth, not only email Login
+
 ## COMPLETED — Session 2026-05-17 (documentary launch film)
 - [x] Created the full documentary-style VanuWay launch script for review and production.
 - [x] Generated 12 new Higgsfield documentary b-roll clips featuring Ni-Vanuatu community life, cruise visitors, flight travellers, expats, local businesses, health/jobs/services, and connected community scenes.

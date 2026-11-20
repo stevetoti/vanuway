@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
+import { safeReturnPath } from '@/lib/rides/handoff';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -21,6 +22,10 @@ type FormData = z.infer<typeof formSchema>;
 
 const Login = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  // Where to go after signing in, when a page sent the person here (for
+  // example a pre-filled ride at /rides/new). Same-site paths only.
+  const returnTo = safeReturnPath((location.state as { from?: unknown } | null)?.from) ?? '/';
   const { signIn, user } = useAuth();
   const [loading, setLoading] = useState(false);
 
@@ -35,9 +40,9 @@ const Login = () => {
 
   useEffect(() => {
     if (user) {
-      navigate('/', { replace: true });
+      navigate(returnTo, { replace: true });
     }
-  }, [user, navigate]);
+  }, [user, navigate, returnTo]);
 
   const onSubmit = async (data: FormData) => {
     setLoading(true);
@@ -54,7 +59,7 @@ const Login = () => {
         }
       } else {
         toast.success('Welcome back!');
-        navigate('/', { replace: true });
+        navigate(returnTo, { replace: true });
       }
     } catch (error) {
       toast.error('An unexpected error occurred');
